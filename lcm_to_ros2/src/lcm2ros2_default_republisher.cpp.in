@@ -1,0 +1,91 @@
+#include <rclcpp/rclcpp.hpp>
+#include <string>
+#include <memory>
+#include <thread>
+
+#include <lcm/lcm-cpp.hpp>
+
+#include "lcm_to_ros2/msg/@ROS2_MSG_TYPE@.hpp"
+#include "@PACKAGE_NAME@/@MESSAGE_TYPE@.hpp"
+
+class LCMToROS2Republisher : public rclcpp::Node
+{
+public:
+    LCMToROS2Republisher()
+        : Node("@TOPIC_NAME@_lcm2ros2_republisher")
+    {
+        // Initialize LCM
+        lcm_ = std::make_shared<lcm::LCM>();
+        if (!lcm_->good()) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to initialize LCM");
+            return;
+        }
+        
+        // Create ROS2 publisher
+        ros2_pub_ = this->create_publisher<lcm_to_ros2::msg::@ROS2_MSG_TYPE@>(
+            "@TOPIC_NAME@",
+            10);
+        
+        RCLCPP_INFO(this->get_logger(), "@TOPIC_NAME@ publisher created");
+        
+        // Subscribe to LCM channel
+        lcm_->subscribe("@TOPIC_NAME@", 
+            &LCMToROS2Republisher::lcmCallback, 
+            this);
+    }
+
+    ~LCMToROS2Republisher()
+    {
+        RCLCPP_INFO(this->get_logger(), "@TOPIC_NAME@ LCMToROS2Republisher destructor.");
+    }
+
+    void handle_lcm(int timeout) {
+        if (lcm_ && lcm_->good()) {
+            lcm_->handleTimeout(timeout);
+        }
+    }
+
+private:
+    void lcmCallback(const lcm::ReceiveBuffer* rbuf,
+            const std::string& channel_name,
+            const @PACKAGE_NAME@::@MESSAGE_TYPE@* msg)
+    {
+        RCLCPP_DEBUG(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
+        
+        // Use reinterpret_cast to convert LCM message to ROS2 message
+        // Note: This assumes LCM and ROS2 message layouts are identical
+        const lcm_to_ros2::msg::@ROS2_MSG_TYPE@* ros2_msg = 
+            reinterpret_cast<const lcm_to_ros2::msg::@ROS2_MSG_TYPE@*>(msg);
+        
+        // Create a shared pointer copy for publishing
+        auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::@ROS2_MSG_TYPE@>(*ros2_msg);
+        ros2_pub_->publish(*ros2_msg_shared);
+    }
+
+    std::shared_ptr<lcm::LCM> lcm_;
+    rclcpp::Publisher<lcm_to_ros2::msg::@ROS2_MSG_TYPE@>::SharedPtr ros2_pub_;
+};
+
+int main(int argc, char** argv)
+{
+    rclcpp::init(argc, argv);
+    
+    auto node = std::make_shared<LCMToROS2Republisher>();
+    
+    // Spin in a separate thread to handle LCM messages
+    std::thread lcm_thread([node]() {
+        while (rclcpp::ok()) {
+            int lcm_timeout = 100; // ms
+            node->handle_lcm(lcm_timeout);
+        }
+    });
+    
+    rclcpp::spin(node);
+    
+    rclcpp::shutdown();
+    if (lcm_thread.joinable()) {
+        lcm_thread.join();
+    }
+    
+    return 0;
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>magic_vis_ros2</name>
+  <version>0.0.0</version>
+  <description>
+    Visualization for the Magic Lab humanoid.
+  </description>
+  
+  <author>luomincheng</author>
+  <maintainer email="liuwei6@dreame.tech">liu</maintainer>
+  <license>TODO</license>
+  
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  
+  <depend>rclcpp</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>kdl_parser</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>visualization_msgs</depend>
+  <depend>lcm_to_ros2</depend>
+  <depend>geometry_msgs</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>urdf</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,60 @@
+#include <rclcpp/rclcpp.hpp>
+#include <string>
+#include <memory>
+
+#include <lcm/lcm-cpp.hpp>
+
+#include "lcm_to_ros2/msg/@ROS2_MSG_TYPE@.hpp"
+#include "@PACKAGE_NAME@/@MESSAGE_TYPE@.hpp"
+
+class ROS2ToLCMRepublisher : public rclcpp::Node
+{
+public:
+    ROS2ToLCMRepublisher()
+        : Node("@TOPIC_NAME@_ros2lcm_republisher")
+    {
+        // Initialize LCM
+        lcm_ = std::make_shared<lcm::LCM>();
+        if (!lcm_->good()) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to initialize LCM");
+            return;
+        }
+        
+        // Create ROS2 subscriber
+        ros2_sub_ = this->create_subscription<lcm_to_ros2::msg::@ROS2_MSG_TYPE@>(
+            "@TOPIC_NAME@",
+            10,
+            std::bind(&ROS2ToLCMRepublisher::ros2Callback, this, std::placeholders::_1));
+        
+        RCLCPP_INFO(this->get_logger(), "@TOPIC_NAME@ subscriber created");
+    }
+
+    ~ROS2ToLCMRepublisher()
+    {
+        RCLCPP_INFO(this->get_logger(), "@TOPIC_NAME@ ROS2ToLCMRepublisher destructor.");
+    }
+
+private:
+    void ros2Callback(const lcm_to_ros2::msg::@ROS2_MSG_TYPE@::SharedPtr ros2_msg)
+    {
+        // Use reinterpret_cast to convert ROS2 message to LCM message
+        // Note: This assumes LCM and ROS2 message layouts are identical
+        const @PACKAGE_NAME@::@MESSAGE_TYPE@* lcm_msg = 
+            reinterpret_cast<const @PACKAGE_NAME@::@MESSAGE_TYPE@*>(ros2_msg.get());
+        
+        lcm_->publish("@TOPIC_NAME@", lcm_msg);
+    }
+
+    std::shared_ptr<lcm::LCM> lcm_;
+    rclcpp::Subscription<lcm_to_ros2::msg::@ROS2_MSG_TYPE@>::SharedPtr ros2_sub_;
+};
+
+int main(int argc, char** argv)
+{
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<ROS2ToLCMRepublisher>();
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
+}
+
