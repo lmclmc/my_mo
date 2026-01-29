@@ -1,0 +1,33 @@
+# This message was automatically generated
+# https://github.com/nrjl/lcm_to_ros, nicholas.lawrance@oregonstate.edu
+int32[4] contact_est
+float32[12] fr_des
+float32[12] fr
+float32[3] body_rpy_cmd
+float32[4] body_ori_cmd
+float32[3] body_pos_cmd
+float32[3] body_vel_cmd
+float32[3] body_ang_vel_cmd
+float32[3] body_pos
+float32[3] body_vel
+float32[3] body_rpy
+float32[4] body_ori
+float32[3] body_ang_vel
+float32[3] com_pos_cmd
+float32[3] com_vel_cmd
+float32[3] com_pos
+float32[3] com_vel
+float32[12] foot_pos_cmd
+float32[12] foot_vel_cmd
+float32[12] foot_acc_cmd
+float32[12] foot_acc_numeric
+float32[12] foot_pos
+float32[12] foot_vel
+float32[12] foot_local_pos
+float32[12] foot_local_vel
+float32[12] jpos_cmd
+float32[12] jvel_cmd
+float32[12] jacc_cmd
+float32[12] jpos
+float32[12] jvel
+float32[3] vision_loc

@@ -1,0 +1,14 @@
+package exlcm;
+
+struct upper_body_data_package
+{
+    int32_t    isUsed;
+    int32_t    curStatusVec[30];
+    int32_t    curErrCodeVec[30];
+    float      curJointPosVec[30];
+    float      curSpeedVec[30];
+    float      curCurrentVec[30];
+    float      curTorqueVec[30];
+    float      endEffectorXYZRPY[24];
+    float      estimated_yaw;
+}

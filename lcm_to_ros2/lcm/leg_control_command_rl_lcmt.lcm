@@ -1,0 +1,5 @@
+package exlcm;
+
+struct leg_control_command_rl_lcmt {
+    float q_des[12];
+}

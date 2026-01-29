@@ -1,0 +1,6 @@
+package exlcm;
+
+struct visual_servo_cmd_lcmt
+{
+    int32_t  control_mode;
+}

@@ -1,0 +1,10 @@
+int8                field_int8
+int16               field_int16
+int32               field_int32
+int64               field_int64
+float32             field_float
+float64             field_double
+string              field_string
+bool                field_boolean
+uint8               field_byte
+int32[5]            fixed_array

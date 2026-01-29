@@ -1,0 +1,6 @@
+package exlcm;
+
+struct lcm_response_lcmt {
+  int16_t robot_fsm;
+  int8_t switch_flag;
+}
