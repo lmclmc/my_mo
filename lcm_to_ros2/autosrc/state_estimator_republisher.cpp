@@ -16,7 +16,7 @@
 
 #include "lcm_to_ros2/msg/StateEstimatorLcmt.hpp"
 #include "exlcm/state_estimator_lcmt.hpp"
-#include "republisher_global.hpp"
+
 class LCMToROS2Republisher : public rclcpp::Node
 {
 public:
@@ -24,7 +24,7 @@ public:
         : Node("state_estimator_lcm2ros2_republisher")
     {
         // Initialize LCM
-        lcm_ = std::make_shared<lcm::LCM>(lcm_url); // 使用全局变量
+        lcm_ = std::make_shared<lcm::LCM>();
         if (!lcm_->good()) {
             RCLCPP_ERROR(this->get_logger(), "Failed to initialize LCM");
             return;
