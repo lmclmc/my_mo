@@ -1,0 +1,35 @@
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, SetLaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    # Get package share directory
+    pkg_share = FindPackageShare(package='magic_vis_ros2').find('magic_vis_ros2')
+    
+    # URDF path
+    urdf_path = PathJoinSubstitution([pkg_share, 'urdf', 'p5_humanoid.urdf'])
+    
+    # Set robot description parameter
+    set_robot_description = SetLaunchConfiguration(
+        name='rviz_urdf_robot_description',
+        value=urdf_path
+    )
+    
+    # URDF visualizer node
+    urdf_vis_node = Node(
+        package='magic_vis_ros2',
+        executable='robot_vis',
+        name='p5_urdf_visualizer',
+        output='screen'
+    )
+    
+    # Create launch description
+    ld = LaunchDescription()
+    
+    # Add actions
+    ld.add_action(set_robot_description)
+    ld.add_action(urdf_vis_node)
+    
+    return ld

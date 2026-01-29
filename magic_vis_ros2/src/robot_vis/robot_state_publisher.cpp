@@ -114,7 +114,6 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 {
   leg_state_sub = this->create_subscription<lcm_to_ros2::msg::LegControlDataLcmt>(
     "/robot_lcm/leg_control_data", 5, std::bind(&magic::RobotStatePublisher::legStateCallback, this, std::placeholders::_1));
-  RCLCPP_INFO(this->get_logger(), "leg_control_data publisher created");
 
   waist_state_sub = this->create_subscription<lcm_to_ros2::msg::WaistControlDataLcmt>(
     "/robot_lcm/waist_control_data", 5, std::bind(&magic::RobotStatePublisher::waistStateCallback, this, std::placeholders::_1));
@@ -128,16 +127,51 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
   //   std::bind(&RobotStatePublisher::callbackJointState, this, std::placeholders::_1),
   //   subscriber_options);
 
-  // 声明URDF文件路径参数
-  std::string urdf_file_path = this->declare_parameter("urdf_file_path", "magic_vis_ros2/p5_humanoid.urdf");
-  RCLCPP_INFO(this->get_logger(), "URDF file path: %s", urdf_file_path.c_str());
+
   // get the XML
-  std::string urdf_xml = readTextFileToString(urdf_file_path);
+  std::string urdf_xml = this->declare_parameter("robot_description", std::string(""));
+  urdf_xml = readTextFileToString("/home/lmc/Desktop/mnt/robot_tools/magic_vis_ros2/urdf/p5_humanoid.urdf");
   
   tinyxml2::XMLDocument doc;
   if (doc.Parse(urdf_xml.c_str()) != tinyxml2::XML_SUCCESS) {
     RCLCPP_WARN(this->get_logger(), "Invalid robot_description given, ignoring");
     return;
+  }
+
+  std::cout << "urdf_xml: " << urdf_xml << std::endl;
+  if (urdf_xml.empty()) {
+    // If the robot_description is empty, we fall back to looking at the
+    // command-line arguments.  Since this is deprecated, we print a warning
+    // but continue on.
+    try {
+      if (options.arguments().size() > 1) {
+        RCLCPP_INFO(
+          get_logger(),
+          "No robot_description parameter, but command-line argument available."
+          "  Assuming argument is name of URDF file."
+          "  This backwards compatibility fallback will be removed in the future.");
+        std::ifstream in(options.arguments()[1], std::ios::in | std::ios::binary);
+        if (in) {
+          in.seekg(0, std::ios::end);
+          urdf_xml.resize(in.tellg());
+          in.seekg(0, std::ios::beg);
+          in.read(&urdf_xml[0], urdf_xml.size());
+          in.close();
+
+          this->set_parameter(rclcpp::Parameter("robot_description", urdf_xml));
+        } else {
+          throw std::system_error(
+                  errno,
+                  std::system_category(),
+                  "Failed to open URDF file: " + std::string(options.arguments()[1]));
+        }
+      } else {
+        throw std::runtime_error("robot_description parameter must not be empty");
+      }
+    } catch (const std::runtime_error & err) {
+      RCLCPP_FATAL(get_logger(), "%s", err.what());
+      throw;
+    }
   }
 
   // set publish frequency
@@ -201,6 +235,9 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 
 void RobotStatePublisher::legStateCallback(const lcm_to_ros2::msg::LegControlDataLcmt::SharedPtr state_msg)
 {
+  //RCLCPP_INFO(this->get_logger(), "leg_control_data publisher created");
+  // f2 = true;
+
   for (int i=0; i<12; i++) {
     free_joints_[joint_list_[i]].position = state_msg->q[i];
     free_joints_[joint_list_[i]].velocity = state_msg->qd[i];
@@ -210,10 +247,6 @@ void RobotStatePublisher::legStateCallback(const lcm_to_ros2::msg::LegControlDat
 void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr state_msg) 
 {
   for (int i=0; i<14; i++) {
-    if (i+16 >= joint_list_.size()) {
-      continue;
-    }
-
     free_joints_[joint_list_[i+16]].position = state_msg->joint_cur_pos[i];
     free_joints_[joint_list_[i+16]].velocity = state_msg->joint_cur_vel[i];
   }
@@ -222,10 +255,6 @@ void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDat
 void RobotStatePublisher::waistStateCallback(const lcm_to_ros2::msg::WaistControlDataLcmt::SharedPtr state_msg) 
 {
   for (int i=0; i<2; i++) {
-    if (i+12 >= joint_list_.size()) {
-      continue;
-    }
-
     free_joints_[joint_list_[i+12]].position = state_msg->q[i];
     free_joints_[joint_list_[i+12]].velocity = state_msg->qd[i];
   }
@@ -262,7 +291,7 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
       auto lower = limit->Attribute("lower");
       auto upper = limit->Attribute("upper");
       if (!lower || !upper) {
-        RCLCPP_WARN(this->get_logger(), "%s limits are not valid!", name.c_str());
+        RCLCPP_WARN(this->get_logger(), "%s limits1111 are not valid!", name.c_str());
         continue;
       }
       
@@ -270,11 +299,11 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
         minval = std::stod(lower);
         maxval = std::stod(upper);
       } catch (const std::invalid_argument &) {
-        RCLCPP_WARN(this->get_logger(), "%s limits are not valid!", name.c_str());
+        RCLCPP_WARN(this->get_logger(), "%s limits 2222are not valid!", name.c_str());
         continue;
       }
     }
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    
     // Apply safety tags if needed
     if (use_small_) {
       auto safety_controller = child->FirstChildElement("safety_controller");
@@ -336,12 +365,12 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
         }
       }
     }
-    ///////////////////////////////////////////////////////////////////////////////////////////////
+    
     // Check if this joint is already a dependent joint
     if (dependent_joints_.find(name) != dependent_joints_.end()) {
       continue;
     }
-
+    
     auto joint = initJoint(minval, maxval, zeroval, jtype == "continuous");
     joint.idx = joint_idx;
     RCLCPP_INFO(this->get_logger(), "joint %s idx %d", name.c_str(), joint.idx);

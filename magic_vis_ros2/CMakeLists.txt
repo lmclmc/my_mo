@@ -29,6 +29,79 @@ include_directories(
   ${pinocchio_INCLUDE_DIRS}
 )
 
+# Declare a C++ library
+add_library(${PROJECT_NAME}
+  src/model/model_humanoid.cpp
+  src/robot_vis/urdf_visualizer.cpp
+  src/marker_vis/marker_base.cpp
+  src/marker_vis/marker_humanoid.cpp
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  rclcpp
+  tf2
+  tf2_ros
+  kdl_parser
+  visualization_msgs
+  lcm_to_ros2
+  geometry_msgs
+  ament_index_cpp
+  urdf
+  std_msgs
+  sensor_msgs
+)
+
+target_link_libraries(${PROJECT_NAME}
+  ${pinocchio_LIBRARIES}
+  Goldfarb_Optimizer
+)
+
+# some executable nodes
+add_executable(node_marker_vis src/marker_vis/marker_visualizer.cpp)
+ament_target_dependencies(node_marker_vis
+  rclcpp
+  tf2
+  tf2_ros
+  visualization_msgs
+  lcm_to_ros2
+)
+target_link_libraries(node_marker_vis
+  ${PROJECT_NAME}
+)
+
+add_executable(node_p3b_vis src/robot_vis/urdf_visualizer_p3b.cpp)
+ament_target_dependencies(node_p3b_vis
+  rclcpp
+  tf2
+  tf2_ros
+  lcm_to_ros2
+)
+target_link_libraries(node_p3b_vis
+  ${PROJECT_NAME}
+)
+
+add_executable(node_p4_vis src/robot_vis/urdf_visualizer_p4.cpp)
+ament_target_dependencies(node_p4_vis
+  rclcpp
+  tf2
+  tf2_ros
+  lcm_to_ros2
+)
+target_link_libraries(node_p4_vis
+  ${PROJECT_NAME}
+)
+
+add_executable(node_p5_vis src/robot_vis/urdf_visualizer_p5.cpp)
+ament_target_dependencies(node_p5_vis
+  rclcpp
+  tf2
+  tf2_ros
+  lcm_to_ros2
+)
+
+
+
+
 add_executable(robot_vis src/robot_vis/robot_state_publisher.cpp)
 ament_target_dependencies(robot_vis
   rclcpp
@@ -43,6 +116,7 @@ ament_target_dependencies(robot_vis
 )
 
 target_link_libraries(robot_vis
+  ${PROJECT_NAME}
   tinyxml2::tinyxml2
 )
 
@@ -100,9 +174,62 @@ target_link_libraries(robot_vis
 #   urdf
 # )
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+target_link_libraries(node_p5_vis
+  ${PROJECT_NAME}
+)
+
 # Install libraries and executables
-install(TARGETS
+install(TARGETS ${PROJECT_NAME}
   robot_vis
+  node_marker_vis
+  node_p3b_vis
+  node_p4_vis
+  node_p5_vis
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
@@ -116,16 +243,6 @@ install(DIRECTORY launch/
 # Install URDF and mesh files
 install(DIRECTORY urdf/ meshes/ rviz/
   DESTINATION share/${PROJECT_NAME}
-)
-
-# Install  mesh files
-install(DIRECTORY  meshes/
-  DESTINATION share/meshes
-)
-
-# Install  mesh files
-install(DIRECTORY  meshes/
-  DESTINATION share/ament_index/resource_index/packages/meshes
 )
 
 ament_package()

@@ -34,7 +34,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/pelvis.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/pelvis.STL" />
       </geometry>
       <material
         name="">
@@ -48,7 +48,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/pelvis.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/pelvis.STL" />
       </geometry>
     </collision>
   </link>
@@ -74,7 +74,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_ROLL_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_ROLL_L.STL" />
       </geometry>
       <material
         name="">
@@ -88,7 +88,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_ROLL_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_ROLL_L.STL" />
       </geometry>
     </collision>
   </link>
@@ -132,7 +132,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_YAW_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_YAW_L.STL" />
       </geometry>
       <material
         name="">
@@ -146,7 +146,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_YAW_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_YAW_L.STL" />
       </geometry>
     </collision>
   </link>
@@ -190,7 +190,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_PITCH_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_PITCH_L.STL" />
       </geometry>
       <material
         name="">
@@ -204,7 +204,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_PITCH_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_PITCH_L.STL" />
       </geometry>
     </collision>
   </link>
@@ -248,7 +248,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_KNEE_PITCH_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_KNEE_PITCH_L.STL" />
       </geometry>
       <material
         name="">
@@ -262,7 +262,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_KNEE_PITCH_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_KNEE_PITCH_L.STL" />
       </geometry>
     </collision>
   </link>
@@ -306,7 +306,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_PITCH_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_PITCH_L.STL" />
       </geometry>
       <material
         name="">
@@ -320,7 +320,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_PITCH_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_PITCH_L.STL" />
       </geometry>
     </collision>
   </link>
@@ -364,7 +364,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_ROLL_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_ROLL_L.STL" />
       </geometry>
       <material
         name="">
@@ -378,7 +378,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_ROLL_L.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_ROLL_L.STL" />
       </geometry>
     </collision>
   </link>
@@ -422,7 +422,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_ROLL_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_ROLL_R.STL" />
       </geometry>
       <material
         name="">
@@ -436,7 +436,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_ROLL_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_ROLL_R.STL" />
       </geometry>
     </collision>
   </link>
@@ -480,7 +480,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_YAW_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_YAW_R.STL" />
       </geometry>
       <material
         name="">
@@ -494,7 +494,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_YAW_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_YAW_R.STL" />
       </geometry>
     </collision>
   </link>
@@ -538,7 +538,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_PITCH_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_PITCH_R.STL" />
       </geometry>
       <material
         name="">
@@ -552,7 +552,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_HIP_PITCH_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_HIP_PITCH_R.STL" />
       </geometry>
     </collision>
   </link>
@@ -596,7 +596,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_KNEE_PITCH_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_KNEE_PITCH_R.STL" />
       </geometry>
       <material
         name="">
@@ -610,7 +610,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_KNEE_PITCH_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_KNEE_PITCH_R.STL" />
       </geometry>
     </collision>
   </link>
@@ -654,7 +654,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_PITCH_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_PITCH_R.STL" />
       </geometry>
       <material
         name="">
@@ -668,7 +668,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_PITCH_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_PITCH_R.STL" />
       </geometry>
     </collision>
   </link>
@@ -712,7 +712,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_ROLL_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_ROLL_R.STL" />
       </geometry>
       <material
         name="">
@@ -726,7 +726,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/LINK_ANKLE_ROLL_R.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/LINK_ANKLE_ROLL_R.STL" />
       </geometry>
     </collision>
   </link>
@@ -770,7 +770,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_wr.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_wr.STL" />
       </geometry>
       <material
         name="">
@@ -784,7 +784,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_wr.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_wr.STL" />
       </geometry>
     </collision>
   </link>
@@ -828,7 +828,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_wy.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_wy.STL" />
       </geometry>
       <material
         name="">
@@ -842,7 +842,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_wy.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_wy.STL" />
       </geometry>
     </collision>
   </link>
@@ -886,7 +886,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_hy.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_hy.STL" />
       </geometry>
       <material
         name="">
@@ -900,7 +900,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_hy.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_hy.STL" />
       </geometry>
     </collision>
   </link>
@@ -944,7 +944,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_hp.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_hp.STL" />
       </geometry>
       <material
         name="">
@@ -958,7 +958,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_hp.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_hp.STL" />
       </geometry>
     </collision>
   </link>
@@ -1002,7 +1002,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la1.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la1.STL" />
       </geometry>
       <material
         name="">
@@ -1016,7 +1016,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la1.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la1.STL" />
       </geometry>
     </collision>
   </link>
@@ -1060,7 +1060,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la2.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la2.STL" />
       </geometry>
       <material
         name="">
@@ -1074,7 +1074,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la2.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la2.STL" />
       </geometry>
     </collision>
   </link>
@@ -1118,7 +1118,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la3.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la3.STL" />
       </geometry>
       <material
         name="">
@@ -1132,7 +1132,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la3.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la3.STL" />
       </geometry>
     </collision>
   </link>
@@ -1176,7 +1176,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la4.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la4.STL" />
       </geometry>
       <material
         name="">
@@ -1190,7 +1190,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la4.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la4.STL" />
       </geometry>
     </collision>
   </link>
@@ -1234,7 +1234,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la5.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la5.STL" />
       </geometry>
       <material
         name="">
@@ -1248,7 +1248,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la5.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la5.STL" />
       </geometry>
     </collision>
   </link>
@@ -1292,7 +1292,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la6.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la6.STL" />
       </geometry>
       <material
         name="">
@@ -1306,7 +1306,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la6.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la6.STL" />
       </geometry>
     </collision>
   </link>
@@ -1350,7 +1350,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la7.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la7.STL" />
       </geometry>
       <material
         name="">
@@ -1364,7 +1364,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_la7.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_la7.STL" />
       </geometry>
     </collision>
   </link>
@@ -1408,7 +1408,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra1.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra1.STL" />
       </geometry>
       <material
         name="">
@@ -1422,7 +1422,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra1.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra1.STL" />
       </geometry>
     </collision>
   </link>
@@ -1466,7 +1466,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra2.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra2.STL" />
       </geometry>
       <material
         name="">
@@ -1480,7 +1480,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra2.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra2.STL" />
       </geometry>
     </collision>
   </link>
@@ -1524,7 +1524,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra3.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra3.STL" />
       </geometry>
       <material
         name="">
@@ -1538,7 +1538,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra3.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra3.STL" />
       </geometry>
     </collision>
   </link>
@@ -1582,7 +1582,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra4.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra4.STL" />
       </geometry>
       <material
         name="">
@@ -1596,7 +1596,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra4.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra4.STL" />
       </geometry>
     </collision>
   </link>
@@ -1640,7 +1640,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra5.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra5.STL" />
       </geometry>
       <material
         name="">
@@ -1654,7 +1654,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra5.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra5.STL" />
       </geometry>
     </collision>
   </link>
@@ -1698,7 +1698,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra6.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra6.STL" />
       </geometry>
       <material
         name="">
@@ -1712,7 +1712,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra6.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra6.STL" />
       </geometry>
     </collision>
   </link>
@@ -1756,7 +1756,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra7.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra7.STL" />
       </geometry>
       <material
         name="">
@@ -1770,7 +1770,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://meshes/p5/link_ra7.STL" />
+          filename="/home/lmc/Desktop/mnt/robot_tools/src/magic_vis_ros2/meshes/p5/link_ra7.STL" />
       </geometry>
     </collision>
   </link>
