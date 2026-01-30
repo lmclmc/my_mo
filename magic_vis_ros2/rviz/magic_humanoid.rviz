@@ -1,48 +1,38 @@
 Panels:
-  - Class: rviz/Displays
+  - Class: rviz_common/Displays
     Help Height: 78
     Name: Displays
     Property Tree Widget:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Grid1
         - /RobotModel1
-        - /MarkerArray1
-        - /MarkerArray1/Namespaces1
-        - /MarkerArray2
-        - /MarkerArray2/Namespaces1
-        - /TF1/Frames1
       Splitter Ratio: 0.5
-    Tree Height: 1079
-  - Class: rviz/Selection
+    Tree Height: 542
+  - Class: rviz_common/Selection
     Name: Selection
-  - Class: rviz/Tool Properties
+  - Class: rviz_common/Tool Properties
     Expanded:
-      - /2D Pose Estimate1
-      - /2D Nav Goal1
+      - /2D Goal Pose1
       - /Publish Point1
     Name: Tool Properties
     Splitter Ratio: 0.5886790156364441
-  - Class: rviz/Views
+  - Class: rviz_common/Views
     Expanded:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
-  - Class: rviz/Time
+  - Class: rviz_common/Time
+    Experimental: false
     Name: Time
     SyncMode: 0
     SyncSource: ""
-Preferences:
-  PromptSaveOnExit: true
-Toolbars:
-  toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
-      Cell Size: 0.5
-      Class: rviz/Grid
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
       Enabled: true
       Line Style:
@@ -58,12 +48,143 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 0.30000001192092896
-      Class: rviz/RobotModel
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        LINK_ANKLE_PITCH_L:
+          Value: true
+        LINK_ANKLE_PITCH_R:
+          Value: true
+        LINK_ANKLE_ROLL_L:
+          Value: true
+        LINK_ANKLE_ROLL_R:
+          Value: true
+        LINK_HIP_PITCH_L:
+          Value: true
+        LINK_HIP_PITCH_R:
+          Value: true
+        LINK_HIP_ROLL_L:
+          Value: true
+        LINK_HIP_ROLL_R:
+          Value: true
+        LINK_HIP_YAW_L:
+          Value: true
+        LINK_HIP_YAW_R:
+          Value: true
+        LINK_KNEE_PITCH_L:
+          Value: true
+        LINK_KNEE_PITCH_R:
+          Value: true
+        base_link:
+          Value: true
+        link_hp:
+          Value: true
+        link_hy:
+          Value: true
+        link_la1:
+          Value: true
+        link_la2:
+          Value: true
+        link_la3:
+          Value: true
+        link_la4:
+          Value: true
+        link_la5:
+          Value: true
+        link_la6:
+          Value: true
+        link_la7:
+          Value: true
+        link_ra1:
+          Value: true
+        link_ra2:
+          Value: true
+        link_ra3:
+          Value: true
+        link_ra4:
+          Value: true
+        link_ra5:
+          Value: true
+        link_ra6:
+          Value: true
+        link_ra7:
+          Value: true
+        link_wr:
+          Value: true
+        link_wy:
+          Value: true
+        p_obv/LINK_HIP_PITCH_L:
+          Value: true
+        p_obv/pelvis:
+          Value: true
+        pelvis:
+          Value: true
+        world:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+      Tree:
+        base_link:
+          pelvis:
+            LINK_HIP_ROLL_L:
+              LINK_HIP_YAW_L:
+                LINK_HIP_PITCH_L:
+                  LINK_KNEE_PITCH_L:
+                    LINK_ANKLE_PITCH_L:
+                      LINK_ANKLE_ROLL_L:
+                        {}
+            LINK_HIP_ROLL_R:
+              LINK_HIP_YAW_R:
+                LINK_HIP_PITCH_R:
+                  LINK_KNEE_PITCH_R:
+                    LINK_ANKLE_PITCH_R:
+                      LINK_ANKLE_ROLL_R:
+                        {}
+            link_wr:
+              link_wy:
+                link_hy:
+                  link_hp:
+                    {}
+                link_la1:
+                  link_la2:
+                    link_la3:
+                      link_la4:
+                        link_la5:
+                          link_la6:
+                            link_la7:
+                              {}
+                link_ra1:
+                  link_ra2:
+                    link_ra3:
+                      link_ra4:
+                        link_ra5:
+                          link_ra6:
+                            link_ra7:
+                              {}
+      Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
       Enabled: true
       Links:
-        All Links Enabled: true
+        All Links Enabled:
+          {}
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
@@ -71,363 +192,212 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_ANKLE_PITCH_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_ANKLE_ROLL_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_ANKLE_ROLL_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_HIP_PITCH_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_HIP_PITCH_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_HIP_ROLL_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_HIP_ROLL_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_HIP_YAW_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_HIP_YAW_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_KNEE_PITCH_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         LINK_KNEE_PITCH_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         link_hp:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_hy:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_la1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_la2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_la3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_la4:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_la5:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_la6:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_la7:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_ra1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_ra2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_ra3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_ra4:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_ra5:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_ra6:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_ra7:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_wr:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         link_wy:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         pelvis:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
       Name: RobotModel
-      Robot Description: rviz_urdf_robot_description
-      TF Prefix: p_obv
+      TF Prefix: ""
       Update Interval: 0
       Value: true
       Visual Enabled: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /magic/rviz_markers_base_visualizer
-      Name: MarkerArray
-      Namespaces:
-        base_pose: false
-        com: true
-        com_gravity_projection: true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /magic/rviz_markers_huamnoid_visualizer
-      Name: MarkerArray
-      Namespaces:
-        footstep_force_0: true
-        footstep_force_1: true
-        footstep_polygon_0: true
-        footstep_polygon_1: true
-        friction_cone: true
-        middle_support_polygon: true
-        mpc_base: true
-        mpc_footl: true
-        mpc_footr: true
-        support_polygon: true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/TF
-      Enabled: true
-      Filter (blacklist): ""
-      Filter (whitelist): ""
-      Frame Timeout: 15
-      Frames:
-        All Enabled: false
-        p_obv/LINK_ANKLE_PITCH_L:
-          Value: false
-        p_obv/LINK_ANKLE_PITCH_R:
-          Value: false
-        p_obv/LINK_ANKLE_ROLL_L:
-          Value: false
-        p_obv/LINK_ANKLE_ROLL_R:
-          Value: false
-        p_obv/LINK_HIP_PITCH_L:
-          Value: false
-        p_obv/LINK_HIP_PITCH_R:
-          Value: false
-        p_obv/LINK_HIP_ROLL_L:
-          Value: false
-        p_obv/LINK_HIP_ROLL_R:
-          Value: false
-        p_obv/LINK_HIP_YAW_L:
-          Value: false
-        p_obv/LINK_HIP_YAW_R:
-          Value: false
-        p_obv/LINK_KNEE_PITCH_L:
-          Value: false
-        p_obv/LINK_KNEE_PITCH_R:
-          Value: false
-        p_obv/link_hp:
-          Value: false
-        p_obv/link_hy:
-          Value: false
-        p_obv/link_la1:
-          Value: false
-        p_obv/link_la2:
-          Value: false
-        p_obv/link_la3:
-          Value: false
-        p_obv/link_la4:
-          Value: false
-        p_obv/link_la5:
-          Value: false
-        p_obv/link_la6:
-          Value: false
-        p_obv/link_la7:
-          Value: false
-        p_obv/link_ra1:
-          Value: false
-        p_obv/link_ra2:
-          Value: false
-        p_obv/link_ra3:
-          Value: false
-        p_obv/link_ra4:
-          Value: false
-        p_obv/link_ra5:
-          Value: false
-        p_obv/link_ra6:
-          Value: false
-        p_obv/link_ra7:
-          Value: false
-        p_obv/link_wr:
-          Value: false
-        p_obv/link_wy:
-          Value: false
-        p_obv/pelvis:
-          Value: true
-        world:
-          Value: false
-      Marker Alpha: 1
-      Marker Scale: 0.3499999940395355
-      Name: TF
-      Show Arrows: false
-      Show Axes: true
-      Show Names: false
-      Tree:
-        world:
-          p_obv/pelvis:
-            p_obv/LINK_HIP_ROLL_L:
-              p_obv/LINK_HIP_YAW_L:
-                p_obv/LINK_HIP_PITCH_L:
-                  p_obv/LINK_KNEE_PITCH_L:
-                    p_obv/LINK_ANKLE_PITCH_L:
-                      p_obv/LINK_ANKLE_ROLL_L:
-                        {}
-            p_obv/LINK_HIP_ROLL_R:
-              p_obv/LINK_HIP_YAW_R:
-                p_obv/LINK_HIP_PITCH_R:
-                  p_obv/LINK_KNEE_PITCH_R:
-                    p_obv/LINK_ANKLE_PITCH_R:
-                      p_obv/LINK_ANKLE_ROLL_R:
-                        {}
-            p_obv/link_wr:
-              p_obv/link_wy:
-                p_obv/link_hy:
-                  p_obv/link_hp:
-                    {}
-                p_obv/link_la1:
-                  p_obv/link_la2:
-                    p_obv/link_la3:
-                      p_obv/link_la4:
-                        p_obv/link_la5:
-                          p_obv/link_la6:
-                            p_obv/link_la7:
-                              {}
-                p_obv/link_ra1:
-                  p_obv/link_ra2:
-                    p_obv/link_ra3:
-                      p_obv/link_ra4:
-                        p_obv/link_ra5:
-                          p_obv/link_ra6:
-                            p_obv/link_ra7:
-                              {}
-      Update Interval: 0
-      Value: true
   Enabled: true
   Global Options:
-    Background Color: 238; 238; 236
-    Default Light: true
-    Fixed Frame: world
+    Background Color: 48; 48; 48
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:
-    - Class: rviz/Interact
+    - Class: rviz_default_plugins/Interact
       Hide Inactive Objects: true
-    - Class: rviz/MoveCamera
-    - Class: rviz/Select
-    - Class: rviz/FocusCamera
-    - Class: rviz/Measure
-    - Class: rviz/SetInitialPose
-      Theta std deviation: 0.2617993950843811
-      Topic: /initialpose
-      X std deviation: 0.5
-      Y std deviation: 0.5
-    - Class: rviz/SetGoal
-      Topic: /move_base_simple/goal
-    - Class: rviz/PublishPoint
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+    - Class: rviz_default_plugins/SetInitialPose
+      Covariance x: 0.25
+      Covariance y: 0.25
+      Covariance yaw: 0.06853891909122467
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
+    - Class: rviz_default_plugins/PublishPoint
       Single click: true
-      Topic: /clicked_point
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /clicked_point
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
   Value: true
   Views:
     Current:
-      Class: rviz/Orbit
-      Distance: 4.107636451721191
+      Class: rviz_default_plugins/Orbit
+      Distance: 10
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.20703010261058807
-        Y: 0.4794417917728424
-        Z: 0.8744082450866699
+        X: 0
+        Y: 0
+        Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.06479835510253906
+      Pitch: 0.785398006439209
       Target Frame: <Fixed Frame>
-      Yaw: 5.906822681427002
+      Value: Orbit (rviz)
+      Yaw: 0.785398006439209
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1376
+  Height: 846
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000252000004c2fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000004c2000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000004c2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000004c2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000a000000003efc0100000002fb0000000800540069006d0065010000000000000a00000003bc00fffffffb0000000800540069006d0065010000000000000450000000000000000000000693000004c200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000156000002acfc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005d00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003f000002ac000000cc00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002acfc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003f000002ac000000a900fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004b00000003efc0100000002fb0000000800540069006d00650100000000000004b00000026f00fffffffb0000000800540069006d006501000000000000045000000000000000000000023f000002ac00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -436,6 +406,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 2560
-  X: 0
-  Y: 27
+  Width: 1200
+  X: 66
+  Y: 60
