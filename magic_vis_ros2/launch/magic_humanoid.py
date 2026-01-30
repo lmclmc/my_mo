@@ -26,16 +26,9 @@ def generate_launch_description():
     )
     print(pkg_share)
     print(str(LaunchConfiguration('robot')))
-    # Marker visualizer node
-    marker_vis_node = Node(
-        package='magic_vis_ros2',
-        executable='node_marker_vis',
-        name='marker_visualizer',
-        output='screen'
-    )
     
     # RViz node
-    rviz_config_path = PathJoinSubstitution([pkg_share, 'rviz', 'magic_humanoid.rviz'])
+    rviz_config_path = PathJoinSubstitution([pkg_share, '', 'magic_humanoid.rviz'])
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -52,7 +45,6 @@ def generate_launch_description():
     
     # Add actions
     ld.add_action(robot_launch)
-    ld.add_action(marker_vis_node)
     ld.add_action(rviz_node)
     
     return ld

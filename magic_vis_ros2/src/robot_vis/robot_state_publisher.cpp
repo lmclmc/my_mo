@@ -138,7 +138,6 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
     return;
   }
 
-  std::cout << "urdf_xml: " << urdf_xml << std::endl;
   if (urdf_xml.empty()) {
     // If the robot_description is empty, we fall back to looking at the
     // command-line arguments.  Since this is deprecated, we print a warning
@@ -291,7 +290,7 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
       auto lower = limit->Attribute("lower");
       auto upper = limit->Attribute("upper");
       if (!lower || !upper) {
-        RCLCPP_WARN(this->get_logger(), "%s limits1111 are not valid!", name.c_str());
+        RCLCPP_WARN(this->get_logger(), "%s limits are not valid!", name.c_str());
         continue;
       }
       
@@ -299,7 +298,7 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
         minval = std::stod(lower);
         maxval = std::stod(upper);
       } catch (const std::invalid_argument &) {
-        RCLCPP_WARN(this->get_logger(), "%s limits 2222are not valid!", name.c_str());
+        RCLCPP_WARN(this->get_logger(), "%s limits are not valid!", name.c_str());
         continue;
       }
     }

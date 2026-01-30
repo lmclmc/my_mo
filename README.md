@@ -56,3 +56,26 @@
 # 说明
   `lcm_to_ros` 原 repo [文档](./lcm_to_ros/README.md)
   `magic_vis` [文档](./magic_vis/README.md)
+
+
+
+
+## ros2 使用示例
+### 完整系统启动
+
+1. 构建
+```bash
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-select lcm_to_ros2 magic_vis_ros2
+```
+2. 启动LCM到ROS2的消息转换：
+
+```bash
+ros2 launch lcm_to_ros2 humanoid_republishers.py
+```
+
+3. 启动机器人可视化系统：
+
+```bash
+ros2 launch magic_vis_ros2 magic_humanoid.py
+```
