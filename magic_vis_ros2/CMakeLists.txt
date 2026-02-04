@@ -118,4 +118,14 @@ install(DIRECTORY urdf/ meshes/ rviz/
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install  mesh files
+install(DIRECTORY  meshes/
+  DESTINATION share/meshes
+)
+
+# Install  mesh files
+install(DIRECTORY  meshes/
+  DESTINATION share/ament_index/resource_index/packages/meshes
+)
+
 ament_package()

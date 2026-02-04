@@ -1,6 +1,6 @@
 catkin_ws/*
 .vscode
-
+src/*
 lcm_to_ros/exlcm/*
 lcm_to_ros/msg/*
 lcm_to_ros/launch/*.launch
