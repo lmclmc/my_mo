@@ -130,7 +130,7 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 
   // get the XML
   std::string urdf_xml = this->declare_parameter("robot_description", std::string(""));
-  urdf_xml = readTextFileToString("/home/lmc/Desktop/mnt/robot_tools/magic_vis_ros2/urdf/p5_humanoid.urdf");
+  urdf_xml = readTextFileToString("magic_vis_ros2/urdf/p5_humanoid.urdf");
   
   tinyxml2::XMLDocument doc;
   if (doc.Parse(urdf_xml.c_str()) != tinyxml2::XML_SUCCESS) {
