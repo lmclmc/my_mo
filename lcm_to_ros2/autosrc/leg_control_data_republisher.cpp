@@ -15,6 +15,7 @@
 #include <lcm/lcm-cpp.hpp>
 
 #include "lcm_to_ros2/msg/LegControlDataLcmt.hpp"
+#include "exlcm/leg_control_data_lcmt_bigdog.hpp"
 #include "exlcm/leg_control_data_lcmt.hpp"
 
 class LCMToROS2Republisher : public rclcpp::Node
@@ -36,10 +37,9 @@ public:
             10);
         
         RCLCPP_INFO(this->get_logger(), "leg_control_data publisher created");
-        
-        // Subscribe to LCM channel
+
         lcm_->subscribe("leg_control_data", 
-            &LCMToROS2Republisher::lcmCallback, 
+            &LCMToROS2Republisher::handleMessage, 
             this);
     }
 
@@ -55,11 +55,46 @@ public:
     }
 
 private:
-    void lcmCallback(const lcm::ReceiveBuffer* rbuf,
-            const std::string& channel_name,
-            const exlcm::leg_control_data_lcmt* msg)
-    {
-        RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
+    void handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& chan) {
+        if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
+
+        // 1. 提取消息头部的 64 位指纹 (Big-Endian)
+        int64_t msg_hash;
+        memcpy(&msg_hash, recvbuf->data, sizeof(int64_t));
+        
+        // 转换字节序（LCM 传输使用的是大端序）
+        msg_hash = be64toh(msg_hash);
+
+        // 2. 与已知类型的 Hash 值进行比对
+        if (msg_hash == (int64_t)exlcm::leg_control_data_lcmt::getHash()) {
+            exlcm::leg_control_data_lcmt leg_msg;
+            if (leg_msg.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
+                processLegData(&leg_msg);
+            }
+        } 
+        else if (msg_hash == (int64_t)exlcm::leg_control_data_lcmt_bigdog::getHash()) {
+            exlcm::leg_control_data_lcmt_bigdog bigdog_msg;
+            if (bigdog_msg.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
+                processBigDogData(&bigdog_msg);
+            }
+        } 
+    }
+    
+    void processLegData(const exlcm::leg_control_data_lcmt* msg) {
+       // RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
+        
+        // Use reinterpret_cast to convert LCM message to ROS2 message
+        // Note: This assumes LCM and ROS2 message layouts are identical
+        const lcm_to_ros2::msg::LegControlDataLcmt* ros2_msg = 
+            reinterpret_cast<const lcm_to_ros2::msg::LegControlDataLcmt*>(msg);
+        
+        // Create a shared pointer copy for publishing
+        auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>(*ros2_msg);
+        ros2_pub_->publish(*ros2_msg_shared);
+    }
+
+    void processBigDogData(const exlcm::leg_control_data_lcmt_bigdog* msg) {
+     //   RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
         
         // Use reinterpret_cast to convert LCM message to ROS2 message
         // Note: This assumes LCM and ROS2 message layouts are identical

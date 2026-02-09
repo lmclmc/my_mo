@@ -16,6 +16,7 @@
 
 #include "lcm_to_ros2/msg/LegControlCommandLcmt.hpp"
 #include "exlcm/leg_control_command_lcmt.hpp"
+#include "exlcm/leg_control_data_lcmt_bigdog.hpp"
 
 class LCMToROS2Republisher : public rclcpp::Node
 {
