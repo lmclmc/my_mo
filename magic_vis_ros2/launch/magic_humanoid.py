@@ -1,34 +1,34 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.substitutions import FindPackageShare
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
+from launch.substitutions import PathJoinSubstitution
+import os
+
 
 def generate_launch_description():
-    # Declare arguments
-    declare_robot_arg = DeclareLaunchArgument(
-        'robot',
-        default_value='p5',
-        description='Robot model name'
-    )
-    
     # Get package share directory
     pkg_share = FindPackageShare(package='magic_vis_ros2').find('magic_vis_ros2')
-
-    # Include robot specific launch file
-    robot_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PythonExpression([
-                '"', pkg_share, '/launch/', LaunchConfiguration('robot'), '.launch"'
-            ])
-        )
+    
+    # Get RViz config path
+    rviz_config_path = PathJoinSubstitution([pkg_share, 'magic_humanoid.rviz'])
+    
+    # Get URDF path as direct string
+    urdf_file_path = os.path.join(pkg_share, '', 'p5_humanoid.urdf')
+    
+    # Robot visualizer node
+    robot_vis_node = Node(
+        package='magic_vis_ros2',
+        executable='robot_vis',
+        name='robot_urdf_visualizer',
+        output='screen',
+        parameters=[{
+            'urdf_file_path': urdf_file_path,
+            'urdf_binary_mode': True,
+            'urdf_throw_on_error': True
+        }]
     )
-    print(pkg_share)
-    print(str(LaunchConfiguration('robot')))
     
     # RViz node
-    rviz_config_path = PathJoinSubstitution([pkg_share, '', 'magic_humanoid.rviz'])
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -40,11 +40,8 @@ def generate_launch_description():
     # Create launch description
     ld = LaunchDescription()
     
-    # Add declared arguments
-    ld.add_action(declare_robot_arg)
-    
-    # Add actions
-    ld.add_action(robot_launch)
+    # Add nodes
+    ld.add_action(robot_vis_node)
     ld.add_action(rviz_node)
     
     return ld
