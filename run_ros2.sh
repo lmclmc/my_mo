@@ -17,17 +17,19 @@ read -p "请输入选择 (1 或 2): " choice
 case $choice in
     1)
         echo "正在启动 magic_humanoid.py..."
-        ros2 launch magic_vis_ros2 magic_humanoid.py &
+        nohup ros2 launch magic_vis_ros2 magic_humanoid.py &
         ;;
     2)
         echo "正在启动 big_dog.py..."
-        ros2 launch magic_vis_ros2 big_dog.py &
+        nohup ros2 launch magic_vis_ros2 big_dog.py &
         ;;
     *)
         echo "无效的选择，默认启动 magic_humanoid.py..."
-        ros2 launch magic_vis_ros2 magic_humanoid.py &
+        nohup ros2 launch magic_vis_ros2 magic_humanoid.py &
         ;;
 esac
 
 # 启动 republishers
-ros2 launch lcm_to_ros2 humanoid_republishers.py
+nohup ros2 launch lcm_to_ros2 humanoid_republishers.py &
+popd
+nohup python motion_controller/motion_window.py &

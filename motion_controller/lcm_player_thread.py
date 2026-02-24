@@ -34,8 +34,7 @@ class LCMPlayerThread(threading.Thread):
         """
         try:
             self.log = lcm.EventLog(self.file_path, "r")
-            lcm_url = f"udpm://239.255.76.67:56666"
-            self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
+            self.lc = lcm.LCM() # 创建 LCM 实例用于发送数据
         except IOError:
             print(f"无法打开文件: {self.file_path}")
             return
@@ -72,7 +71,7 @@ class LCMPlayerThread(threading.Thread):
 
                 # 将数据重新发布到网络
                 # event.channel 是原通道名，event.data 是原始 bytes 字节流
-                #print(event.channel, event.timestamp)
+                print(event.channel, event.timestamp)
                 # if event.channel == "leg_control_command":
                 #     print(event.data)
                 # if event.channel == "leg_control_data":
