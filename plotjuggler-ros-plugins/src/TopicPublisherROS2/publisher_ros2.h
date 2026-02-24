@@ -18,15 +18,6 @@
 #include "ros_parsers/ros2_parser.h"
 #include "generic_publisher.h"
 
-#include <lcm_to_ros2/msg/state_estimator_lcmt.hpp>
-#include <lcm_to_ros2/msg/leg_control_data_lcmt.hpp>
-#include <lcm_to_ros2/msg/arm_control_data_lcmt.hpp>
-#include <lcm_to_ros2/msg/waist_control_data_lcmt.hpp>
-#include <lcm_to_ros2/msg/head_control_data_lcmt.hpp>
-#include <lcm_to_ros2/msg/lcm_response_lcmt.hpp>
-#include <lcm_to_ros2/msg/wbc_test_data_t.hpp>
-#include <lcm_to_ros2/msg/trajectory_joint_lcmt.hpp>
-
 using MessageRefPtr = std::shared_ptr<rosbag2_storage::SerializedBagMessage>;
 
 class TopicPublisherROS2 : public PJ::StatePublisher
@@ -89,15 +80,6 @@ private:
   void broadcastTF(double current_time);
 
   void updatePublishers();
-
-private:
-  rclcpp::Publisher<lcm_to_ros2::msg::LegControlDataLcmt>::SharedPtr leg_data_publisher_;
-  rclcpp::Publisher<lcm_to_ros2::msg::WaistControlDataLcmt>::SharedPtr waist_data_publisher_;
-  rclcpp::Publisher<lcm_to_ros2::msg::HeadControlDataLcmt>::SharedPtr head_data_publisher_;
-  rclcpp::Publisher<lcm_to_ros2::msg::ArmControlDataLcmt>::SharedPtr arm_data_publisher_;
-  
-  void publish_data(double current_time);
-  bool checkRos2ModeFile(bool enable);
 };
 
 #endif  // STATE_PUBLISHER_ROS2TOPIC_H

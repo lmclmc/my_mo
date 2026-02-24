@@ -2,8 +2,6 @@ add_definitions(${QT_DEFINITIONS})
 add_definitions(-DQT_PLUGIN)
 add_definitions(-DQT_SHARED)
 
-find_package(lcm_to_ros2 REQUIRED)
-
 QT5_WRAP_UI ( COMMON_UI_SRC
     qnodedialog.ui
     dialog_select_ros_topics.ui
@@ -45,10 +43,6 @@ target_link_libraries( DataStreamROS2  commonROS)
 
 add_library( TopicPublisherROS2 SHARED TopicPublisherROS2/publisher_ros2.cpp)
 target_link_libraries( TopicPublisherROS2 commonROS)
-
-ament_target_dependencies(TopicPublisherROS2
-  lcm_to_ros2
-)
 
 message("AMENT_PREFIX_PATH = ${AMENT_PREFIX_PATH}")
 message("ROS_DISTRO (env) = $ENV{ROS_DISTRO}")

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-    <name>plotjuggler-ros-plugins</name>
+    <name>plotjuggler_ros</name>
     <version>2.3.1</version>
     <description>PlotJuggler plugin for ROS</description>
 

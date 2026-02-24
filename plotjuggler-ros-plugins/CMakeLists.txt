@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-PROJECT(plotjuggler-ros-plugins)
+PROJECT(plotjuggler_ros)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
