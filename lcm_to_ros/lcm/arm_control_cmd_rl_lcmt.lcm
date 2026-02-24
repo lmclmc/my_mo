@@ -1,6 +1,0 @@
-package exlcm;
-
-struct arm_control_cmd_rl_lcmt
-{
-    float q_des[14];
-}
