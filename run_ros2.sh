@@ -33,4 +33,4 @@ esac
 nohup ros2 launch lcm_to_ros2 humanoid_republishers.py &
 popd
 nohup ros2 run plotjuggler plotjuggler &
-#python motion_controller/motion_window.py
+nohup python motion_controller/motion_window.py &

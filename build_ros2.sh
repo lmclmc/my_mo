@@ -10,6 +10,7 @@ ln -svf $(pwd)/plotjuggler-ros-plugins $(pwd)/src/plotjuggler-ros-plugins
 pushd src
 colcon build --packages-select lcm_to_ros2
 colcon build --packages-select magic_vis_ros2
+source install/setup.bash
 colcon build --packages-select plotjuggler-ros-plugins
 popd
 

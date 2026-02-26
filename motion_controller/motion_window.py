@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 import sys
-
+import os
 from lcm_player_thread import LCMPlayerThread
 
 class MainWindow(QMainWindow):
@@ -20,6 +20,7 @@ class MainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
+        self.ros2_bag_process = None  # 用于存储 ros2 bag 录制进程
         self.init_ui()
     
     def init_ui(self):
@@ -44,10 +45,10 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         
         # 创建打开日志按钮
-        open_log_button = QPushButton('打开日志', self)
-        open_log_button.setFixedSize(200, 50)
-        open_log_button.clicked.connect(self.on_open_log)
-        layout.addWidget(open_log_button, 0, Qt.AlignCenter)
+        self.open_log_button = QPushButton('播放lcm日志', self)
+        self.open_log_button.setFixedSize(200, 50)
+        self.open_log_button.clicked.connect(self.on_play_lcm_log)
+        layout.addWidget(self.open_log_button, 0, Qt.AlignCenter)
         
         # 创建在线调试按钮
         online_debug_button = QPushButton('在线调试', self)
@@ -55,42 +56,86 @@ class MainWindow(QMainWindow):
         online_debug_button.clicked.connect(self.on_online_debug)
         layout.addWidget(online_debug_button, 0, Qt.AlignCenter)
         
+        # 创建 ROS2 bag 录制按钮
+        self.ros2_bag_button = QPushButton('开始录制ROS2 bag', self)
+        self.ros2_bag_button.setFixedSize(200, 50)
+        self.ros2_bag_button.clicked.connect(self.on_ros2_bag_record)
+        layout.addWidget(self.ros2_bag_button, 0, Qt.AlignCenter)
+        
         # 设置布局间距
         layout.setSpacing(30)
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
     
-    def on_open_log(self):
+    def on_ros2_bag_record(self):
+        """ROS2 bag 录制槽函数"""
+        if self.ros2_bag_process is None:
+            # 开始录制
+            # 弹出文件保存对话框
+            file_name, _ = QFileDialog.getSaveFileName(
+                self, '保存ROS2 bag文件', '', 'ROS2 bag文件 (*)'
+            )
+            if file_name:
+                try:
+                    # 确保文件路径存在
+                    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+                    
+                    # 启动 ros2 bag 录制进程
+                    self.ros2_bag_process = subprocess.Popen([
+                        'ros2', 'bag', 'record', '-o', file_name, '-a'
+                    ])
+                    self.statusBar().showMessage(f'已开始录制ROS2 bag: {file_name}')
+                    QMessageBox.information(self, '信息', f'已开始录制ROS2 bag: {file_name}')
+                    # 更改按钮文本
+                    self.ros2_bag_button.setText('停止录制ROS2 bag')
+                except Exception as e:
+                    QMessageBox.critical(self, '错误', f'启动ROS2 bag录制失败: {str(e)}')
+                    self.statusBar().showMessage('启动ROS2 bag录制失败')
+        else:
+            # 停止录制
+            try:
+                self.ros2_bag_process.terminate()
+                self.ros2_bag_process.wait(timeout=5)
+                self.statusBar().showMessage('已停止ROS2 bag录制')
+                QMessageBox.information(self, '信息', '已停止ROS2 bag录制')
+                # 重置进程变量和按钮文本
+                self.ros2_bag_process = None
+                self.ros2_bag_button.setText('开始录制ROS2 bag')
+            except Exception as e:
+                QMessageBox.critical(self, '错误', f'停止ROS2 bag录制失败: {str(e)}')
+                self.statusBar().showMessage('停止ROS2 bag录制失败')
+                
+    def on_play_lcm_log(self):
         """打开日志槽函数"""
-        # 弹出文件选择对话框
-        file_name, _ = QFileDialog.getOpenFileName(
-            self, '打开日志文件', '', '所有文件 (*)'
-        )
-        if file_name:
-            self.statusBar().showMessage(f'已选择日志文件: {file_name}')
-            QMessageBox.information(self, '信息', f'已选择日志文件: {file_name}')
-            
-            # 停止之前的线程（如果存在）
-            if self.lcm_player_thread and self.lcm_player_thread.is_alive():
+        # 检查是否正在播放
+        if self.lcm_player_thread and self.lcm_player_thread.is_alive():
+            # 停止播放
+            try:
                 self.lcm_player_thread.stop()
                 self.lcm_player_thread.join()
-            
-            # 启动LCM播放器线程
-            try:
-                self.lcm_player_thread = LCMPlayerThread(file_name)
-                self.lcm_player_thread.start()
-                self.statusBar().showMessage('已启动 LCM 日志回放')
             except Exception as e:
-                QMessageBox.critical(self, '错误', f'启动 LCM 日志回放失败: {str(e)}')
-                self.statusBar().showMessage('启动 LCM 日志回放失败')
-            
-        # 运行 ros2 run plotjuggler plotjuggler
-        try:
-            subprocess.Popen(['ros2', 'run', 'plotjuggler', 'plotjuggler'])
-            self.statusBar().showMessage('已启动 PlotJuggler')
-        except Exception as e:
-            QMessageBox.critical(self, '错误', f'启动 PlotJuggler 失败: {str(e)}')
-            self.statusBar().showMessage('启动 PlotJuggler 失败')
+                QMessageBox.critical(self, '错误', f'停止 LCM 日志回放失败: {str(e)}')
+                self.statusBar().showMessage('停止 LCM 日志回放失败')
+            self.open_log_button.setText('播放lcm日志')
+        else:
+            # 开始播放
+            # 弹出文件选择对话框
+            file_name, _ = QFileDialog.getOpenFileName(
+                self, '打开日志文件', '', '所有文件 (*)'
+            )
+            if file_name:
+                self.statusBar().showMessage(f'已选择日志文件: {file_name}')
+                QMessageBox.information(self, '信息', f'已选择日志文件: {file_name}')
+                
+                # 启动LCM播放器线程
+                try:
+                    self.lcm_player_thread = LCMPlayerThread(file_name)
+                    self.lcm_player_thread.start()
+                    self.statusBar().showMessage('已启动 LCM 日志回放')
+                    self.open_log_button.setText('停止播放lcm')
+                except Exception as e:
+                    QMessageBox.critical(self, '错误', f'启动 LCM 日志回放失败: {str(e)}')
+                    self.statusBar().showMessage('启动 LCM 日志回放失败')
     
     def on_online_debug(self):
         """在线调试槽函数"""

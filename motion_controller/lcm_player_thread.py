@@ -71,7 +71,7 @@ class LCMPlayerThread(threading.Thread):
 
                 # 将数据重新发布到网络
                 # event.channel 是原通道名，event.data 是原始 bytes 字节流
-                print(event.channel, event.timestamp)
+                #print(event.channel, event.timestamp)
                 # if event.channel == "leg_control_command":
                 #     print(event.data)
                 # if event.channel == "leg_control_data":
