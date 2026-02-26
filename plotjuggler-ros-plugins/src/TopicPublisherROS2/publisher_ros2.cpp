@@ -59,11 +59,11 @@ void TopicPublisherROS2::updatePublishers()
       continue;  // no publish
     }
 
-    auto publisher_it = _publishers.find(info.topic_name);
-    if (publisher_it == _publishers.end())
-    {
-      _publishers.insert({ info.topic_name, GenericPublisher::create(*_node, info.topic_name, info.type) });
-    }
+    // auto publisher_it = _publishers.find(info.topic_name);
+    // if (publisher_it == _publishers.end())
+    // {
+    //   _publishers.insert({ info.topic_name, GenericPublisher::create(*_node, info.topic_name, info.type) });
+    // }
   }
 
   // remove already created publishers if not needed anymore
@@ -88,7 +88,26 @@ void TopicPublisherROS2::setEnabled(bool to_enable)
     auto node_opts = rclcpp::NodeOptions();
     node_opts.context(_context);
     _node = std::make_shared<rclcpp::Node>("plotjuggler", node_opts);
+    leg_data_publisher_ = _node->create_publisher<lcm_to_ros2::msg::LegControlDataLcmt>(
+      "/robot_lcm/leg_control_data",
+      10);
+    waist_data_publisher_ = _node->create_publisher<lcm_to_ros2::msg::WaistControlDataLcmt>(
+      "/robot_lcm/waist_control_data",
+      10);
+    head_data_publisher_ = _node->create_publisher<lcm_to_ros2::msg::HeadControlDataLcmt>(
+      "/robot_lcm/head_control_data",
+      10);
+    arm_data_publisher_ = _node->create_publisher<lcm_to_ros2::msg::ArmControlDataLcmt>(
+      "/robot_lcm/arm_control_data",
+      10);
+
     _executor->add_node(_node);
+    std::thread([this]() {
+      while (rclcpp::ok()) {
+        // 非阻塞spin（每次处理1ms的回调，避免卡死）
+        _executor->spin_once(std::chrono::milliseconds(1));
+      }
+    }).detach();
   }
   _enabled = (to_enable && _node);
 
@@ -308,48 +327,65 @@ void TopicPublisherROS2::updateState(double current_time)
   {
     return;
   }
+  publish_data(current_time);
+}
 
-  //-----------------------------------------------
-  broadcastTF(current_time);
-  //-----------------------------------------------
-
-  auto data_it = _datamap->user_defined.find("plotjuggler::rosbag2_cpp::consecutive_messages");
-  if (data_it != _datamap->user_defined.end())
-  {
-    const PJ::PlotDataAny& continuous_msgs = data_it->second;
-    _previous_play_index = continuous_msgs.getIndexFromX(current_time);
-  }
-
-  for (const auto& data_it : _datamap->user_defined)
-  {
-    const std::string& topic_name = data_it.first;
-    const PJ::PlotDataAny& plot_any = data_it.second;
-
-    if (topic_name == "/tf" || topic_name == "tf_static")
-    {
-      continue;
-    }
-
-    auto publisher_it = _publishers.find(topic_name);
-    if (publisher_it == _publishers.end())
-    {
-      continue;
-    }
-
-    int last_index = plot_any.getIndexFromX(current_time);
-    if (last_index < 0)
-    {
-      continue;
-    }
-
-    const auto& any_value = plot_any.at(last_index).y;
-
-    if (any_value.type() == typeid(MessageRefPtr))
-    {
-      const auto& msg_instance = std::any_cast<MessageRefPtr>(any_value);
-      publisher_it->second->publish(msg_instance->serialized_data);
+void TopicPublisherROS2::publish_data(double current_time) {
+  auto leg_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>();
+  for (int i = 0; i < 12; i++) {
+    std::string str_q = std::string("/robot_lcm/leg_control_data/q[") + 
+                        std::to_string(i) + std::string("]");
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      leg_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      leg_data_ros2_msg->q[i] = 0;
     }
   }
+  leg_data_publisher_->publish(*leg_data_ros2_msg);
+
+  auto waist_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::WaistControlDataLcmt>();
+  for (int i = 0; i < 3; i++) {
+    std::string str_q = std::string("/robot_lcm/waist_control_data/q[") + 
+                        std::to_string(i) + std::string("]");
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      waist_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      waist_data_ros2_msg->q[i] = 0;
+    }
+  }
+  waist_data_publisher_->publish(*waist_data_ros2_msg);
+
+  auto head_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::HeadControlDataLcmt>();
+  for (int i = 0; i < 2; i++) {
+    std::string str_q = std::string("/robot_lcm/head_control_data/q[") + 
+                        std::to_string(i) + std::string("]");
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      head_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      head_data_ros2_msg->q[i] = 0;
+    }
+  }
+  head_data_publisher_->publish(*head_data_ros2_msg);
+
+  auto arm_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::ArmControlDataLcmt>();
+  for (int i = 0; i < 14; i++) {
+    std::string str_q = std::string("/robot_lcm/arm_control_data/joint_cur_pos[") + 
+                        std::to_string(i) + std::string("]");
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      arm_data_ros2_msg->joint_cur_pos[i] = data_it->second.at(index).y;
+    } else {
+      arm_data_ros2_msg->joint_cur_pos[i] = 0;
+    }
+  }
+  arm_data_publisher_->publish(*arm_data_ros2_msg);
 }
 
 void TopicPublisherROS2::play(double current_time)
@@ -358,7 +394,8 @@ void TopicPublisherROS2::play(double current_time)
   {
     return;
   }
-
+  publish_data(current_time);
+  return;
   auto data_it = _datamap->user_defined.find("plotjuggler::rosbag2_cpp::consecutive_messages");
   if (data_it == _datamap->user_defined.end())
   {
@@ -376,21 +413,23 @@ void TopicPublisherROS2::play(double current_time)
   else
   {
     const PJ::PlotDataAny& consecutive_msg = data_it->second;
+    publish_data(current_index);
     for (int index = _previous_play_index + 1; index <= current_index; index++)
     {
-      const auto& any_value = consecutive_msg.at(index).y;
-      if (any_value.type() == typeid(MessageRefPtr))
-      {
-        const auto& msg_instance = std::any_cast<MessageRefPtr>(any_value);
+     // publish_data(index);
+      // const auto& any_value = consecutive_msg.at(index).y;
+      // if (any_value.type() == typeid(MessageRefPtr))
+      // {
+      //   const auto& msg_instance = std::any_cast<MessageRefPtr>(any_value);
 
-        auto publisher_it = _publishers.find(msg_instance->topic_name);
-        if (publisher_it == _publishers.end())
-        {
-          continue;
-        }
+      //   auto publisher_it = _publishers.find(msg_instance->topic_name);
+      //   if (publisher_it == _publishers.end())
+      //   {
+      //     continue;
+      //   }
 
-        publisher_it->second->publish(msg_instance->serialized_data);
-      }
+      //   publisher_it->second->publish(msg_instance->serialized_data);
+      // }
     }
     _previous_play_index = current_index;
   }
