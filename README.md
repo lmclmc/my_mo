@@ -1,74 +1,122 @@
-# Robot Tools
+# MotionStudio: 运控上位机调试工具
 
-## 介绍
-机器人开发辅助工具，以 ROS package 形式存在，当前仅支持 ROS1，含如下功能
+## 项目概述
 
-* `lcm_to_ros` 将 [LCM](https://github.com/lcm-proj/lcm) 消息转化为 ros msg 发布
+MotionStudio 是一款针对运控工程化的调试工具
 
-* `magic_vis` 基于 [RViz](https://wiki.ros.org/rviz) 可视化机器人及关键数据
+## 主要功能
 
-## 安装与运行
-* 创建工作空间并将相关package软链接到workspace
+### 1. LCM 到 ROS2 消息转换 (`lcm_to_ros2`)
+- 将 [LCM](https://github.com/lcm-proj/lcm) 消息类型自动转换为 ROS2 消息类型
+- 自动生成消息转换节点，实现 LCM 消息到 ROS2 消息的实时转发
+- 支持多种机器人平台的消息格式，包括人形机器人、四足机器人等
 
-  ```bash
-  mkdir -p catkin_ws/src
-  ln -s ~/robot_tools/lcm_to_ros ~/robot_tools/catkin_ws/src/lcm_to_ros
-  ln -s ~/robot_tools/magic_vis ~/robot_tools/catkin_ws/src/magic_vis
-  ```
+### 2. 机器人可视化 (`magic_vis_ros2`)
+- 基于 RViz2 实现机器人模型的 3D 可视化
+- 实时显示机器人关节状态、传感器数据等关键信息
+- 支持多种机器人模型的可视化配置
 
-* 创建 `lcm_to_ros` 消息类型，自动生成转换 ros node 
+### 3. 数据可视化插件 (`plotjuggler-ros-plugins`)
+- 为 PlotJuggler 提供 ROS2 支持
+- 方便查看和分析 ROS2 话题数据
+- 支持数据录制和回放
 
-  * 将需要转换成 ros msg 的 LCM 消息类型（ `*.lcm` 文件，注意加入 namespace `exlcm`）放在文件夹 `./lcm_to_ros/lcm` 下，执行
+### 4. 运控上位机控制器 (`motion_controller`)
+- 目录motion_controller 支持lcm日志播放，支持ros2 bag日志录制，支持连接真机在线调试
 
-    ```bash
-    cd ~/robot_tools/lcm_to_ros
-    ./rosmsg-gen.sh lcm/*.lcm
-    ```
-    根据 lcm 消息类型自动生成的 ros msg 放置在 `./lcm_to_ros/msg/` 目录下，**手动确认 `*.msg` 是否符合 ros msg 格式**
+## 目录结构
 
-  * 生成 ros node cpp 及相关 launch 文件
-    将所需要的 lcm to ros 转换配置到 `./lcm_to_ros/repub_configs/*.cfg`，[example](./lcm_to_ros/repub_configs/example_republishers.cfg)，执行
-    ```bash
-    cd ~/robot_tools/lcm_to_ros
-    ./rosrepub-gen.sh repub_configs/humanoid_republishers.cfg
-    ```
+```
+motionstudio/
+├── motion_controller/                # 运控上位机控制器
+├── lcm_to_ros2/        # LCM 到 ROS2 消息转换工具
+│   ├── autosrc/        # 自动生成的源代码
+│   ├── cmake/          # CMake 配置文件
+│   ├── exlcm/          # LCM 消息头文件
+│   ├── launch/         # ROS2 launch 文件
+│   ├── lcm/            # LCM 消息定义文件
+│   ├── msg/            # ROS2 消息定义文件
+│   ├── repub_configs/  # 消息转换配置文件
+│   ├── src/            # 源代码模板
+│   ├── CMakeLists.txt
+│   ├── README.md
+│   ├── package.xml
+│   └── 工具脚本文件
+├── magic_vis_ros2/     # 机器人可视化工具
+│   ├── doc/            # 文档和图片
+│   ├── include/        # 头文件
+│   ├── launch/         # ROS2 launch 文件
+│   ├── meshes/         # 机器人模型网格文件
+│   ├── CMakeLists.txt
+│   ├── README.md
+│   └── package.xml
+├── plotjuggler-ros-plugins/ # ROS2 的 PlotJuggler 插件
+├── env_install.sh      # 环境安装脚本
+├── build_ros2.sh       # 编译构建脚本
+├── run_ros.sh          # 运行上位机脚本
+├── stop_ros2.sh        # 停止上位机脚本
+└── README.md           # 项目说明文件
+```
 
-* 编译
-  ```bash
-  cd ~/robot_tools/catkin_ws
-  catkin_make
-  ```
-  **每次改变 lcm 消息类型，且该类型会在 `magic_vis`中被使用，需要删掉 workspace 下的 `build` 和 `devel` 文件夹，重头开始编译**
+## 环境要求
 
-* 运行
-  ```bash
-  # 终端 1
-  cd ~/robot_tools/catkin_ws
-  source devel/setup.bash
-  roslaunch lcm_to_ros humanoid_republishers.launch
+- Ubuntu 22.04 或更高版本
+- ROS2 Jazzy 或兼容版本
+- Conda (用于环境管理)
+- CMake 3.20 或更高版本
+- C++14 兼容编译器
+- Python 3.13 或更高版本
 
-  # 终端 2
-  cd ~/robot_tools/catkin_ws
-  source devel/setup.bash
-  roslaunch magic_vis magic_humanoid.launch
-  ```
+## 安装与设置
 
-# 说明
-  `lcm_to_ros` 原 repo [文档](./lcm_to_ros/README.md)
-  `magic_vis` [文档](./magic_vis/README.md)
+### 1. 环境安装
 
-
-
-
-## ros2 使用示例
-### 完整系统启动
-
-1. 构建
 ```bash
+# 运行环境安装脚本
+./env_install.sh
+```
+
+该脚本会：
+- 创建名为 `ros2` 的 Conda 环境
+- 安装所需的 Python 依赖包
+
+### 2. 编译构建
+
+```bash
+# 运行编译构建脚本
 ./build_ros2.sh
 ```
-2. 启动LCM到ROS2的消息转换并可视化：
+
+该脚本会：
+- 设置 ROS2 环境变量
+- 创建工作空间并链接相关包
+- 编译 `lcm_to_ros2` 包
+- 编译 `magic_vis_ros2` 包（Debug 模式）
+- 编译 `plotjuggler-ros-plugins` 包
+- 安装 PlotJuggler 插件到系统目录
+
+
+## 使用方法
+
+### 1. 运行上位机
 
 ```bash
-./run_ros2.sh
+# 运行上位机脚本
+./run_ros.sh
 ```
+
+该脚本会：
+- 启动 LCM 到 ROS2 的消息转换
+- 启动机器人可视化
+- 启动数据可视化工具
+
+### 2. 停止上位机
+
+```bash
+# 停止上位机脚本
+./stop_ros2.sh
+```
+
+该脚本会：
+- 停止所有运行的 ROS2 节点
+- 清理相关进程
