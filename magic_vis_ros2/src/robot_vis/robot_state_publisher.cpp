@@ -114,7 +114,7 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 {
   leg_state_sub = this->create_subscription<lcm_to_ros2::msg::LegControlDataLcmt>(
     "/robot_lcm/leg_control_data", 5, std::bind(&magic::RobotStatePublisher::legStateCallback, this, std::placeholders::_1));
-  RCLCPP_INFO(this->get_logger(), "l2222222222222222222222222222222222222222222222222222eg_control_data publisher created");
+  RCLCPP_INFO(this->get_logger(), "leg_control_data publisher created");
 
   waist_state_sub = this->create_subscription<lcm_to_ros2::msg::WaistControlDataLcmt>(
     "/robot_lcm/waist_control_data", 5, std::bind(&magic::RobotStatePublisher::waistStateCallback, this, std::placeholders::_1));
@@ -210,6 +210,10 @@ void RobotStatePublisher::legStateCallback(const lcm_to_ros2::msg::LegControlDat
 void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr state_msg) 
 {
   for (int i=0; i<14; i++) {
+    if (i+16 >= joint_list_.size()) {
+      continue;
+    }
+
     free_joints_[joint_list_[i+16]].position = state_msg->joint_cur_pos[i];
     free_joints_[joint_list_[i+16]].velocity = state_msg->joint_cur_vel[i];
   }
@@ -218,6 +222,10 @@ void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDat
 void RobotStatePublisher::waistStateCallback(const lcm_to_ros2::msg::WaistControlDataLcmt::SharedPtr state_msg) 
 {
   for (int i=0; i<2; i++) {
+    if (i+12 >= joint_list_.size()) {
+      continue;
+    }
+
     free_joints_[joint_list_[i+12]].position = state_msg->q[i];
     free_joints_[joint_list_[i+12]].velocity = state_msg->qd[i];
   }
