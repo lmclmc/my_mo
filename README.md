@@ -69,22 +69,54 @@ motionstudio/
 
 ## 安装与设置
 
-# 说明
-  `lcm_to_ros` 原 repo [文档](./lcm_to_ros/README.md)
-  `magic_vis` [文档](./magic_vis/README.md)
+### 1. 环境安装
 
-
-
-
-## ros2 使用示例
-### 完整系统启动
-
-1. 构建
 ```bash
+# 运行环境安装脚本
+./env_install.sh
+```
+
+该脚本会：
+- 创建名为 `ros2` 的 Conda 环境
+- 安装所需的 Python 依赖包
+
+### 2. 编译构建
+
+```bash
+# 运行编译构建脚本
 ./build_ros2.sh
 ```
-2. 启动LCM到ROS2的消息转换并可视化：
+
+该脚本会：
+- 设置 ROS2 环境变量
+- 创建工作空间并链接相关包
+- 编译 `lcm_to_ros2` 包
+- 编译 `magic_vis_ros2` 包（Debug 模式）
+- 编译 `plotjuggler-ros-plugins` 包
+- 安装 PlotJuggler 插件到系统目录
+
+
+## 使用方法
+
+### 1. 运行上位机
 
 ```bash
-./run_ros2.sh
+# 运行上位机脚本
+./run_ros.sh
 ```
+
+该脚本会：
+- 启动 LCM 到 ROS2 的消息转换
+- 启动机器人可视化
+- 启动数据可视化工具
+
+### 2. 停止上位机
+
+```bash
+# 停止上位机脚本
+./stop_ros2.sh
+```
+
+该脚本会：
+- 停止所有运行的 ROS2 节点
+- 清理相关进程

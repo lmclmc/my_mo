@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/${ROS_DISTRO}/setup.bash
 
 mkdir src
 ln -svf $(pwd)/lcm_to_ros2 $(pwd)/src/lcm_to_ros2
