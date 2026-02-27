@@ -11,6 +11,7 @@ source install/setup.bash
 echo "请选择要运行的Python脚本："
 echo "1) magic_humanoid.py"
 echo "2) big_dog.py"
+echo "3) magic_humanoid_gen2_v2.py"
 
 # 读取用户输入
 read -p "请输入选择 (1 或 2): " choice
@@ -24,6 +25,10 @@ case $choice in
     2)
         echo "正在启动 big_dog.py..."
         nohup ros2 launch magic_vis_ros2 big_dog.py &
+        ;;
+    3)
+        echo "正在启动 magic_humanoid_gen2_v2.py..."
+        nohup ros2 launch magic_vis_ros2 magic_humanoid_gen2_v2.py &
         ;;
     *)
         echo "无效的选择，默认启动 magic_humanoid.py..."
