@@ -2,6 +2,8 @@
 #
 
 # 进入src目录并source setup文件
+
+source /opt/ros/${ROS_DISTRO}/setup.bash
 pushd src
 source install/setup.bash
 

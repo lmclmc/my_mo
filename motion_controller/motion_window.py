@@ -67,10 +67,58 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
     
+    def check_ros2_mode(self, to_enable=""):
+        mode_file = "/opt/ros2_mode"
+        ros2_mode = "idle"
+        try:
+            # 检查文件是否存在
+            if not os.path.exists(mode_file):
+                # 文件不存在，创建并写入 'record'
+                with open(mode_file, 'w') as f:
+                    if to_enable == "record":
+                        ros2_mode = "record"
+                        f.write('record')
+                    else:
+                        ros2_mode = "idle"
+                        f.write('idle')
+                self.statusBar().showMessage(f'当前ros2消息模式为 {ros2_mode}')
+            else:
+                # 文件存在，读取内容
+                with open(mode_file, 'r') as f:
+                    content = f.read().strip()
+                
+                # 检查内容是否为 'replay'
+                if content == 'replay':
+                    QMessageBox.critical(self, '错误', '当前 ros2 消息模式为重放模式，无法开启此功能，请关闭plotjuggler的ros2消息重发，再试一次')
+                    self.statusBar().showMessage(f'当前ros2消息模式为 {ros2_mode}')
+                    ros2_mode = "replay"
+                else:
+                    # 内容不是 'record'，更新为 'record'
+                    with open(mode_file, 'w') as f:
+                        if to_enable == "record":
+                            ros2_mode = "record"
+                            f.write('record')
+                        elif to_enable == "idle":
+                            ros2_mode = "idle"
+                            f.write('idle')
+                        else:
+                            ros2_mode = content  # 保持原有模式
+                            f.write(ros2_mode)
+                    self.statusBar().showMessage(f'当前ros2消息模式为 {ros2_mode}')
+        except Exception as e:
+            QMessageBox.critical(self, '错误', f'处理 ros2 消息模式文件失败: {str(e)}')
+            with open(mode_file, 'w') as f:
+                f.write('idle')
+            self.statusBar().showMessage('处理 ros2 消息模式文件失败')
+            ros2_mode = "idle"
+        return ros2_mode
+        
     def on_ros2_bag_record(self):
         """ROS2 bag 录制槽函数"""
         if self.ros2_bag_process is None:
             # 开始录制
+            if self.check_ros2_mode("record") == "replay":
+                return
             # 弹出文件保存对话框
             file_name, _ = QFileDialog.getSaveFileName(
                 self, '保存ROS2 bag文件', '', 'ROS2 bag文件 (*)'
@@ -91,8 +139,12 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     QMessageBox.critical(self, '错误', f'启动ROS2 bag录制失败: {str(e)}')
                     self.statusBar().showMessage('启动ROS2 bag录制失败')
+            else:
+                self.check_ros2_mode("idle")
         else:
             # 停止录制
+            if self.check_ros2_mode("idle") == "replay":
+                return
             try:
                 self.ros2_bag_process.terminate()
                 self.ros2_bag_process.wait(timeout=5)
@@ -110,6 +162,8 @@ class MainWindow(QMainWindow):
         # 检查是否正在播放
         if self.lcm_player_thread and self.lcm_player_thread.is_alive():
             # 停止播放
+            if self.check_ros2_mode() == "replay":
+                return
             try:
                 self.lcm_player_thread.stop()
                 self.lcm_player_thread.join()
@@ -120,6 +174,8 @@ class MainWindow(QMainWindow):
         else:
             # 开始播放
             # 弹出文件选择对话框
+            if self.check_ros2_mode() == "replay":
+                return
             file_name, _ = QFileDialog.getOpenFileName(
                 self, '打开日志文件', '', '所有文件 (*)'
             )

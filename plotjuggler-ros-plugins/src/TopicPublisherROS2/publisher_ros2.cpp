@@ -19,6 +19,7 @@
 #include <rmw/rmw.h>
 #include <rmw/types.h>
 #include "publisher_select_dialog.h"
+#include <fstream>
 
 TopicPublisherROS2::TopicPublisherROS2() : _node(nullptr), _enabled(false)
 {
@@ -81,6 +82,60 @@ void TopicPublisherROS2::updatePublishers()
   }
 }
 
+bool TopicPublisherROS2::checkRos2ModeFile(bool enable)
+{
+  const std::string mode_file_path = "/opt/ros2_mode";
+  
+  try {
+    // 检查文件是否存在
+    std::ifstream file(mode_file_path);
+    if (!file.good()) {
+      // 文件不存在，创建并写入 "replay"
+      std::ofstream new_file(mode_file_path);
+      if (new_file) {
+        if (enable) {
+          new_file << "replay";
+        } else {
+          new_file << "idle";
+        }
+        new_file.close();
+        return true;
+      } else {
+        QMessageBox::critical(nullptr, "错误", "无法创建 /opt/ros2_mode 文件");
+        return false;
+      }
+    } else {
+      // 文件存在，读取内容
+      std::string content;
+      std::getline(file, content);
+      file.close();
+      
+      // 检查内容是否为 "record"
+      if (content == "record") {
+        QMessageBox::critical(nullptr, "错误", "当前已开启ros2 bag消息录制功能，请先关闭ros2 bag消息录制功能，再开启ros2重放");
+        return false;
+      } else {
+        // 内容不是 "replay"，更新为 "replay"
+        std::ofstream update_file(mode_file_path);
+        if (update_file) {
+          if (enable) {
+            update_file << "replay";
+          } else {
+            update_file << "idle";
+          }
+          update_file.close();
+        } else {
+          QMessageBox::warning(nullptr, "警告", "无法更新 /opt/ros2_mode 文件");
+        }
+      }
+      return true;
+    }
+  } catch (const std::exception& e) {
+    QMessageBox::critical(nullptr, "错误", QString("处理 ros2 消息模式文件失败: %1").arg(e.what()));
+    return false;
+  }
+}
+
 void TopicPublisherROS2::setEnabled(bool to_enable)
 {
   if (!_node && to_enable)
@@ -109,6 +164,12 @@ void TopicPublisherROS2::setEnabled(bool to_enable)
       }
     }).detach();
   }
+
+
+  if (!checkRos2ModeFile(to_enable)) {
+    return;
+  }
+  
   _enabled = (to_enable && _node);
 
   if (_enabled)

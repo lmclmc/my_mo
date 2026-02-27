@@ -97,6 +97,7 @@ private:
   rclcpp::Publisher<lcm_to_ros2::msg::ArmControlDataLcmt>::SharedPtr arm_data_publisher_;
   
   void publish_data(double current_time);
+  bool checkRos2ModeFile(bool enable);
 };
 
 #endif  // STATE_PUBLISHER_ROS2TOPIC_H
