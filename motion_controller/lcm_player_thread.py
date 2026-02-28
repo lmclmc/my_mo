@@ -34,7 +34,8 @@ class LCMPlayerThread(threading.Thread):
         """
         try:
             self.log = lcm.EventLog(self.file_path, "r")
-            self.lc = lcm.LCM() # 创建 LCM 实例用于发送数据
+            lcm_url = f"udpm://239.255.76.67:56666"
+            self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
         except IOError:
             print(f"无法打开文件: {self.file_path}")
             return
