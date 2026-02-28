@@ -17,7 +17,7 @@
 #include "lcm_to_ros2/msg/LegControlDataLcmt.hpp"
 #include "exlcm/leg_control_data_lcmt_bigdog.hpp"
 #include "exlcm/leg_control_data_lcmt.hpp"
-
+#include "republisher_global.hpp"
 class LCMToROS2Republisher : public rclcpp::Node
 {
 public:
@@ -25,7 +25,7 @@ public:
         : Node("leg_control_data_lcm2ros2_republisher")
     {
         // Initialize LCM
-        lcm_ = std::make_shared<lcm::LCM>("udpm://239.255.76.67:7667?ttl=1");
+        lcm_ = std::make_shared<lcm::LCM>(lcm_url); // 使用全局变量
         if (!lcm_->good()) {
             RCLCPP_ERROR(this->get_logger(), "Failed to initialize LCM");
             return;

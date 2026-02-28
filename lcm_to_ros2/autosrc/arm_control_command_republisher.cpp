@@ -16,7 +16,7 @@
 
 #include "lcm_to_ros2/msg/ArmControlCmdLcmt.hpp"
 #include "exlcm/arm_control_cmd_lcmt.hpp"
-
+#include "republisher_global.hpp"
 class LCMToROS2Republisher : public rclcpp::Node
 {
 public:
@@ -24,7 +24,7 @@ public:
         : Node("arm_control_command_lcm2ros2_republisher")
     {
         // Initialize LCM
-        lcm_ = std::make_shared<lcm::LCM>();
+        lcm_ = std::make_shared<lcm::LCM>(lcm_url);
         if (!lcm_->good()) {
             RCLCPP_ERROR(this->get_logger(), "Failed to initialize LCM");
             return;
