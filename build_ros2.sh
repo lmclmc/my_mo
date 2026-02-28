@@ -1,6 +1,15 @@
 #!/bin/bash
 
+
+
 source /opt/ros/${ROS_DISTRO}/setup.bash
+
+sudo chown -R $(id -gn):$(id -un) /opt/ros/
+
+pushd lcm_turn_server
+sudo ./build_lcm_turn_server.sh
+cp lcm_turn_server /opt/ros/
+popd
 
 mkdir src
 ln -svf $(pwd)/lcm_to_ros2 $(pwd)/src/lcm_to_ros2

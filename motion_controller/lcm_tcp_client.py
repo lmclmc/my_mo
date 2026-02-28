@@ -3,7 +3,7 @@
 LCM 转发服务器的 Python 客户端类
 带有独立线程，可由主界面调用
 """
-import lcm
+
 import socket
 import struct
 import threading
@@ -29,9 +29,6 @@ class LcmTcpClient:
         self.running = False
         self.connected = False
         self.lock = threading.Lock()
-        
-        lcm_url = f"udpm://239.255.76.67:56666"
-        self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
     
     def start(self):
         """启动客户端，开始接收消息"""
@@ -100,27 +97,33 @@ class LcmTcpClient:
                 if not self.client_socket:
                     time.sleep(0.1)
                     continue
+                
                 # 接收通道长度（4字节，小端）
                 channel_len_data = self._recv_all(4)
                 if not channel_len_data:
                     break
+                
                 channel_len = struct.unpack('<I', channel_len_data)[0]
+                
                 # 接收通道名
                 channel_name = self._recv_all(channel_len).decode('utf-8')
+                
                 # 接收数据长度（4字节，小端）
                 data_len_data = self._recv_all(4)
                 if not data_len_data:
                     break
+                
                 data_len = struct.unpack('<I', data_len_data)[0]
+                
                 # 接收数据
                 data = self._recv_all(data_len)
                 if not data:
                     break
+                
                 # 调用回调函数处理消息
                 if self.message_callback:
                     try:
                         self.message_callback(channel_name, data)
-                        self.lc.publish(channel_name, data)
                     except Exception as e:
                         print(f"回调函数执行出错: {e}")
                 
@@ -177,8 +180,8 @@ if __name__ == "__main__":
     
     # 创建客户端实例
     client = LcmTcpClient(
-        server_ip='192.168.54.1',
-        server_port=58888,
+        server_ip='192.168.54.110',
+        server_port=8080,
         message_callback=message_handler
     )
     

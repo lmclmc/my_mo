@@ -65,9 +65,8 @@ public:
     }
 
     void subscribeAll() {
-        std::cout << "Subscribing to all LCM channels..." << std::endl;
         // 订阅所有通道的消息
-        subscribe(".*", &LcmHandler::handleMessage, this);
+        subscribe("", &LcmHandler::handleMessage, this);
     }
 
 private:
@@ -264,7 +263,6 @@ private:
     void sendQueuedMessages() {
         // 检查队列是否有消息
         if (g_message_queue.empty()) {
-            std::cout << "No messages in queue" << std::endl;
             return;
         }
 
@@ -272,17 +270,18 @@ private:
         LcmMessage msg = g_message_queue.pop();
 
         // 构建消息格式：通道长度 + 通道名 + 数据长度 + 数据
-        uint32_t channel_len = msg.channel.size();
-        uint32_t data_len = msg.data.size();
-        uint32_t total_len = sizeof(channel_len) + channel_len + sizeof(data_len) + data_len;
+        size_t channel_len = msg.channel.size();
+        size_t data_len = msg.data.size();
+        size_t total_len = sizeof(channel_len) + channel_len + sizeof(data_len) + data_len;
 
         // 分配缓冲区
         std::vector<uint8_t> buffer(total_len);
-        uint32_t offset = 0;
-        
+        size_t offset = 0;
+
         // 写入通道长度
         memcpy(buffer.data() + offset, &channel_len, sizeof(channel_len));
         offset += sizeof(channel_len);
+
         // 写入通道名
         memcpy(buffer.data() + offset, msg.channel.data(), channel_len);
         offset += channel_len;
@@ -298,7 +297,6 @@ private:
         std::lock_guard<std::mutex> lock(g_clients_mutex);
         for (auto it = g_client_sockets.begin(); it != g_client_sockets.end();) {
             int client_fd = *it;
-            std::cout << client_fd << std::endl;
             ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
             if (sent < 0) {
                 // 发送失败，关闭连接
