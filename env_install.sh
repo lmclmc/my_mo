@@ -23,7 +23,7 @@ yellow_echo() {
 check_root() {
     password=$1
     if [[ -z $password ]]; then
-        red_echo "错误：该脚本需要以 root 权限运行，请使用 sudo ./install_ros2.sh 执行！"
+        red_echo "用法： ./env_install.sh <password>"
         exit 1
     fi
 }
@@ -203,7 +203,9 @@ install_packages() {
 
     # 先更新 apt 缓存（只更一次，提升效率）
     echo "🔄 正在更新 apt 包索引缓存..."
-    sudo apt update -y
+    set +e 
+    echo $password | sudo -S apt update -y
+    set -e
     echo "✅ apt 缓存更新完成"
     echo "=========================================="
 

@@ -73,14 +73,20 @@ motionstudio/
 
 ```bash
 # 运行环境安装脚本
-./env_install.sh
+./env_install.sh 1
 ```
-
 该脚本会：
 - 创建名为 `ros2` 的 Conda 环境
 - 安装所需的 Python 依赖包
 
-### 2. 编译构建
+### 2. 环境初始化
+
+```bash
+# 运行环境初始化脚本
+source env_init.sh
+```
+
+### 3. 编译构建
 
 ```bash
 # 运行编译构建脚本
