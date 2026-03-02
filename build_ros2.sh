@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-
+ROS_DISTRO=jazzy
 source /opt/ros/${ROS_DISTRO}/setup.bash
 
 sudo chown -R $(id -gn):$(id -un) /opt/ros/

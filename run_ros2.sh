@@ -2,7 +2,7 @@
 #
 
 # 进入src目录并source setup文件
-
+ROS_DISTRO="jazzy"
 source /opt/ros/${ROS_DISTRO}/setup.bash
 pushd src
 source install/setup.bash
@@ -16,6 +16,7 @@ echo "3) magic_humanoid_gen2_v2.py"
 # 读取用户输入
 read -p "请输入选择 (1 或 2): " choice
 
+sudo chown -R $(id -gn):$(id -un) /opt/ros/
 # 根据用户选择执行相应的命令
 case $choice in
     1)
