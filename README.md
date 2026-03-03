@@ -90,7 +90,7 @@ source env_init.sh
 
 ```bash
 # 运行编译构建脚本
-./build_ros2.sh
+./build_motion_studio.sh
 ```
 
 该脚本会：
@@ -108,7 +108,7 @@ source env_init.sh
 
 ```bash
 # 运行上位机脚本
-./run_ros.sh
+./run_motion_studio.sh
 ```
 
 该脚本会：
@@ -120,7 +120,7 @@ source env_init.sh
 
 ```bash
 # 停止上位机脚本
-./stop_ros2.sh
+./stop_motion_studio.sh
 ```
 
 该脚本会：
