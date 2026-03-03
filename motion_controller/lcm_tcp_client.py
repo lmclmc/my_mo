@@ -116,13 +116,15 @@ class LcmTcpClient:
                 data = self._recv_all(data_len)
                 if not data:
                     break
-                # 调用回调函数处理消息
-                if self.message_callback:
-                    try:
-                        self.message_callback(channel_name, data)
-                        self.lc.publish(channel_name, data)
-                    except Exception as e:
-                        print(f"回调函数执行出错: {e}")
+                
+                self.lc.publish(channel_name, data)
+                # # 调用回调函数处理消息
+                # if self.message_callback:
+                #     try:
+                #         self.message_callback(channel_name, data)
+                        
+                #     except Exception as e:
+                #         print(f"回调函数执行出错: {e}")
                 
             except socket.error as e:
                 print(f"接收数据时出错: {e}")

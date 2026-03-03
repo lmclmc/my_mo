@@ -319,16 +319,13 @@ class MainWindow(QMainWindow):
             self.log_message_updated.emit('正在启动LCM TCP客户端...')
             from lcm_tcp_client import LcmTcpClient
             # 定义消息回调函数
-            def message_handler(channel, data):
-                self.log_message_updated.emit(f'收到LCM消息: 通道={channel}, 数据长度={len(data)}')
-            
+
             import time
             time.sleep(5)
             # 创建并启动客户端
             self.lcm_client = LcmTcpClient(
                 server_ip='192.168.54.1',
-                server_port=58888,
-                message_callback=message_handler
+                server_port=58888
             )
             
             if self.lcm_client.start():
