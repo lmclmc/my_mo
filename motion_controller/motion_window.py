@@ -21,6 +21,7 @@ class MainWindow(QMainWindow):
     """主窗口类"""
     log_message_updated = Signal(str)
     message_updated = Signal(int, str)  # 新增：更新消息的信号
+    ping_timeout_updated = Signal(float)  # 新增：更新消息的信号
     
     def __init__(self):
         super().__init__()
@@ -31,7 +32,8 @@ class MainWindow(QMainWindow):
         
         self.log_message_updated.connect(self.log_message, Qt.QueuedConnection)
         self.message_updated.connect(self.update_message, Qt.QueuedConnection)
-    
+        self.ping_timeout_updated.connect(self.ping_timeout, Qt.QueuedConnection)
+        
     def init_ui(self):
         """初始化用户界面"""
         # 设置窗口标题和大小
@@ -216,6 +218,12 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage('停止ROS2 bag录制失败')
                 self.log_message(f'停止ROS2 bag录制失败: {str(e)}')
           
+    def ping_timeout(self, timeout):
+        """心跳超时槽函数"""
+        print(f"心跳超时: {timeout:.4f} 毫秒")
+        self.statusBar().showMessage(f'心跳超时: {timeout:.4f} 毫秒')
+        self.log_message(f'心跳超时: {timeout:.4f} 毫秒')
+        
     def update_message(self, mode, message):
         """更新消息显示槽函数"""
         if mode == 0:
@@ -267,6 +275,10 @@ class MainWindow(QMainWindow):
             else:
                 self.log_message('用户取消了打开LCM日志文件')
     
+    def ping_callback(self, timeout):
+        """心跳回调函数"""
+        self.ping_timeout_updated.emit(timeout)
+                
     async def on_excute_watch(self):
         # 开始监听
         self.statusBar().showMessage('在线监听模式')
@@ -342,7 +354,8 @@ class MainWindow(QMainWindow):
             # 创建并启动客户端
             self.lcm_client = LcmTcpClient(
                 server_ip=ip_address,
-                server_port=58888
+                server_port=58888,
+                message_callback=self.ping_callback
             )
             
             if self.lcm_client.start():

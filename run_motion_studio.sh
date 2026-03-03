@@ -13,9 +13,10 @@ echo "1) magic_humanoid.py"
 echo "2) big_dog.py"
 echo "3) magic_humanoid_gen2_v2.py"
 echo "4) magicdog.py"
+echo "5) MagicBotZ1_23dof.py"
 
 # 读取用户输入
-read -p "请输入选择 (1 或 2): " choice
+read -p "请输入选择 (1 2 3 4 5): " choice
 
 sudo chown -R $(id -gn):$(id -un) /opt/ros/
 # 根据用户选择执行相应的命令
@@ -36,6 +37,10 @@ case $choice in
         echo "正在启动 magicdog.py..."
         nohup ros2 launch magic_vis_ros2 magicdog.py &
         ;;
+    5)
+        echo "正在启动 MagicBotZ1_23dof.py..."
+        nohup ros2 launch magic_vis_ros2 MagicBotZ1_23dof.py &
+        ;;
     *)
         echo "无效的选择，默认启动 magic_humanoid.py..."
         nohup ros2 launch magic_vis_ros2 magic_humanoid.py &
@@ -43,7 +48,7 @@ case $choice in
 esac
 
 # 启动 republishers
-nohup ros2 launch lcm_to_ros2 humanoid_republishers.py &
+ros2 launch lcm_to_ros2 humanoid_republishers.py &
 popd
 nohup ros2 run plotjuggler plotjuggler &
 nohup python motion_controller/motion_window.py &

@@ -29,7 +29,9 @@ class LcmTcpClient:
         self.running = False
         self.connected = False
         self.lock = threading.Lock()
-        
+        self.ping_timestamp = 0 # 上次心跳时间
+        self.ping_timeout = 0 # 心跳超时时间
+    
         lcm_url = f"udpm://239.255.76.67:56666"
         self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
     
@@ -51,8 +53,12 @@ class LcmTcpClient:
                 
                 # 启动接收线程
                 self.running = True
-                self.thread = threading.Thread(target=self._receive_thread, daemon=True)
-                self.thread.start()
+                self.thread_receive = threading.Thread(target=self._receive_thread, daemon=True)
+                self.thread_receive.start()
+                
+                self.thread_ping = threading.Thread(target=self._ping_thread, daemon=True)
+                self.thread_ping.start()
+                
                 
                 print(f"客户端已启动，连接到 {self.server_ip}:{self.server_port}")
                 return True
@@ -93,6 +99,14 @@ class LcmTcpClient:
         """检查客户端是否正在运行"""
         return self.running
     
+    def _ping_thread(self):
+        "心跳"
+        while self.running:
+            time.sleep(10)
+            # 发送心跳包
+            self.client_socket.sendall(b'ping')
+            self.ping_timestamp = time.time()
+
     def _receive_thread(self):
         """接收线程函数，持续接收和处理消息"""
         while self.running:
@@ -107,6 +121,11 @@ class LcmTcpClient:
                 channel_len = struct.unpack('<I', channel_len_data)[0]
                 # 接收通道名
                 channel_name = self._recv_all(channel_len).decode('utf-8')
+                if channel_name == '__heartbeat__':
+                    if self.message_callback:
+                        print(f"收到心跳包，时间差: {time.time() - self.ping_timestamp}")
+                        self.message_callback(time.time() - self.ping_timestamp)
+                    
                 # 接收数据长度（4字节，小端）
                 data_len_data = self._recv_all(4)
                 if not data_len_data:
@@ -116,7 +135,6 @@ class LcmTcpClient:
                 data = self._recv_all(data_len)
                 if not data:
                     break
-                
                 self.lc.publish(channel_name, data)
                 # # 调用回调函数处理消息
                 # if self.message_callback:

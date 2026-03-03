@@ -240,12 +240,58 @@ private:
             // 连接关闭或错误
             closeClient(client_fd);
         } else if (events & EPOLLIN) {
-            // 有数据可读（我们只是转发，不需要读取客户端数据）
+            // 有数据可读
             char buffer[1024];
             int read_size = read(client_fd, buffer, sizeof(buffer));
             if (read_size <= 0) {
                 closeClient(client_fd);
+                return;
             }
+
+            // 解析客户端数据（这里只处理心跳包）
+            // 注意：实际应用中可能需要更复杂的协议解析
+            // 这里简化处理，假设客户端发送的是心跳包
+            handleHeartbeat(client_fd);
+        }
+    }
+
+    void handleHeartbeat(int client_fd) {
+        // 回复心跳包
+        sendHeartbeatResponse(client_fd);
+    }
+
+    void sendHeartbeatResponse(int client_fd) {
+        // 构建心跳响应
+        std::string channel = "__heartbeat__";
+        std::string data = "pong";
+
+        uint32_t channel_len = channel.size();
+        uint32_t data_len = data.size();
+        uint32_t total_len = sizeof(channel_len) + channel_len + sizeof(data_len) + data_len;
+
+        // 分配缓冲区
+        std::vector<uint8_t> buffer(total_len);
+        uint32_t offset = 0;
+        
+        // 写入通道长度
+        memcpy(buffer.data() + offset, &channel_len, sizeof(channel_len));
+        offset += sizeof(channel_len);
+        // 写入通道名
+        memcpy(buffer.data() + offset, channel.data(), channel_len);
+        offset += channel_len;
+
+        // 写入数据长度
+        memcpy(buffer.data() + offset, &data_len, sizeof(data_len));
+        offset += sizeof(data_len);
+
+        // 写入数据
+        memcpy(buffer.data() + offset, data.data(), data_len);
+
+        // 发送响应
+        ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
+        if (sent < 0) {
+            // 发送失败，关闭连接
+            closeClient(client_fd);
         }
     }
 
@@ -268,7 +314,6 @@ private:
     void sendQueuedMessages() {
         // 检查队列是否有消息
         if (g_message_queue.empty()) {
-            std::cout << "No messages in queue" << std::endl;
             return;
         }
         int queue_size = g_message_queue.size();
@@ -313,8 +358,6 @@ private:
                 }
             }
         }
-
-        
     }
 
     int port_;
@@ -326,8 +369,8 @@ int main() {
     std::cout << "LCM to TCP forwarder starting..." << std::endl;
 
     // 启动LCM订阅
-    LcmHandler lcm;
-    lcm.subscribeAll();
+    LcmHandler* lcm = lmc::TypeSingle<LcmHandler>::getInstance();
+    lcm->subscribeAll();
 
     // 启动TCP服务器
     TcpServer* server = lmc::TypeSingle<TcpServer>::getInstance(58888); // 使用8080端口
@@ -341,7 +384,7 @@ int main() {
 
     // 主线程运行LCM事件循环
     while (true) {
-        lcm.handle();
+        lcm->handle();
     }
 
     // 清理资源
