@@ -10,8 +10,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout, 
     QWidget, QFileDialog, QMessageBox, QStatusBar, QTextEdit, QSplitter
 )
-from PySide6.QtCore import Qt, QTime
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTime, Signal
 import sys
 import os
 from lcm_player_thread import LCMPlayerThread
@@ -20,13 +19,15 @@ import asyncio
 
 class MainWindow(QMainWindow):
     """主窗口类"""
-    
+    log_message_updated = Signal(str)
     def __init__(self):
         super().__init__()
         self.ros2_bag_process = None  # 用于存储 ros2 bag 录制进程
         self.init_ui()
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
+        
+        self.log_message_updated.connect(self.log_message, Qt.QueuedConnection)
     
     def init_ui(self):
         """初始化用户界面"""
@@ -251,81 +252,78 @@ class MainWindow(QMainWindow):
                 self.log_message('用户取消了打开LCM日志文件')
     
     async def on_excute_watch(self):
-        print(1111111111111111111111111111)
         # 开始监听
         self.statusBar().showMessage('在线监听模式')
-        self.log_message('进入在线监听模式')
+        self.log_message_updated.emit('进入在线监听模式')
         try:
             # 1. 传输lcm_turn_server到远程机器
-            self.log_message('正在传输lcm_turn_server到远程机器...')
+            self.log_message_updated.emit('正在传输lcm_turn_server到远程机器...')
             import subprocess
             
             # 检查lcm_turn_server可执行文件是否存在
             lcm_turn_server_path = '/opt/ros/lcm_turn_server'
             import os
             if not os.path.exists(lcm_turn_server_path):
-                self.log_message('错误：lcm_turn_server可执行文件不存在')
+                self.log_message_updated.emit('错误：lcm_turn_server可执行文件不存在')
                 QMessageBox.critical(self, '错误', 'lcm_turn_server可执行文件不存在')
                 return
             
             # 无脑删除lcm_turn_server文件
             scp_cmd = f'sshpass -p "123" ssh eame@192.168.54.1 "pkill -9 -f lcm_turn_server"'
-            self.log_message(f'执行命令: {scp_cmd}')
+            self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
             
             # 无脑删除lcm_turn_server文件
             scp_cmd = f'sshpass -p "123" ssh eame@192.168.54.1 "rm -rf /home/eame/lcm_turn_server"'
-            self.log_message(f'执行命令: {scp_cmd}')
+            self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
             
-            self.log_message('lcm_turn_server垃圾清理成功')
+            self.log_message_updated.emit('lcm_turn_server垃圾清理成功')
 
             # 使用scp传输文件，设置10秒超时
             scp_cmd = f'sshpass -p "123" scp -o ConnectTimeout=10 {lcm_turn_server_path} eame@192.168.54.1:/home/eame/lcm_turn_server'
-            self.log_message(f'执行命令: {scp_cmd}')
+            self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
             
             if result.returncode != 0:
-                self.log_message(f'传输失败: {result.stderr}')
+                self.log_message_updated.emit(f'传输失败: {result.stderr}')
                 QMessageBox.critical(self, '错误', f'传输lcm_turn_server失败: {result.stderr}')
                 return
-            print("1111111111111111111111111111111111111111111111111111111111111111111")
-            self.log_message('lcm_turn_server传输成功')
+            self.log_message_updated.emit('lcm_turn_server传输成功')
             
             # 2. 给lcm_turn_server添加可执行权限
-            self.log_message('正在远程启动lcm_turn_server...')
+            self.log_message_updated.emit('正在远程启动lcm_turn_server...')
             ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@192.168.54.1 "chmod +x /home/eame/lcm_turn_server"'
-            self.log_message(f'执行命令: {ssh_cmd}')
+            self.log_message_updated.emit(f'执行命令: {ssh_cmd}')
             result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
-            print("2222222222222222222222222222222222222222222222222222")
             if result.returncode != 0:
-                self.log_message(f'添加可执行权限失败: {result.stderr}')
+                self.log_message_updated.emit(f'添加可执行权限失败: {result.stderr}')
                 QMessageBox.critical(self, '错误', f'添加可执行权限失败: {result.stderr}')
                 return
             
-            self.log_message('lcm_turn_server添加可执行权限')
+            self.log_message_updated.emit('lcm_turn_server添加可执行权限')
             
             # 3. 远程启动lcm_turn_server
-            self.log_message('正在远程启动lcm_turn_server...')
+            self.log_message_updated.emit('正在远程启动lcm_turn_server...')
             ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@192.168.54.1 "nohup /home/eame/lcm_turn_server > /dev/null 2>&1 &"'
-            self.log_message(f'执行命令: {ssh_cmd}')
+            self.log_message_updated.emit(f'执行命令: {ssh_cmd}')
             result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
-            print("2222222222222222222222222222222222222222222222222222")
             if result.returncode != 0:
-                self.log_message(f'启动失败: {result.stderr}')
+                self.log_message_updated.emit(f'启动失败: {result.stderr}')
                 QMessageBox.critical(self, '错误', f'启动lcm_turn_server失败: {result.stderr}')
                 return
             
-            self.log_message('lcm_turn_server启动成功')
+            self.log_message_updated.emit('lcm_turn_server启动成功')
             
             # 3. 启动lcm_tcp_client客户端
-            self.log_message('正在启动LCM TCP客户端...')
+            self.log_message_updated.emit('正在启动LCM TCP客户端...')
             from lcm_tcp_client import LcmTcpClient
-            print(333333333333333333333333333333333333333333)
             # 定义消息回调函数
             def message_handler(channel, data):
-                self.log_message(f'收到LCM消息: 通道={channel}, 数据长度={len(data)}')
+                self.log_message_updated.emit(f'收到LCM消息: 通道={channel}, 数据长度={len(data)}')
             
+            import time
+            time.sleep(5)
             # 创建并启动客户端
             self.lcm_client = LcmTcpClient(
                 server_ip='192.168.54.1',
@@ -334,16 +332,16 @@ class MainWindow(QMainWindow):
             )
             
             if self.lcm_client.start():
-                self.log_message('LCM TCP客户端启动成功')
+                self.log_message_updated.emit('LCM TCP客户端启动成功')
                 # 修改按钮文本为停止监听
                 self.online_debug_button.setText('停止在线监听')
                 QMessageBox.information(self, '信息', '在线监听功能已启动')
             else:
-                self.log_message('LCM TCP客户端启动失败')
+                self.log_message_updated.emit('LCM TCP客户端启动失败')
                 QMessageBox.critical(self, '错误', 'LCM TCP客户端启动失败')
                 
         except Exception as e:
-            self.log_message(f'在线监听功能启动失败: {str(e)}')
+            self.log_message_updated.emit(f'在线监听功能启动失败: {str(e)}')
             QMessageBox.critical(self, '错误', f'在线监听功能启动失败: {str(e)}')
             
         self.online_debug_button.setEnabled(True)
@@ -360,7 +358,7 @@ class MainWindow(QMainWindow):
                 self.log_message('LCM TCP客户端已停止')
                 # 远程停止lcm_turn_server（可选）
                 import subprocess
-                ssh_cmd = f'ssh -o ConnectTimeout=10 eame@192.168.54.1 "pkill -f lcm_turn_server"'
+                ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@192.168.54.1 "pkill -f lcm_turn_server"'
                 self.log_message(f'执行命令: {ssh_cmd}')
                 result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
                 
