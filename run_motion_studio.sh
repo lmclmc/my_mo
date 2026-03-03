@@ -48,7 +48,7 @@ case $choice in
 esac
 
 # 启动 republishers
-ros2 launch lcm_to_ros2 humanoid_republishers.py &
+nohup ros2 launch lcm_to_ros2 humanoid_republishers.py &
 popd
 nohup ros2 run plotjuggler plotjuggler &
 nohup python motion_controller/motion_window.py &

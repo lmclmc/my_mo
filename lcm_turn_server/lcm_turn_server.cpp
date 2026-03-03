@@ -272,7 +272,7 @@ private:
         // 分配缓冲区
         std::vector<uint8_t> buffer(total_len);
         uint32_t offset = 0;
-        
+
         // 写入通道长度
         memcpy(buffer.data() + offset, &channel_len, sizeof(channel_len));
         offset += sizeof(channel_len);
@@ -328,7 +328,7 @@ private:
             // 分配缓冲区
             std::vector<uint8_t> buffer(total_len);
             uint32_t offset = 0;
-            
+
             // 写入通道长度
             memcpy(buffer.data() + offset, &channel_len, sizeof(channel_len));
             offset += sizeof(channel_len);
@@ -347,12 +347,18 @@ private:
             std::lock_guard<lmc::SpinMutex> lock(g_clients_mutex);
             for (auto it = g_client_sockets.begin(); it != g_client_sockets.end();) {
                 int client_fd = *it;
-                std::cout << client_fd << std::endl;
                 ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
                 if (sent < 0) {
-                    // 发送失败，关闭连接
-                    closeClient(client_fd);
-                    it = g_client_sockets.erase(it);
+                    // 区分不同类型的错误
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        // 非致命错误，暂时跳过
+                        ++it;
+                    } else {
+                        // 发送失败，关闭连接
+                        std::cout << "Failed to send message to client " << client_fd << " " << strerror(errno) << std::endl;
+                        closeClient(client_fd);
+                        it = g_client_sockets.erase(it);
+                    }
                 } else {
                     ++it;
                 }

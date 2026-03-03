@@ -295,9 +295,9 @@ class MainWindow(QMainWindow):
                 self.log_message_updated.emit('错误：lcm_turn_server可执行文件不存在')
                 self.message_updated.emit(1, '错误：lcm_turn_server可执行文件不存在')
                 return
+            ip_address = self.ip_input.text().strip()
             
             # 无脑删除lcm_turn_server文件
-            ip_address = self.ip_input.text().strip()
             scp_cmd = f'sshpass -p "123" ssh eame@{ip_address} "pkill -9 -f lcm_turn_server"'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
