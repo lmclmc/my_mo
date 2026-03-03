@@ -1,7 +1,6 @@
 #include <iostream>
 #include <thread>
 #include <queue>
-#include <mutex>
 #include <condition_variable>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,33 +13,38 @@
 #include <lcm/lcm-cpp.hpp>
 #include <netinet/tcp.h>
 #include <fcntl.h>
+#include "singleton.hpp"
+#include "spinmutex.hpp"
+
 // 线程安全的消息队列
 template<typename T>
 class SafeQueue {
 public:
     void push(const T& item) {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<lmc::SpinMutex> lock(mutex_);
         queue_.push(item);
-        cond_.notify_one();
     }
 
     T pop() {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cond_.wait(lock, [this]() { return !queue_.empty(); });
+        std::lock_guard<lmc::SpinMutex> lock(mutex_);
         T item = queue_.front();
         queue_.pop();
         return item;
     }
 
     bool empty() {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<lmc::SpinMutex> lock(mutex_);
         return queue_.empty();
+    }
+
+    int size() {
+        std::lock_guard<lmc::SpinMutex> lock(mutex_);
+        return queue_.size();
     }
 
 private:
     std::queue<T> queue_;
-    std::mutex mutex_;
-    std::condition_variable cond_;
+    lmc::SpinMutex mutex_;
 };
 
 // LCM消息结构体
@@ -51,7 +55,7 @@ struct LcmMessage {
 
 // 全局变量
 SafeQueue<LcmMessage> g_message_queue;
-std::mutex g_clients_mutex;
+lmc::SpinMutex g_clients_mutex;
 std::vector<int> g_client_sockets;
 
 // LCM消息处理类
@@ -189,7 +193,7 @@ public:
         }
         
         // 关闭所有客户端连接
-        std::lock_guard<std::mutex> lock(g_clients_mutex);
+        std::lock_guard<lmc::SpinMutex> lock(g_clients_mutex);
         for (int sock : g_client_sockets) {
             close(sock);
         }
@@ -222,7 +226,7 @@ private:
 
         // 添加到客户端列表
         { 
-            std::lock_guard<std::mutex> lock(g_clients_mutex);
+            std::lock_guard<lmc::SpinMutex> lock(g_clients_mutex);
             g_client_sockets.push_back(client_fd);
         }
 
@@ -252,7 +256,7 @@ private:
         close(client_fd);
         // 从客户端列表中移除
         { 
-            std::lock_guard<std::mutex> lock(g_clients_mutex);
+            std::lock_guard<lmc::SpinMutex> lock(g_clients_mutex);
             auto it = std::find(g_client_sockets.begin(), g_client_sockets.end(), client_fd);
             if (it != g_client_sockets.end()) {
                 g_client_sockets.erase(it);
@@ -267,47 +271,50 @@ private:
             std::cout << "No messages in queue" << std::endl;
             return;
         }
+        int queue_size = g_message_queue.size();
 
-        // 获取消息
-        LcmMessage msg = g_message_queue.pop();
+        for (size_t i =0; i < queue_size; i++) {
+            LcmMessage msg = g_message_queue.pop();
+            // 构建消息格式：通道长度 + 通道名 + 数据长度 + 数据
+            uint32_t channel_len = msg.channel.size();
+            uint32_t data_len = msg.data.size();
+            uint32_t total_len = sizeof(channel_len) + channel_len + sizeof(data_len) + data_len;
 
-        // 构建消息格式：通道长度 + 通道名 + 数据长度 + 数据
-        uint32_t channel_len = msg.channel.size();
-        uint32_t data_len = msg.data.size();
-        uint32_t total_len = sizeof(channel_len) + channel_len + sizeof(data_len) + data_len;
+            // 分配缓冲区
+            std::vector<uint8_t> buffer(total_len);
+            uint32_t offset = 0;
+            
+            // 写入通道长度
+            memcpy(buffer.data() + offset, &channel_len, sizeof(channel_len));
+            offset += sizeof(channel_len);
+            // 写入通道名
+            memcpy(buffer.data() + offset, msg.channel.data(), channel_len);
+            offset += channel_len;
 
-        // 分配缓冲区
-        std::vector<uint8_t> buffer(total_len);
-        uint32_t offset = 0;
-        
-        // 写入通道长度
-        memcpy(buffer.data() + offset, &channel_len, sizeof(channel_len));
-        offset += sizeof(channel_len);
-        // 写入通道名
-        memcpy(buffer.data() + offset, msg.channel.data(), channel_len);
-        offset += channel_len;
+            // 写入数据长度
+            memcpy(buffer.data() + offset, &data_len, sizeof(data_len));
+            offset += sizeof(data_len);
 
-        // 写入数据长度
-        memcpy(buffer.data() + offset, &data_len, sizeof(data_len));
-        offset += sizeof(data_len);
+            // 写入数据
+            memcpy(buffer.data() + offset, msg.data.data(), data_len);
 
-        // 写入数据
-        memcpy(buffer.data() + offset, msg.data.data(), data_len);
-
-        // 发送给所有客户端
-        std::lock_guard<std::mutex> lock(g_clients_mutex);
-        for (auto it = g_client_sockets.begin(); it != g_client_sockets.end();) {
-            int client_fd = *it;
-            std::cout << client_fd << std::endl;
-            ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
-            if (sent < 0) {
-                // 发送失败，关闭连接
-                closeClient(client_fd);
-                it = g_client_sockets.erase(it);
-            } else {
-                ++it;
+            // 发送给所有客户端
+            std::lock_guard<lmc::SpinMutex> lock(g_clients_mutex);
+            for (auto it = g_client_sockets.begin(); it != g_client_sockets.end();) {
+                int client_fd = *it;
+                std::cout << client_fd << std::endl;
+                ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
+                if (sent < 0) {
+                    // 发送失败，关闭连接
+                    closeClient(client_fd);
+                    it = g_client_sockets.erase(it);
+                } else {
+                    ++it;
+                }
             }
         }
+
+        
     }
 
     int port_;
@@ -323,22 +330,22 @@ int main() {
     lcm.subscribeAll();
 
     // 启动TCP服务器
-    TcpServer tcp_server(58888); // 使用8080端口
-    if (!tcp_server.start()) {
+    TcpServer* server = lmc::TypeSingle<TcpServer>::getInstance(58888); // 使用8080端口
+    if (!server->start()) {
         std::cerr << "Failed to start TCP server" << std::endl;
         return 1;
     }
 
     // 启动TCP服务器线程
-    std::thread tcp_thread(&TcpServer::run, &tcp_server);
+    std::thread tcp_thread(&TcpServer::run, server);
 
     // 主线程运行LCM事件循环
     while (true) {
         lcm.handle();
     }
 
-    // 清理
-    tcp_server.stop();
+    // 清理资源
+    server->stop();
     tcp_thread.join();
 
     return 0;

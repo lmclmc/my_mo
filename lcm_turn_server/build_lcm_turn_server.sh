@@ -13,7 +13,7 @@ docker run --rm --name $CONTAINER_NAME \
   -v $(pwd):/workspace \
   -w /workspace \
   $DOCKER_IMAGE \
-  bash -c "aarch64-linux-gnu-g++ -o $OUTPUT_BINARY $SOURCE_FILE -lpthread -L/rk3588_rootfs/usr/local/lib/ -llcm &&
+  bash -c "aarch64-linux-gnu-g++ -O3 -o $OUTPUT_BINARY $SOURCE_FILE -lpthread -L/rk3588_rootfs/usr/local/lib/ -llcm &&
            aarch64-linux-gnu-strip $OUTPUT_BINARY"
 
 # 检查编译结果
