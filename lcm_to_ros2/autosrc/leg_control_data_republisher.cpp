@@ -16,6 +16,7 @@
 
 #include "lcm_to_ros2/msg/LegControlDataLcmt.hpp"
 #include "exlcm/leg_control_data_lcmt_bigdog.hpp"
+#include "exlcm/leg_control_data_lcmt_magicdog.hpp"
 #include "exlcm/leg_control_data_lcmt.hpp"
 #include "republisher_global.hpp"
 class LCMToROS2Republisher : public rclcpp::Node
@@ -64,7 +65,10 @@ private:
         
         // 转换字节序（LCM 传输使用的是大端序）
         msg_hash = be64toh(msg_hash);
-
+        // RCLCPP_INFO(this->get_logger(), "leg_control_data publisher created");
+        // RCLCPP_INFO(this->get_logger(), "Received message with hash: %ld", msg_hash);
+        // RCLCPP_INFO(this->get_logger(), "Received message with leg_control_data_lcmt: %ld", (int64_t)exlcm::leg_control_data_lcmt::getHash());
+        // RCLCPP_INFO(this->get_logger(), "Received message with leg_control_data_lcmt_bigdog: %ld", (int64_t)exlcm::leg_control_data_lcmt_bigdog::getHash());
         // 2. 与已知类型的 Hash 值进行比对
         if (msg_hash == (int64_t)exlcm::leg_control_data_lcmt::getHash()) {
             exlcm::leg_control_data_lcmt leg_msg;
@@ -77,7 +81,12 @@ private:
             if (bigdog_msg.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
                 processBigDogData(&bigdog_msg);
             }
-        } 
+        } else if (msg_hash == (int64_t)exlcm::leg_control_data_lcmt_magicdog::getHash()) {
+            exlcm::leg_control_data_lcmt_magicdog magicdog_msg;
+            if (magicdog_msg.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
+                processMagicDogData(&magicdog_msg);
+            }
+        }
     }
     
     void processLegData(const exlcm::leg_control_data_lcmt* msg) {
@@ -94,6 +103,19 @@ private:
     }
 
     void processBigDogData(const exlcm::leg_control_data_lcmt_bigdog* msg) {
+     //   RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
+        
+        // Use reinterpret_cast to convert LCM message to ROS2 message
+        // Note: This assumes LCM and ROS2 message layouts are identical
+        const lcm_to_ros2::msg::LegControlDataLcmt* ros2_msg = 
+            reinterpret_cast<const lcm_to_ros2::msg::LegControlDataLcmt*>(msg);
+        
+        // Create a shared pointer copy for publishing
+        auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>(*ros2_msg);
+        ros2_pub_->publish(*ros2_msg_shared);
+    }
+
+    void processMagicDogData(const exlcm::leg_control_data_lcmt_magicdog* msg) {
      //   RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
         
         // Use reinterpret_cast to convert LCM message to ROS2 message

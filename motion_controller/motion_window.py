@@ -7,7 +7,7 @@
 import subprocess
 import asyncio
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QPushButton, QVBoxLayout, 
+    QApplication, QMainWindow, QPushButton, QVBoxLayout, QLineEdit,
     QWidget, QFileDialog, QMessageBox, QStatusBar, QTextEdit, QSplitter
 )
 from PySide6.QtCore import Qt, QTime, Signal
@@ -75,6 +75,12 @@ class MainWindow(QMainWindow):
         self.online_debug_button.setFixedSize(200, 50)
         self.online_debug_button.clicked.connect(self.on_online_watch)
         button_layout.addWidget(self.online_debug_button, 0, Qt.AlignCenter)
+        
+        # 创建IP地址输入框
+        self.ip_input = QLineEdit('192.168.54.1', self)
+        self.ip_input.setFixedSize(200, 30)
+        self.ip_input.setPlaceholderText('请输入IPv4地址')
+        button_layout.addWidget(self.ip_input, 0, Qt.AlignCenter)
         
         # 创建 ROS2 bag 录制按钮
         self.ros2_bag_button = QPushButton('开始录制ROS2 bag', self)
@@ -269,19 +275,20 @@ class MainWindow(QMainWindow):
                 return
             
             # 无脑删除lcm_turn_server文件
-            scp_cmd = f'sshpass -p "123" ssh eame@192.168.54.1 "pkill -9 -f lcm_turn_server"'
+            ip_address = self.ip_input.text().strip()
+            scp_cmd = f'sshpass -p "123" ssh eame@{ip_address} "pkill -9 -f lcm_turn_server"'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
             
             # 无脑删除lcm_turn_server文件
-            scp_cmd = f'sshpass -p "123" ssh eame@192.168.54.1 "rm -rf /home/eame/lcm_turn_server"'
+            scp_cmd = f'sshpass -p "123" ssh eame@{ip_address} "rm -rf /home/eame/lcm_turn_server"'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
             
             self.log_message_updated.emit('lcm_turn_server垃圾清理成功')
 
             # 使用scp传输文件，设置10秒超时
-            scp_cmd = f'sshpass -p "123" scp -o ConnectTimeout=10 {lcm_turn_server_path} eame@192.168.54.1:/home/eame/lcm_turn_server'
+            scp_cmd = f'sshpass -p "123" scp -o ConnectTimeout=10 {lcm_turn_server_path} eame@{ip_address}:/home/eame/lcm_turn_server'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
             
@@ -293,7 +300,7 @@ class MainWindow(QMainWindow):
             
             # 2. 给lcm_turn_server添加可执行权限
             self.log_message_updated.emit('正在远程启动lcm_turn_server...')
-            ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@192.168.54.1 "chmod +x /home/eame/lcm_turn_server"'
+            ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@{ip_address} "chmod +x /home/eame/lcm_turn_server"'
             self.log_message_updated.emit(f'执行命令: {ssh_cmd}')
             result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
@@ -305,7 +312,7 @@ class MainWindow(QMainWindow):
             
             # 3. 远程启动lcm_turn_server
             self.log_message_updated.emit('正在远程启动lcm_turn_server...')
-            ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@192.168.54.1 "nohup /home/eame/lcm_turn_server > /dev/null 2>&1 &"'
+            ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@{ip_address} "nohup /home/eame/lcm_turn_server > /dev/null 2>&1 &"'
             self.log_message_updated.emit(f'执行命令: {ssh_cmd}')
             result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
@@ -324,7 +331,7 @@ class MainWindow(QMainWindow):
             time.sleep(5)
             # 创建并启动客户端
             self.lcm_client = LcmTcpClient(
-                server_ip='192.168.54.1',
+                server_ip=ip_address,
                 server_port=58888
             )
             

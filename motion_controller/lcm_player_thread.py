@@ -80,9 +80,9 @@ class LCMPlayerThread(threading.Thread):
                     
                 self.lc.publish(event.channel, event.data)
                 
-                # 打印进度 (可选)
-                sys.stdout.write(f"\r正在播放通道: {event.channel:<30} 时间戳: {event.timestamp}")
-                sys.stdout.flush()
+                # # 打印进度 (可选)
+                # sys.stdout.write(f"\r正在播放通道: {event.channel:<30} 时间戳: {event.timestamp}")
+                # sys.stdout.flush()
 
         except KeyboardInterrupt:
             print("\n回放已由用户中止")
