@@ -20,6 +20,8 @@ import asyncio
 class MainWindow(QMainWindow):
     """主窗口类"""
     log_message_updated = Signal(str)
+    message_updated = Signal(int, str)  # 新增：更新消息的信号
+    
     def __init__(self):
         super().__init__()
         self.ros2_bag_process = None  # 用于存储 ros2 bag 录制进程
@@ -28,6 +30,7 @@ class MainWindow(QMainWindow):
         asyncio.set_event_loop(self.loop)
         
         self.log_message_updated.connect(self.log_message, Qt.QueuedConnection)
+        self.message_updated.connect(self.update_message, Qt.QueuedConnection)
     
     def init_ui(self):
         """初始化用户界面"""
@@ -212,7 +215,14 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, '错误', f'停止ROS2 bag录制失败: {str(e)}')
                 self.statusBar().showMessage('停止ROS2 bag录制失败')
                 self.log_message(f'停止ROS2 bag录制失败: {str(e)}')
-                
+          
+    def update_message(self, mode, message):
+        """更新消息显示槽函数"""
+        if mode == 0:
+            QMessageBox.information(self, '信息', message)
+        else:
+            QMessageBox.critical(self, '错误', message)
+      
     def on_play_lcm_log(self):
         """打开日志槽函数"""
         # 检查是否正在播放
@@ -271,7 +281,7 @@ class MainWindow(QMainWindow):
             import os
             if not os.path.exists(lcm_turn_server_path):
                 self.log_message_updated.emit('错误：lcm_turn_server可执行文件不存在')
-                QMessageBox.critical(self, '错误', 'lcm_turn_server可执行文件不存在')
+                self.message_updated.emit(1, '错误：lcm_turn_server可执行文件不存在')
                 return
             
             # 无脑删除lcm_turn_server文件
@@ -294,7 +304,7 @@ class MainWindow(QMainWindow):
             
             if result.returncode != 0:
                 self.log_message_updated.emit(f'传输失败: {result.stderr}')
-                QMessageBox.critical(self, '错误', f'传输lcm_turn_server失败: {result.stderr}')
+                self.message_updated.emit(1, f'传输lcm_turn_server失败: {result.stderr}')
                 return
             self.log_message_updated.emit('lcm_turn_server传输成功')
             
@@ -305,7 +315,7 @@ class MainWindow(QMainWindow):
             result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
                 self.log_message_updated.emit(f'添加可执行权限失败: {result.stderr}')
-                QMessageBox.critical(self, '错误', f'添加可执行权限失败: {result.stderr}')
+                self.message_updated.emit(1, f'添加可执行权限失败: {result.stderr}')
                 return
             
             self.log_message_updated.emit('lcm_turn_server添加可执行权限')
@@ -317,7 +327,7 @@ class MainWindow(QMainWindow):
             result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
                 self.log_message_updated.emit(f'启动失败: {result.stderr}')
-                QMessageBox.critical(self, '错误', f'启动lcm_turn_server失败: {result.stderr}')
+                self.message_updated.emit(1, f'启动lcm_turn_server失败: {result.stderr}')
                 return
             
             self.log_message_updated.emit('lcm_turn_server启动成功')
@@ -339,14 +349,14 @@ class MainWindow(QMainWindow):
                 self.log_message_updated.emit('LCM TCP客户端启动成功')
                 # 修改按钮文本为停止监听
                 self.online_debug_button.setText('停止在线监听')
-                QMessageBox.information(self, '信息', '在线监听功能已启动')
+                self.message_updated.emit(0, '在线监听功能已启动')
             else:
                 self.log_message_updated.emit('LCM TCP客户端启动失败')
-                QMessageBox.critical(self, '错误', 'LCM TCP客户端启动失败')
+                self.message_updated.emit(1, 'LCM TCP客户端启动失败')
                 
         except Exception as e:
             self.log_message_updated.emit(f'在线监听功能启动失败: {str(e)}')
-            QMessageBox.critical(self, '错误', f'在线监听功能启动失败: {str(e)}')
+            self.message_updated.emit(1, f'在线监听功能启动失败: {str(e)}')
             
         self.online_debug_button.setEnabled(True)
         
