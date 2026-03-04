@@ -14,9 +14,10 @@ echo "2) big_dog.py"
 echo "3) magic_humanoid_gen2_v2.py"
 echo "4) magicdog.py"
 echo "5) MagicBotZ1_23dof.py"
+echo "6) A2601-M-MINI-BOT.py"
 
 # 读取用户输入
-read -p "请输入选择 (1 2 3 4 5): " choice
+read -p "请输入选择 (1 2 3 4 5 6): " choice
 
 sudo chown -R $(id -gn):$(id -un) /opt/ros/
 # 根据用户选择执行相应的命令
@@ -40,6 +41,10 @@ case $choice in
     5)
         echo "正在启动 MagicBotZ1_23dof.py..."
         nohup ros2 launch magic_vis_ros2 MagicBotZ1_23dof.py &
+        ;;
+    6)
+        echo "正在启动 MagicBotZ1_23dof.py..."
+        nohup ros2 launch magic_vis_ros2 A2601-M-MINI-BOT.py &
         ;;
     *)
         echo "无效的选择，默认启动 magic_humanoid.py..."
