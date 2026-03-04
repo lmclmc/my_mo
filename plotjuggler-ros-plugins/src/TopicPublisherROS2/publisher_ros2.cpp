@@ -82,58 +82,50 @@ void TopicPublisherROS2::updatePublishers()
   }
 }
 
-bool TopicPublisherROS2::checkRos2ModeFile(bool enable)
-{
-  const std::string mode_file_path = "/opt/ros2_mode";
+// 用于存储脚本执行结果的结构体
+struct ScriptResult {
+    std::string output;   // 脚本的打印内容
+    int returnCode;       // 脚本的返回值
+};
+
+/**
+ * 执行指定脚本并获取其输出和返回值
+ * @param scriptPath 脚本路径
+ * @param mode 模式参数 (play/record/playback/watch)
+ * @param value 值参数 (0/1)
+ * @return 包含脚本输出和返回值的结构体
+ */
+static ScriptResult executeScript(const std::string& scriptPath, const std::string& mode, int value) {
+  ScriptResult result;
+  result.returnCode = -1;
   
-  try {
-    // 检查文件是否存在
-    std::ifstream file(mode_file_path);
-    if (!file.good()) {
-      // 文件不存在，创建并写入 "replay"
-      std::ofstream new_file(mode_file_path);
-      if (new_file) {
-        if (enable) {
-          new_file << "replay";
-        } else {
-          new_file << "idle";
-        }
-        new_file.close();
-        return true;
-      } else {
-        QMessageBox::critical(nullptr, "错误", "无法创建 /opt/ros2_mode 文件");
-        return false;
-      }
-    } else {
-      // 文件存在，读取内容
-      std::string content;
-      std::getline(file, content);
-      file.close();
-      
-      // 检查内容是否为 "record"
-      if (content == "record") {
-        QMessageBox::critical(nullptr, "错误", "当前已开启ros2 bag消息录制功能，请先关闭ros2 bag消息录制功能，再开启ros2重放");
-        return false;
-      } else {
-        // 内容不是 "replay"，更新为 "replay"
-        std::ofstream update_file(mode_file_path);
-        if (update_file) {
-          if (enable) {
-            update_file << "replay";
-          } else {
-            update_file << "idle";
-          }
-          update_file.close();
-        } else {
-          QMessageBox::warning(nullptr, "警告", "无法更新 /opt/ros2_mode 文件");
-        }
-      }
-      return true;
-    }
-  } catch (const std::exception& e) {
-    QMessageBox::critical(nullptr, "错误", QString("处理 ros2 消息模式文件失败: %1").arg(e.what()));
-    return false;
+  // 构建完整的命令行
+  std::string command = scriptPath + " " + mode + " " + std::to_string(value);
+  
+  // 使用popen执行命令并捕获输出
+  FILE* pipe = popen(command.c_str(), "r");
+  if (!pipe) {
+      result.output = "Error: Failed to open pipe";
+      return result;
   }
+  
+  // 读取脚本输出
+  std::array<char, 128> buffer;
+  std::string output;
+  while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+      output += buffer.data();
+  }
+  result.output = output;
+  
+  // 获取脚本返回值
+  int status = pclose(pipe);
+  if (WIFEXITED(status)) {
+      result.returnCode = WEXITSTATUS(status);
+  } else {
+      result.output += "\nError: Script did not exit normally";
+  }
+  
+  return result;
 }
 
 void TopicPublisherROS2::setEnabled(bool to_enable)
@@ -165,11 +157,12 @@ void TopicPublisherROS2::setEnabled(bool to_enable)
     }).detach();
   }
 
-
-  if (!checkRos2ModeFile(to_enable)) {
+  ScriptResult result = executeScript("/opt/ros/motion_studio_mode_switch.sh", "playback", to_enable);
+  if (result.returnCode != 0) {
+    QMessageBox::critical(nullptr, "错误", result.output.c_str());
     return;
   }
-  
+ 
   _enabled = (to_enable && _node);
 
   if (_enabled)

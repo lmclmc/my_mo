@@ -119,61 +119,51 @@ class MainWindow(QMainWindow):
         # 滚动到最新消息
         self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
     
-    def check_ros2_mode(self, to_enable=""):
-        mode_file = "/opt/ros2_mode"
-        ros2_mode = "idle"
+    def execute_script(self, script_path, mode, value):
+        """
+        执行指定脚本并获取其输出和返回值
+        
+        Args:
+            script_path (str): 脚本路径
+            mode (str): 模式参数 (play/record/playback/watch)
+            value (int): 值参数 (0/1)
+        
+        Returns:
+            dict: 包含脚本输出和返回值的字典，格式为 {"output": str, "return_code": int}
+        """
+        # 构建完整的命令行
+        command = [script_path, mode, str(value)]
+        
         try:
-            # 检查文件是否存在
-            if not os.path.exists(mode_file):
-                # 文件不存在，创建并写入 'record'
-                with open(mode_file, 'w') as f:
-                    if to_enable == "record":
-                        ros2_mode = "record"
-                        f.write('record')
-                    else:
-                        ros2_mode = "idle"
-                        f.write('idle')
-                self.statusBar().showMessage(f'当前ros2消息模式为 {ros2_mode}')
-                self.log_message(f'设置ROS2消息模式为 {ros2_mode}')
-            else:
-                # 文件存在，读取内容
-                with open(mode_file, 'r') as f:
-                    content = f.read().strip()
-                
-                # 检查内容是否为 'replay'
-                if content == 'replay':
-                    QMessageBox.critical(self, '错误', '当前 ros2 消息模式为重放模式，无法开启此功能，请关闭plotjuggler的ros2消息重发，再试一次')
-                    self.statusBar().showMessage(f'当前ros2消息模式为 {ros2_mode}')
-                    ros2_mode = "replay"
-                    self.log_message('ROS2消息模式为重放模式，操作被拒绝')
-                else:
-                    # 内容不是 'record'，更新为 'record'
-                    with open(mode_file, 'w') as f:
-                        if to_enable == "record":
-                            ros2_mode = "record"
-                            f.write('record')
-                        elif to_enable == "idle":
-                            ros2_mode = "idle"
-                            f.write('idle')
-                        else:
-                            ros2_mode = content  # 保持原有模式
-                            f.write(ros2_mode)
-                    self.statusBar().showMessage(f'当前ros2消息模式为 {ros2_mode}')
-                    self.log_message(f'设置ROS2消息模式为 {ros2_mode}')
+            # 执行命令并捕获输出
+            result = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # 将标准错误也捕获到标准输出
+                text=True,  # 以文本模式获取输出
+                check=False  # 不自动抛出异常
+            )
+            
+            # 构建返回结果
+            return {
+                "output": result.stdout,
+                "return_code": result.returncode
+            }
+        
         except Exception as e:
-            QMessageBox.critical(self, '错误', f'处理 ros2 消息模式文件失败: {str(e)}')
-            with open(mode_file, 'w') as f:
-                f.write('idle')
-            self.statusBar().showMessage('处理 ros2 消息模式文件失败')
-            self.log_message(f'处理ROS2消息模式文件失败: {str(e)}')
-            ros2_mode = "idle"
-        return ros2_mode
+            # 处理异常情况
+            return {
+                "output": f"Error: {str(e)}",
+                "return_code": -1
+            }
         
     def on_ros2_bag_record(self):
         """ROS2 bag 录制槽函数"""
         if self.ros2_bag_process is None:
             # 开始录制
-            if self.check_ros2_mode("record") == "replay":
+            result = self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "record", 1)
+            if result["return_code"] != 0:
+                QMessageBox.critical(self, "错误", result["output"])
                 return
             # 弹出文件保存对话框
             file_name, _ = QFileDialog.getSaveFileName(
@@ -198,12 +188,12 @@ class MainWindow(QMainWindow):
                     self.statusBar().showMessage('启动ROS2 bag录制失败')
                     self.log_message(f'启动ROS2 bag录制失败: {str(e)}')
             else:
-                self.check_ros2_mode("idle")
+                self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "record", 0)
                 self.log_message('用户取消了ROS2 bag录制')
         else:
             # 停止录制
-            if self.check_ros2_mode("idle") == "replay":
-                return
+            self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "record", 0)
+
             try:
                 self.ros2_bag_process.terminate()
                 self.ros2_bag_process.wait(timeout=5)
@@ -220,9 +210,9 @@ class MainWindow(QMainWindow):
           
     def ping_timeout(self, timeout):
         """心跳超时槽函数"""
-        print(f"心跳超时: {timeout:.4f} 毫秒")
-        self.statusBar().showMessage(f'心跳超时: {timeout:.4f} 毫秒')
-        self.log_message(f'心跳超时: {timeout:.4f} 毫秒')
+        print(f"心跳超时: {timeout:.4f} 秒")
+        self.statusBar().showMessage(f'心跳超时: {timeout:.4f} 秒')
+        self.log_message(f'心跳超时: {timeout:.4f} 秒')
         
     def update_message(self, mode, message):
         """更新消息显示槽函数"""
@@ -236,8 +226,8 @@ class MainWindow(QMainWindow):
         # 检查是否正在播放
         if self.lcm_player_thread and self.lcm_player_thread.is_alive():
             # 停止播放
-            if self.check_ros2_mode() == "replay":
-                return
+            self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "play_lcm", 0)
+
             try:
                 self.lcm_player_thread.stop()
                 self.lcm_player_thread.join()
@@ -251,8 +241,11 @@ class MainWindow(QMainWindow):
         else:
             # 开始播放
             # 弹出文件选择对话框
-            if self.check_ros2_mode() == "replay":
+            result = self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "play_lcm", 1)
+            if result["return_code"] != 0:
+                QMessageBox.critical(self, "错误", result["output"])
                 return
+            
             file_name, _ = QFileDialog.getOpenFileName(
                 self, '打开日志文件', '', '所有文件 (*)'
             )
@@ -273,6 +266,7 @@ class MainWindow(QMainWindow):
                     self.statusBar().showMessage('启动 LCM 日志回放失败')
                     self.log_message(f'启动 LCM 日志回放失败: {str(e)}')
             else:
+                self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "play_lcm", 0)
                 self.log_message('用户取消了打开LCM日志文件')
     
     def ping_callback(self, timeout):
@@ -377,6 +371,7 @@ class MainWindow(QMainWindow):
         """在线监听槽函数"""
         # 检查是否已经在监听
         if hasattr(self, 'lcm_client') and self.lcm_client and self.lcm_client.is_running():
+            self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "watch", 0)
             # 停止监听
             self.log_message('正在停止在线监听...')
             try:
@@ -405,6 +400,10 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, '错误', f'停止在线监听失败: {str(e)}')
                 
         else:
+            result = self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "watch", 1)
+            if result["return_code"] != 0:
+                QMessageBox.critical(self, "错误", result["output"])
+                return
             self.online_debug_button.setEnabled(False)
             def run_async():
                 try:
