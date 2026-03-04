@@ -184,6 +184,7 @@ class MainWindow(QMainWindow):
                     # 更改按钮文本
                     self.ros2_bag_button.setText('停止录制ROS2 bag')
                 except Exception as e:
+                    self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "record", 0)
                     QMessageBox.critical(self, '错误', f'启动ROS2 bag录制失败: {str(e)}')
                     self.statusBar().showMessage('启动ROS2 bag录制失败')
                     self.log_message(f'启动ROS2 bag录制失败: {str(e)}')
@@ -193,7 +194,6 @@ class MainWindow(QMainWindow):
         else:
             # 停止录制
             self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "record", 0)
-
             try:
                 self.ros2_bag_process.terminate()
                 self.ros2_bag_process.wait(timeout=5)
@@ -262,6 +262,7 @@ class MainWindow(QMainWindow):
                     self.log_message('已启动 LCM 日志回放')
                     self.open_log_button.setText('停止播放lcm')
                 except Exception as e:
+                    self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "play_lcm", 0)
                     QMessageBox.critical(self, '错误', f'启动 LCM 日志回放失败: {str(e)}')
                     self.statusBar().showMessage('启动 LCM 日志回放失败')
                     self.log_message(f'启动 LCM 日志回放失败: {str(e)}')
@@ -409,6 +410,7 @@ class MainWindow(QMainWindow):
                 try:
                     asyncio.run(self.on_excute_watch())
                 except Exception as e:
+                    self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "watch", 0)
                     self.log_message(f'在线监听功能执行失败: {str(e)}')
                     # 重新启用按钮
                     self.online_debug_button.setEnabled(True)
