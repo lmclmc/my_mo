@@ -288,13 +288,25 @@ private:
         memcpy(buffer.data() + offset, data.data(), data_len);
 
         // 发送响应
-        ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
-        if (sent < 0) {
-            // 发送失败，关闭连接
-            closeClient(client_fd);
+        while (1) {
+            ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
+            if (sent < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    std::cout << "EAGAIN or EWOULDBLOCK error, client " << client_fd << " " << strerror(errno) << std::endl;
+                    // 非致命错误，暂时跳过
+                    continue;
+                } else if (errno == EPIPE || errno == ECONNRESET) {
+                    std::cout << "EPIPE or ECONNRESET error, client " << client_fd << " " << strerror(errno) << std::endl;
+                } else {
+                    std::cout << "Failed to send message to client " << client_fd << " " << strerror(errno) << std::endl;
+                }
+
+                // 发送失败，关闭连接
+                closeClient(client_fd);
+            }
+            break;
         }
     }
-
     void closeClient(int client_fd) {
         // 从epoll中移除
         epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd, nullptr);
@@ -351,14 +363,19 @@ private:
                 if (sent < 0) {
                     // 区分不同类型的错误
                     if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        std::cout << "EAGAIN or EWOULDBLOCK error, client " << client_fd << " " << strerror(errno) << std::endl;
                         // 非致命错误，暂时跳过
-                        ++it;
+                        continue;
+                    } else if (errno == EPIPE || errno == ECONNRESET) {
+                        std::cout << "EPIPE or ECONNRESET error, client " << client_fd << " " << strerror(errno) << std::endl;
                     } else {
                         // 发送失败，关闭连接
                         std::cout << "Failed to send message to client " << client_fd << " " << strerror(errno) << std::endl;
-                        closeClient(client_fd);
-                        it = g_client_sockets.erase(it);
                     }
+
+                    // 发送失败，关闭连接
+                    closeClient(client_fd);
+                    it = g_client_sockets.erase(it);
                 } else {
                     ++it;
                 }

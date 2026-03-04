@@ -279,6 +279,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('在线监听模式')
         self.log_message_updated.emit('进入在线监听模式')
         try:
+            ip_address = self.ip_input.text().strip()
             # 1. 传输lcm_turn_server到远程机器
             self.log_message_updated.emit('正在传输lcm_turn_server到远程机器...')
             import subprocess
@@ -290,24 +291,23 @@ class MainWindow(QMainWindow):
                 self.log_message_updated.emit('错误：lcm_turn_server可执行文件不存在')
                 self.message_updated.emit(1, '错误：lcm_turn_server可执行文件不存在')
                 return
-            ip_address = self.ip_input.text().strip()
             
             # 无脑删除lcm_turn_server文件
             scp_cmd = f'sshpass -p "123" ssh eame@{ip_address} "pkill -9 -f lcm_turn_server"'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
-            result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(scp_cmd, timeout=5, shell=True, capture_output=True, text=True)
             
             # 无脑删除lcm_turn_server文件
             scp_cmd = f'sshpass -p "123" ssh eame@{ip_address} "rm -rf /home/eame/lcm_turn_server"'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
-            result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(scp_cmd, timeout=5, shell=True, capture_output=True, text=True)
             
             self.log_message_updated.emit('lcm_turn_server垃圾清理成功')
 
             # 使用scp传输文件，设置10秒超时
             scp_cmd = f'sshpass -p "123" scp -o ConnectTimeout=10 {lcm_turn_server_path} eame@{ip_address}:/home/eame/lcm_turn_server'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
-            result = subprocess.run(scp_cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(scp_cmd, timeout=5, shell=True, capture_output=True, text=True)
             
             if result.returncode != 0:
                 self.log_message_updated.emit(f'传输失败: {result.stderr}')
@@ -319,7 +319,7 @@ class MainWindow(QMainWindow):
             self.log_message_updated.emit('正在远程启动lcm_turn_server...')
             ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@{ip_address} "chmod +x /home/eame/lcm_turn_server"'
             self.log_message_updated.emit(f'执行命令: {ssh_cmd}')
-            result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(ssh_cmd, timeout=5, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
                 self.log_message_updated.emit(f'添加可执行权限失败: {result.stderr}')
                 self.message_updated.emit(1, f'添加可执行权限失败: {result.stderr}')
@@ -329,9 +329,9 @@ class MainWindow(QMainWindow):
             
             # 3. 远程启动lcm_turn_server
             self.log_message_updated.emit('正在远程启动lcm_turn_server...')
-            ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@{ip_address} "nohup /home/eame/lcm_turn_server > /dev/null 2>&1 &"'
+            ssh_cmd = f'sshpass -p "123" ssh -o ConnectTimeout=10 eame@{ip_address} "nohup /home/eame/lcm_turn_server > /home/eame/lcm_turn_server.log 2>&1 &"'
             self.log_message_updated.emit(f'执行命令: {ssh_cmd}')
-            result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(ssh_cmd, timeout=15, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
                 self.log_message_updated.emit(f'启动失败: {result.stderr}')
                 self.message_updated.emit(1, f'启动lcm_turn_server失败: {result.stderr}')
