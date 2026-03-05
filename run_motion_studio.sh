@@ -20,6 +20,7 @@ echo "6) A2601-M-MINI-BOT.py"
 read -p "请输入选择 (1 2 3 4 5 6): " choice
 
 sudo chown -R $(id -gn):$(id -un) /opt/ros/
+rm -rf /opt/ros/motionstudio_mode
 # 根据用户选择执行相应的命令
 case $choice in
     1)

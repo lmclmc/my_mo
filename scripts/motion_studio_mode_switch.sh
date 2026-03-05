@@ -15,7 +15,7 @@ fi
 
 MODE=$1
 VALUE=$2
-FILE="motionstudio_mode"
+FILE="/opt/ros/motionstudio_mode"
 
 # 检查文件是否存在，如果不存在则创建
 if [ ! -f "$FILE" ]; then
