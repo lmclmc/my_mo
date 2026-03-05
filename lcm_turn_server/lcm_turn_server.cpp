@@ -262,6 +262,7 @@ private:
 
     void sendHeartbeatResponse(int client_fd) {
         // 构建心跳响应
+        std::cout << "Sending heartbeat response to client " << client_fd << std::endl;
         std::string channel = "__heartbeat__";
         std::string data = "pong";
 
@@ -292,7 +293,7 @@ private:
             ssize_t sent = send(client_fd, buffer.data(), buffer.size(), 0);
             if (sent < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    std::cout << "EAGAIN or EWOULDBLOCK error, client " << client_fd << " " << strerror(errno) << std::endl;
+              //      std::cout << "EAGAIN or EWOULDBLOCK error, client " << client_fd << " " << strerror(errno) << std::endl;
                     // 非致命错误，暂时跳过
                     continue;
                 } else if (errno == EPIPE || errno == ECONNRESET) {
@@ -363,7 +364,7 @@ private:
                 if (sent < 0) {
                     // 区分不同类型的错误
                     if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                        std::cout << "EAGAIN or EWOULDBLOCK error, client " << client_fd << " " << strerror(errno) << std::endl;
+                   //     std::cout << "EAGAIN or EWOULDBLOCK error, client " << client_fd << " " << strerror(errno) << std::endl;
                         // 非致命错误，暂时跳过
                         continue;
                     } else if (errno == EPIPE || errno == ECONNRESET) {
