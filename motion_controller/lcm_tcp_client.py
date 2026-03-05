@@ -12,7 +12,7 @@ import time
 class LcmTcpClient:
     """LCM TCP 客户端类，带有独立线程处理消息接收"""
     
-    def __init__(self, server_ip='192.168.54.110', server_port=58888, message_callback=None):
+    def __init__(self, server_ip='192.168.54.110', server_port=58888, message_callback=None, error_callback=None):
         """
         初始化客户端
         
@@ -24,6 +24,8 @@ class LcmTcpClient:
         self.server_ip = server_ip
         self.server_port = server_port
         self.message_callback = message_callback
+        self.error_callback = error_callback
+        
         self.client_socket = None
         self.thread = None
         self.running = False
@@ -39,7 +41,8 @@ class LcmTcpClient:
         """启动客户端，开始接收消息"""
         with self.lock:
             if self.running:
-                print("客户端已经在运行")
+                if self.error_callback:
+                    self.error_callback("客户端已经在运行")
                 return False
             
             try:
@@ -59,12 +62,13 @@ class LcmTcpClient:
                 self.thread_ping = threading.Thread(target=self._ping_thread, daemon=True)
                 self.thread_ping.start()
                 
-                
-                print(f"客户端已启动，连接到 {self.server_ip}:{self.server_port}")
+                if self.error_callback:
+                    self.error_callback(f"客户端已启动，连接到 {self.server_ip}:{self.server_port}")
                 return True
                 
             except socket.error as e:
-                print(f"连接服务器时出错: {e}")
+                if self.error_callback:
+                    self.error_callback(f"连接服务器时出错: {e}")
                 self.connected = False
                 return False
     
@@ -89,7 +93,8 @@ class LcmTcpClient:
                 self.client_socket = None
             
             self.connected = False
-            print("客户端已停止")
+            if self.error_callback:
+                self.error_callback("客户端已停止")
     
     def is_connected(self):
         """检查客户端是否已连接"""
@@ -119,6 +124,10 @@ class LcmTcpClient:
                 if not channel_len_data:
                     break
                 channel_len = struct.unpack('<I', channel_len_data)[0]
+                if channel_len > 128:
+                    if self.error_callback:
+                        self.error_callback(f"通道名长度异常: {channel_len}")
+                    continue
                 # 接收通道名
                 channel_name = self._recv_all(channel_len).decode('utf-8')
                 if channel_name == '__heartbeat__':
@@ -131,6 +140,10 @@ class LcmTcpClient:
                 if not data_len_data:
                     break
                 data_len = struct.unpack('<I', data_len_data)[0]
+                if data_len > 1600:
+                    if self.error_callback:
+                        self.error_callback(f"数据长度异常: {data_len}")
+                    continue
                 # 接收数据
                 data = self._recv_all(data_len)
                 if not data:
@@ -145,10 +158,12 @@ class LcmTcpClient:
                 #         print(f"回调函数执行出错: {e}")
                 
             except socket.error as e:
-                print(f"接收数据时出错: {e}")
+                if self.error_callback:
+                    self.error_callback(f"接收数据时出错: {e}")
                 break
             except Exception as e:
-                print(f"处理消息时出错: {e}")
+                if self.error_callback:
+                    self.error_callback(f"处理消息时出错: {e}")
                 continue
         
         # 连接断开
@@ -161,7 +176,8 @@ class LcmTcpClient:
                 except:
                     pass
                 self.client_socket = None
-            print("连接已关闭")
+            if self.error_callback:
+                self.error_callback("连接已关闭")
     
     def _recv_all(self, size):
         """

@@ -273,6 +273,10 @@ class MainWindow(QMainWindow):
     def ping_callback(self, timeout):
         """心跳回调函数"""
         self.ping_timeout_updated.emit(timeout)
+        
+    def error_callback(self, message):
+        """错误回调函数"""
+        self.log_message_updated.emit(message)
                 
     async def on_excute_watch(self):
         # 开始监听
@@ -350,7 +354,8 @@ class MainWindow(QMainWindow):
             self.lcm_client = LcmTcpClient(
                 server_ip=ip_address,
                 server_port=58888,
-                message_callback=self.ping_callback
+                message_callback=self.ping_callback,
+                error_callback=self.error_callback,
             )
             
             if self.lcm_client.start():

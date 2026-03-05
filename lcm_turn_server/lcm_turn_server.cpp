@@ -335,9 +335,18 @@ private:
             LcmMessage msg = g_message_queue.pop();
             // 构建消息格式：通道长度 + 通道名 + 数据长度 + 数据
             uint32_t channel_len = msg.channel.size();
+            if (channel_len > 128) {
+                std::cout << "channel: " << msg.channel << std::endl;
+                std::cout << "channel_len > 1600, continue" << channel_len << std::endl;
+                continue;
+            }
             uint32_t data_len = msg.data.size();
             uint32_t total_len = sizeof(channel_len) + channel_len + sizeof(data_len) + data_len;
-
+            if (data_len > 1600) {
+                std::cout << "channel: " << msg.channel << std::endl;
+                std::cout << "data_len > 1600, continue " << data_len << std::endl;
+                continue;
+            }
             // 分配缓冲区
             std::vector<uint8_t> buffer(total_len);
             uint32_t offset = 0;
