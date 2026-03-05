@@ -1,0 +1,20 @@
+package exlcm;
+
+struct visual_servo_debug_lcmt
+{
+    float op_origin[3];
+    float op_frame[4];
+    float op_box_size[3];
+    
+    float camera_origin[3];
+    float camera_frame[4];
+
+    float ee_origin[3];
+    float ee_frame[4];
+
+    float tar_pos_raw[3];
+    float tar_pos_thresh[3];
+
+    float tar_camera[3];
+    float tool_camera[3];
+}

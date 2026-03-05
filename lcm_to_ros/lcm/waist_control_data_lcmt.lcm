@@ -1,0 +1,7 @@
+package exlcm;
+
+struct waist_control_data_lcmt {
+    float q[3];
+    float qd[3];
+    float tau_est[3];
+}

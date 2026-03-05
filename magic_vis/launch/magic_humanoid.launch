@@ -1,0 +1,13 @@
+<launch>
+  <arg name="robot" default="gen2"/>
+
+  <!-- Visualize robot URDF -->
+  <include file="$(find magic_vis)/launch/$(arg robot).launch"></include>
+
+  <!-- Visualize specific markers -->
+  <node name="marker_visualizer" pkg="magic_vis" type="node_marker_vis" output="screen"/>
+
+  <!-- Launch rviz with specific configuration -->
+  <node name="rviz_magic" pkg="rviz" type="rviz" args="-d $(find magic_vis)/rviz/magic_humanoid.rviz"/>
+  
+</launch>

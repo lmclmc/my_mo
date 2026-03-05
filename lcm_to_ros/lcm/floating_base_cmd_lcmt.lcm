@@ -1,0 +1,7 @@
+package exlcm;
+
+struct floating_base_cmd_lcmt
+{
+    float delta_pos_cmd[3];  // dx dy dz
+    float abs_ori_cmd[3];    // x y z
+}

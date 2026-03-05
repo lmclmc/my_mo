@@ -1,0 +1,11 @@
+package exlcm;
+
+struct lcm_command_struct {
+  int16_t robot_fsm; 
+
+  float x_vel_des;
+  float y_vel_des;
+  float yaw_vel_des;
+  float stop;
+  float rpy_des[3];
+}

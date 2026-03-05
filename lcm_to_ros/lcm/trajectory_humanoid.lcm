@@ -1,0 +1,41 @@
+package exlcm;
+
+struct trajectory_humanoid_lcmt {
+    float body_x[10];
+    float body_y[10];
+    float body_z[10];
+    float body_roll[10];
+    float body_pitch[10];
+    float body_yaw[10];
+
+    float leg_l_q0[10];
+    float leg_l_q1[10];
+    float leg_l_q2[10];
+    float leg_l_q3[10];
+    float leg_l_q4[10];
+    float leg_l_q5[10];
+    
+    float leg_r_q0[10];
+    float leg_r_q1[10];
+    float leg_r_q2[10];
+    float leg_r_q3[10];
+    float leg_r_q4[10];
+    float leg_r_q5[10];
+
+    float foot_l_contact[10];
+    float foot_l_force_x[10];
+    float foot_l_force_y[10];
+    float foot_l_force_z[10];
+    float foot_l_torque_x[10];
+    float foot_l_torque_y[10];
+    float foot_l_torque_z[10];
+    
+    float foot_r_contact[10];
+    float foot_r_force_x[10];
+    float foot_r_force_y[10];
+    float foot_r_force_z[10];
+    float foot_r_torque_x[10];
+    float foot_r_torque_y[10];
+    float foot_r_torque_z[10];
+
+}

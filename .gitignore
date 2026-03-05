@@ -1,0 +1,7 @@
+catkin_ws/*
+.vscode
+
+lcm_to_ros/exlcm/*
+lcm_to_ros/msg/*
+lcm_to_ros/launch/*.launch
+lcm_to_ros/autosrc/*
