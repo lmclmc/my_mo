@@ -10,3 +10,4 @@ float32[12] force_desired
 float32[12] knee_pos
 float32[6] ankle_pos
 float32[12] ft_sensor
+float32[12] motor_temperature
