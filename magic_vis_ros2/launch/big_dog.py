@@ -16,9 +16,9 @@ def generate_launch_description():
     urdf_file_path = os.path.join(pkg_share, '', 'y1_magicdog.urdf')
     
     # Robot visualizer node
-    robot_vis_node = Node(
+    magic_vis_ros2_node = Node(
         package='magic_vis_ros2',
-        executable='robot_vis',
+        executable='magic_vis_ros2',
         name='robot_urdf_visualizer',
         output='screen',
         parameters=[{
@@ -41,7 +41,7 @@ def generate_launch_description():
     ld = LaunchDescription()
     
     # Add nodes
-    ld.add_action(robot_vis_node)
+    ld.add_action(magic_vis_ros2_node)
     ld.add_action(rviz_node)
     
     return ld

@@ -28,7 +28,7 @@
 
 /* Author: Wim Meeussen */
 
-#include "robot_vis/robot_state_publisher.hpp"
+#include "robot_state_publisher.hpp"
 
 #include <chrono>
 #include <fstream>

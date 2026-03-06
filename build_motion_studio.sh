@@ -8,7 +8,7 @@ password=""
 check_root() {
     password=$1
     if [[ -z $password ]]; then
-        echo "用法： ./env_install.sh <password>"
+        echo "用法：$0 <password>"
         exit 1
     fi
 }
