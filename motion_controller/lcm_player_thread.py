@@ -4,6 +4,7 @@ import lcm
 import time
 import sys
 import threading
+from PySide6.QtCore import QObject, Signal, Qt
 
 # 导入你自定义的 LCM 类型 (确保 PYTHONPATH 包含这些类型所在路径)
 # try:
@@ -11,17 +12,22 @@ import threading
 # except ImportError:
 #     print("警告: 未能导入自定义 LCM 类型，将以原始二进制格式回放")
 
-class LCMPlayerThread(threading.Thread):
+class LCMPlayerThread(threading.Thread, QObject):
     """
     LCM 日志播放线程类
     """
+    
+    # 定义播放完成信号
+    playback_finished = Signal()
+    
     def __init__(self, file_path, speed=1.0):
         """
         初始化线程
         :param file_path: .lcm 文件路径
         :param speed: 播放倍速 (1.0 是原速)
         """
-        super().__init__()
+        QObject.__init__(self)
+        threading.Thread.__init__(self)
         self.file_path = file_path
         self.speed = speed
         self._stop_event = threading.Event()
@@ -49,7 +55,7 @@ class LCMPlayerThread(threading.Thread):
             for event in self.log:
                 # 检查是否需要停止
                 if self._stop_event.is_set():
-                    print("\n回放已停止")
+                    print("\n播放已停止")
                     break
                 
                 # 初始化起始时间
@@ -67,7 +73,7 @@ class LCMPlayerThread(threading.Thread):
                 if sleep_time > 0:
                     # 在等待时检查是否需要停止
                     if self._stop_event.wait(sleep_time):
-                        print("\n回放已停止")
+                        print("\n播放已停止")
                         break
 
                 # 将数据重新发布到网络
@@ -77,7 +83,7 @@ class LCMPlayerThread(threading.Thread):
                 #     print(event.data)
                 # if event.channel == "leg_control_data":
                 #     print(event.data)
-                    
+                print(event.channel, event.timestamp)
                 self.lc.publish(event.channel, event.data)
                 
                 # # 打印进度 (可选)
@@ -87,9 +93,12 @@ class LCMPlayerThread(threading.Thread):
         except KeyboardInterrupt:
             print("\n回放已由用户中止")
         finally:
-            print("\n回放结束")
+            print("\n播放结束")
             if self.log:
                 self.log.close()
+            
+            # 发送播放完成信号
+            self.playback_finished.emit()
     
     def stop(self):
         """

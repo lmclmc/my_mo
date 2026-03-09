@@ -8,9 +8,9 @@ import subprocess
 import asyncio
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout, QLineEdit,
-    QWidget, QFileDialog, QMessageBox, QStatusBar, QTextEdit, QSplitter
+    QWidget, QFileDialog, QMessageBox, QStatusBar, QTextEdit, QSplitter, QLabel
 )
-from PySide6.QtCore import Qt, QTime, Signal
+from PySide6.QtCore import Qt, QTime, Signal, QTimer
 import sys
 import os
 from lcm_player_thread import LCMPlayerThread
@@ -26,9 +26,14 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.ros2_bag_process = None  # 用于存储 ros2 bag 录制进程
+        self.ros2_bag_timer = QTimer()  # 用于ROS2 bag录制计时
+        self.ros2_bag_time = 0  # 录制时间（秒）
         self.init_ui()
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
+        
+        # 连接计时器信号
+        self.ros2_bag_timer.timeout.connect(self.update_ros2_bag_timer)
         
         self.log_message_updated.connect(self.log_message, Qt.QueuedConnection)
         self.message_updated.connect(self.update_message, Qt.QueuedConnection)
@@ -93,6 +98,12 @@ class MainWindow(QMainWindow):
         self.ros2_bag_button.clicked.connect(self.on_ros2_bag_record)
         button_layout.addWidget(self.ros2_bag_button, 0, Qt.AlignCenter)
         
+        # 创建 ROS2 bag 录制时间标签
+        self.ros2_bag_timer_label = QLabel('录制时间: 00:00:00', self)
+        self.ros2_bag_timer_label.setFixedSize(200, 30)
+        self.ros2_bag_timer_label.setAlignment(Qt.AlignCenter)
+        button_layout.addWidget(self.ros2_bag_timer_label, 0, Qt.AlignCenter)
+        
         # 设置按钮布局间距
         button_layout.setSpacing(20)  # 减少按钮间距，使整体更紧凑
         button_widget.setLayout(button_layout)
@@ -111,6 +122,14 @@ class MainWindow(QMainWindow):
         # 记录初始日志
         self.log_message('应用程序已启动')
     
+    def update_ros2_bag_timer(self):
+        """更新ROS2 bag录制时间"""
+        self.ros2_bag_time += 1
+        hours = self.ros2_bag_time // 3600
+        minutes = (self.ros2_bag_time % 3600) // 60
+        seconds = self.ros2_bag_time % 60
+        self.ros2_bag_timer_label.setText(f'录制时间: {hours:02d}:{minutes:02d}:{seconds:02d}')
+        
     def log_message(self, message):
         """记录消息到日志窗口"""
         current_time = QTime.currentTime().toString('HH:mm:ss')
@@ -183,6 +202,10 @@ class MainWindow(QMainWindow):
                     QMessageBox.information(self, '信息', f'已开始录制ROS2 bag: {file_name}')
                     # 更改按钮文本
                     self.ros2_bag_button.setText('停止录制ROS2 bag')
+                    # 重置并启动计时器
+                    self.ros2_bag_time = 0
+                    self.ros2_bag_timer_label.setText('录制时间: 00:00:00')
+                    self.ros2_bag_timer.start(1000)  # 每1秒更新一次
                 except Exception as e:
                     self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "record", 0)
                     QMessageBox.critical(self, '错误', f'启动ROS2 bag录制失败: {str(e)}')
@@ -197,16 +220,25 @@ class MainWindow(QMainWindow):
             try:
                 self.ros2_bag_process.terminate()
                 self.ros2_bag_process.wait(timeout=5)
+                # 停止计时器
+                self.ros2_bag_timer.stop()
                 self.statusBar().showMessage('已停止ROS2 bag录制')
                 self.log_message('已停止ROS2 bag录制')
                 QMessageBox.information(self, '信息', '已停止ROS2 bag录制')
                 # 重置进程变量和按钮文本
                 self.ros2_bag_process = None
                 self.ros2_bag_button.setText('开始录制ROS2 bag')
+                # 清零时间显示
+                self.ros2_bag_time = 0
+                self.ros2_bag_timer_label.setText('录制时间: 00:00:00')
             except Exception as e:
                 QMessageBox.critical(self, '错误', f'停止ROS2 bag录制失败: {str(e)}')
                 self.statusBar().showMessage('停止ROS2 bag录制失败')
                 self.log_message(f'停止ROS2 bag录制失败: {str(e)}')
+                # 即使出错也要停止计时器并清零
+                self.ros2_bag_timer.stop()
+                self.ros2_bag_time = 0
+                self.ros2_bag_timer_label.setText('录制时间: 00:00:00')
           
     def ping_timeout(self, timeout):
         """心跳超时槽函数"""
@@ -221,6 +253,16 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.critical(self, '错误', message)
       
+    def on_lcm_playback_finished(self):
+        """LCM日志播放完成槽函数"""
+        # 执行模式切换脚本，停止播放模式
+        self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "play_lcm", 0)
+        # 更新按钮文本
+        self.open_log_button.setText('播放lcm日志')
+        # 更新状态栏和日志
+        self.statusBar().showMessage('LCM 日志回放已完成')
+        self.log_message('LCM 日志回放已完成')
+        
     def on_play_lcm_log(self):
         """打开日志槽函数"""
         # 检查是否正在播放
@@ -257,6 +299,8 @@ class MainWindow(QMainWindow):
                 # 启动LCM播放器线程
                 try:
                     self.lcm_player_thread = LCMPlayerThread(file_name)
+                    # 连接播放完成信号
+                    self.lcm_player_thread.playback_finished.connect(self.on_lcm_playback_finished, Qt.QueuedConnection)
                     self.lcm_player_thread.start()
                     self.statusBar().showMessage('已启动 LCM 日志回放')
                     self.log_message('已启动 LCM 日志回放')
