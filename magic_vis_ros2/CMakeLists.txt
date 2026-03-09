@@ -58,7 +58,7 @@ install(DIRECTORY launch/
 )
 
 # Install URDF and mesh files
-install(DIRECTORY urdf/ meshes/ rviz/
+install(DIRECTORY urdf/ meshes/ rviz/ xml/
   DESTINATION share/${PROJECT_NAME}
 )
 

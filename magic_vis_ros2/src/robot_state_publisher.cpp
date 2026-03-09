@@ -76,10 +76,12 @@ geometry_msgs::msg::TransformStamped kdlToTransform(const KDL::Frame & k)
 
 
 std::string readTextFileToString(const std::string& file_path) {
+    std::string file_content;
     // 1. 以二进制模式打开文件（避免Windows下换行符转换问题），并定位到文件末尾
     std::ifstream file(file_path, std::ios::in | std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        throw std::runtime_error("无法打开文件: " + file_path);
+        std::cout << "无法打开文件: " << file_path << std::endl;
+        return file_content;
     }
 
     try {
@@ -90,7 +92,7 @@ std::string readTextFileToString(const std::string& file_path) {
         }
 
         // 3. 调整string容量，避免多次内存分配（优化性能）
-        std::string file_content;
+        
         file_content.resize(static_cast<size_t>(file_size));
 
         // 4. 将文件指针移回开头，读取全部内容到string
@@ -105,8 +107,8 @@ std::string readTextFileToString(const std::string& file_path) {
         return file_content;
     } catch (...) {
         file.close();  // 确保异常时文件也能关闭
-        throw;  // 重新抛出异常，让调用方处理
     }
+    return file_content;
 }
 
 RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
@@ -134,13 +136,13 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
   //   rclcpp::SensorDataQoS(),
   //   std::bind(&RobotStatePublisher::callbackJointState, this, std::placeholders::_1),
   //   subscriber_options);
-
+  
   // 声明URDF文件路径参数
   std::string urdf_file_path = this->declare_parameter("urdf_file_path", "magic_vis_ros2/p5_humanoid.urdf");
   RCLCPP_INFO(this->get_logger(), "URDF file path: %s", urdf_file_path.c_str());
   // get the XML
   std::string urdf_xml = readTextFileToString(urdf_file_path);
-  
+
   tinyxml2::XMLDocument doc;
   if (doc.Parse(urdf_xml.c_str()) != tinyxml2::XML_SUCCESS) {
     RCLCPP_WARN(this->get_logger(), "Invalid robot_description given, ignoring");
@@ -170,6 +172,8 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
   setupURDF(urdf_xml);
 
   initUrdf(doc);
+  std::string xml_file_path = this->declare_parameter("xml_file_path", "magic_vis_ros2/p5_humanoid.xml");
+  reRank(joint_list_, xml_file_path);
 
   auto subscriber_options = rclcpp::SubscriptionOptions();
   subscriber_options.qos_overriding_options =
@@ -361,7 +365,58 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
     RCLCPP_INFO(this->get_logger(), "joint %s idx %d", name.c_str(), joint.idx);
     joint_idx++;
     free_joints_[name] = joint;
+    std::cout << "joint" << name << " idx " << joint.idx << std::endl;
     joint_list_.push_back(name);
+  }
+}
+
+void RobotStatePublisher::reRank(std::vector<std::string> &joint_list, const std::string &xml_file_path) {
+  // 声明URDF文件路径参数
+  std::vector<std::string> new_joint_list;
+  RCLCPP_INFO(this->get_logger(), "XML file path: %s", xml_file_path.c_str());
+  // get the XML
+
+  std::string xml_content = readTextFileToString(xml_file_path);
+  if (xml_content.empty()) {
+    RCLCPP_WARN(this->get_logger(), "Failed to read XML file content");
+    return;
+  }
+
+  tinyxml2::XMLDocument doc;
+  if (doc.Parse(xml_content.c_str()) != tinyxml2::XML_SUCCESS) {
+    RCLCPP_WARN(this->get_logger(), "Invalid magicbot_gen2_v2.xml content given, ignoring");
+    return;
+  }
+  
+  // Get the mujoco root element
+  auto mujoco = doc.FirstChildElement("mujoco");
+  if (!mujoco) {
+    RCLCPP_WARN(this->get_logger(), "No mujoco element found in XML");
+    return;
+  }
+  
+  // Get the actuator element to map actuators to joints
+  auto actuator = mujoco->FirstChildElement("actuator");
+  if (actuator) {
+    RCLCPP_INFO(this->get_logger(), "Parsing actuators");
+  
+    for (auto motor = actuator->FirstChildElement("motor"); motor; motor = motor->NextSiblingElement("motor")) {
+      std::string motor_name = motor->Attribute("name") ? motor->Attribute("name") : "unknown";
+      std::string joint_name = motor->Attribute("joint") ? motor->Attribute("joint") : "unknown";
+      
+      RCLCPP_INFO(this->get_logger(), "Found actuator: %s mapping to joint: %s", motor_name.c_str(), joint_name.c_str());
+      for (auto &j : joint_list) {
+        if (j == joint_name) {
+          RCLCPP_INFO(this->get_logger(), "joint %s is found", joint_name.c_str());
+          new_joint_list.push_back(joint_name);
+        }
+      }
+      // Here you can add code to map actuators to joints if needed
+    }
+  }
+  if (new_joint_list.size() == joint_list.size()) {
+    RCLCPP_INFO(this->get_logger(), "joint list rank is the same");
+    joint_list = new_joint_list;
   }
 }
 

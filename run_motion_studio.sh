@@ -34,7 +34,7 @@ echo "1) magic_humanoid.py"
 echo "2) big_dog.py"
 echo "3) magic_humanoid_gen2_v2.py"
 echo "4) magicdog.py"
-echo "5) MagicBotZ1_23dof.py"
+echo "5) DreameZ1HumanoidV3_ankle80.py"
 echo "6) A2601-M-MINI-BOT.py"
 
 # 读取用户输入
@@ -61,8 +61,8 @@ case $choice in
         nohup ros2 launch magic_vis_ros2 magicdog.py >> log/magic_vis_ros2.log 2>&1 &
         ;;
     5)
-        echo "正在启动 MagicBotZ1_23dof.py..."
-        nohup ros2 launch magic_vis_ros2 MagicBotZ1_23dof.py >> log/magic_vis_ros2.log 2>&1 &
+        echo "正在启动 DreameZ1HumanoidV3_ankle80.py..."
+        nohup ros2 launch magic_vis_ros2 DreameZ1HumanoidV3_ankle80.py >> log/magic_vis_ros2.log 2>&1 &
         ;;
     6)
         echo "正在启动 A2601-M-MINI-BOT.py..."

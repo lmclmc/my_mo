@@ -225,6 +225,8 @@ private:
   void armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr msg);
   void waistStateCallback(const lcm_to_ros2::msg::WaistControlDataLcmt::SharedPtr msg);
   void stateEstimatorCallback(const lcm_to_ros2::msg::StateEstimatorLcmt::SharedPtr msg);
+
+  void reRank(std::vector<std::string> &joint_list, const std::string &xml_file_path);
   
   rclcpp::Subscription<lcm_to_ros2::msg::LegControlDataLcmt>::SharedPtr leg_state_sub;
   rclcpp::Subscription<lcm_to_ros2::msg::ArmControlDataLcmt>::SharedPtr arm_state_sub;
