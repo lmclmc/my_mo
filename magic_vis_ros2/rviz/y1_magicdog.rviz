@@ -55,73 +55,39 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        LINK_ANKLE_PITCH_L:
+        FL_calf:
           Value: true
-        LINK_ANKLE_PITCH_R:
+        FL_foot:
           Value: true
-        LINK_ANKLE_ROLL_L:
+        FL_hip:
           Value: true
-        LINK_ANKLE_ROLL_R:
+        FL_thigh:
           Value: true
-        LINK_HIP_PITCH_L:
+        FR_calf:
           Value: true
-        LINK_HIP_PITCH_R:
+        FR_foot:
           Value: true
-        LINK_HIP_ROLL_L:
+        FR_hip:
           Value: true
-        LINK_HIP_ROLL_R:
+        FR_thigh:
           Value: true
-        LINK_HIP_YAW_L:
+        RL_calf:
           Value: true
-        LINK_HIP_YAW_R:
+        RL_foot:
           Value: true
-        LINK_KNEE_PITCH_L:
+        RL_hip:
           Value: true
-        LINK_KNEE_PITCH_R:
+        RL_thigh:
           Value: true
-        base_link:
+        RR_calf:
           Value: true
-        link_hp:
+        RR_foot:
           Value: true
-        link_hy:
+        RR_hip:
           Value: true
-        link_la1:
+        RR_thigh:
           Value: true
-        link_la2:
-          Value: true
-        link_la3:
-          Value: true
-        link_la4:
-          Value: true
-        link_la5:
-          Value: true
-        link_la6:
-          Value: true
-        link_la7:
-          Value: true
-        link_ra1:
-          Value: true
-        link_ra2:
-          Value: true
-        link_ra3:
-          Value: true
-        link_ra4:
-          Value: true
-        link_ra5:
-          Value: true
-        link_ra6:
-          Value: true
-        link_ra7:
-          Value: true
-        link_wr:
-          Value: true
-        link_wy:
-          Value: true
-        p_obv/LINK_HIP_PITCH_L:
-          Value: true
-        p_obv/pelvis:
-          Value: true
-        pelvis:
+        base:
           Value: true
         world:
           Value: true
@@ -131,43 +97,28 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        base_link:
-          pelvis:
-            LINK_HIP_ROLL_L:
-              LINK_HIP_YAW_L:
-                LINK_HIP_PITCH_L:
-                  LINK_KNEE_PITCH_L:
-                    LINK_ANKLE_PITCH_L:
-                      LINK_ANKLE_ROLL_L:
-                        {}
-            LINK_HIP_ROLL_R:
-              LINK_HIP_YAW_R:
-                LINK_HIP_PITCH_R:
-                  LINK_KNEE_PITCH_R:
-                    LINK_ANKLE_PITCH_R:
-                      LINK_ANKLE_ROLL_R:
-                        {}
-            link_wr:
-              link_wy:
-                link_hy:
-                  link_hp:
+        world:
+          base:
+            FL_hip:
+              FL_thigh:
+                FL_calf:
+                  FL_foot:
                     {}
-                link_la1:
-                  link_la2:
-                    link_la3:
-                      link_la4:
-                        link_la5:
-                          link_la6:
-                            link_la7:
-                              {}
-                link_ra1:
-                  link_ra2:
-                    link_ra3:
-                      link_ra4:
-                        link_ra5:
-                          link_ra6:
-                            link_ra7:
-                              {}
+            FR_hip:
+              FR_thigh:
+                FR_calf:
+                  FR_foot:
+                    {}
+            RL_hip:
+              RL_thigh:
+                RL_calf:
+                  RL_foot:
+                    {}
+            RR_hip:
+              RR_thigh:
+                RR_calf:
+                  RR_foot:
+                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -183,140 +134,96 @@ Visualization Manager:
         Value: /robot_description
       Enabled: true
       Links:
-        All Links Enabled:
-          {}
+        All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
-        LINK_ANKLE_PITCH_L:
+        FL_calf:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_ANKLE_PITCH_R:
+          Value: true
+        FL_foot:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_ANKLE_ROLL_L:
+          Value: true
+        FL_hip:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_ANKLE_ROLL_R:
+          Value: true
+        FL_thigh:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_HIP_PITCH_L:
+          Value: true
+        FR_calf:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_HIP_PITCH_R:
+          Value: true
+        FR_foot:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_HIP_ROLL_L:
+          Value: true
+        FR_hip:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_HIP_ROLL_R:
+          Value: true
+        FR_thigh:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        LINK_HIP_YAW_L:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        LINK_HIP_YAW_R:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        LINK_KNEE_PITCH_L:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        LINK_KNEE_PITCH_R:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
+          Value: true
         Link Tree Style: Links in Alphabetic Order
-        base_link:
+        RL_calf:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_hp:
+          Value: true
+        RL_foot:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_hy:
+          Value: true
+        RL_hip:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_la1:
+          Value: true
+        RL_thigh:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_la2:
+          Value: true
+        RR_calf:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_la3:
+          Value: true
+        RR_foot:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_la4:
+          Value: true
+        RR_hip:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_la5:
+          Value: true
+        RR_thigh:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_la6:
+          Value: true
+        base:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        link_la7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_ra1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_ra2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_ra3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_ra4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_ra5:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_ra6:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_ra7:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_wr:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        link_wy:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pelvis:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
+          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
@@ -328,7 +235,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -371,7 +278,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 10
+      Distance: 5.277319431304932
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -386,10 +293,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.785398006439209
+      Pitch: 0.5653982162475586
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.785398006439209
+      Yaw: 1.0353977680206299
     Saved: ~
 Window Geometry:
   Displays:
@@ -407,5 +314,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 66
-  Y: 60
+  X: 2805
+  Y: 115

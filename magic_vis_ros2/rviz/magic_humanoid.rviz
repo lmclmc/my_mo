@@ -79,8 +79,6 @@ Visualization Manager:
           Value: true
         LINK_KNEE_PITCH_R:
           Value: true
-        base_link:
-          Value: true
         link_hp:
           Value: true
         link_hy:
@@ -117,10 +115,6 @@ Visualization Manager:
           Value: true
         link_wy:
           Value: true
-        p_obv/LINK_HIP_PITCH_L:
-          Value: true
-        p_obv/pelvis:
-          Value: true
         pelvis:
           Value: true
         world:
@@ -131,7 +125,7 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        base_link:
+        world:
           pelvis:
             LINK_HIP_ROLL_L:
               LINK_HIP_YAW_L:
@@ -183,8 +177,7 @@ Visualization Manager:
         Value: /robot_description
       Enabled: true
       Links:
-        All Links Enabled:
-          {}
+        All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
@@ -192,131 +185,158 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_ANKLE_PITCH_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_ANKLE_ROLL_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_ANKLE_ROLL_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_HIP_PITCH_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_HIP_PITCH_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_HIP_ROLL_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_HIP_ROLL_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_HIP_YAW_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_HIP_YAW_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_KNEE_PITCH_L:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         LINK_KNEE_PITCH_R:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         Link Tree Style: Links in Alphabetic Order
-        base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         link_hp:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_hy:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_la1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_la2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_la3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_la4:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_la5:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_la6:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_la7:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_ra1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_ra2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_ra3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_ra4:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_ra5:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_ra6:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_ra7:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_wr:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         link_wy:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         pelvis:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
       Mass Properties:
         Inertia: false
         Mass: false
@@ -328,7 +348,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -407,5 +427,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 66
-  Y: 60
+  X: 3083
+  Y: 83

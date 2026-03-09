@@ -89,33 +89,36 @@ Visualization Manager:
           Value: true
         base:
           Value: true
+        world:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        base:
-          FL_hip:
-            FL_thigh:
-              FL_calf:
-                FL_foot:
-                  {}
-          FR_hip:
-            FR_thigh:
-              FR_calf:
-                FR_foot:
-                  {}
-          RL_hip:
-            RL_thigh:
-              RL_calf:
-                RL_foot:
-                  {}
-          RR_hip:
-            RR_thigh:
-              RR_calf:
-                RR_foot:
-                  {}
+        world:
+          base:
+            FL_hip:
+              FL_thigh:
+                FL_calf:
+                  FL_foot:
+                    {}
+            FR_hip:
+              FR_thigh:
+                FR_calf:
+                  FR_foot:
+                    {}
+            RL_hip:
+              RL_thigh:
+                RL_calf:
+                  RL_foot:
+                    {}
+            RR_hip:
+              RR_thigh:
+                RR_calf:
+                  RR_foot:
+                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -232,7 +235,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -290,10 +293,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.785398006439209
+      Pitch: 0.665398120880127
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.785398006439209
+      Yaw: 0.8603979349136353
     Saved: ~
 Window Geometry:
   Displays:
@@ -311,5 +314,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 671
-  Y: 134
+  X: 2712
+  Y: 60

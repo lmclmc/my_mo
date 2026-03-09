@@ -112,6 +112,7 @@ std::string readTextFileToString(const std::string& file_path) {
 RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 : rclcpp::Node("robot_state_publisher", options)
 {
+  RCLCPP_INFO(this->get_logger(), "RobotStatePublisher start");
   leg_state_sub = this->create_subscription<lcm_to_ros2::msg::LegControlDataLcmt>(
     "/robot_lcm/leg_control_data", 5, std::bind(&magic::RobotStatePublisher::legStateCallback, this, std::placeholders::_1));
   RCLCPP_INFO(this->get_logger(), "leg_control_data publisher created");
@@ -121,6 +122,12 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 
   arm_state_sub = this->create_subscription<lcm_to_ros2::msg::ArmControlDataLcmt>(
     "/robot_lcm/arm_control_data", 5, std::bind(&magic::RobotStatePublisher::armStateCallback, this, std::placeholders::_1));
+
+  state_estimator_sub = this->create_subscription<lcm_to_ros2::msg::StateEstimatorLcmt>(
+    "/robot_lcm/state_estimator", 5, std::bind(&magic::RobotStatePublisher::stateEstimatorCallback, this, std::placeholders::_1));
+
+  RCLCPP_INFO(this->get_logger(), "state_estimator publisher created");
+
   // // subscribe to joint state
   // joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
   //   "joint_states",
@@ -205,6 +212,13 @@ void RobotStatePublisher::legStateCallback(const lcm_to_ros2::msg::LegControlDat
     free_joints_[joint_list_[i]].position = state_msg->q[i];
     free_joints_[joint_list_[i]].velocity = state_msg->qd[i];
   }
+}
+
+void RobotStatePublisher::stateEstimatorCallback(const lcm_to_ros2::msg::StateEstimatorLcmt::SharedPtr msg) {
+  imu_quaternion_.w = msg->quat[0];
+  imu_quaternion_.x = msg->quat[1];
+  imu_quaternion_.y = msg->quat[2];
+  imu_quaternion_.z = msg->quat[3];
 }
 
 void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr state_msg) 
@@ -543,6 +557,7 @@ void RobotStatePublisher::setupURDF(const std::string & urdf_xml)
   // walk the tree and add segments to segments_
   segments_.clear();
   segments_fixed_.clear();
+
   addChildren(model, tree.getRootSegment());
 
   auto msg = std::make_unique<std_msgs::msg::String>();
@@ -560,7 +575,13 @@ void RobotStatePublisher::addChildren(
   const KDL::SegmentMap::const_iterator segment)
 {
   const std::string & root = GetTreeElementSegment(segment->second).getName();
+  if (root == "pelvis") {
+    root_link_name_ = "pelvis";
+  } else if (root == "base") {
+    root_link_name_ = "base";
+  }
 
+  std::cout << "root: " << root << std::endl;
   std::vector<KDL::SegmentMap::const_iterator> children = GetTreeElementChildren(segment->second);
   for (unsigned int i = 0; i < children.size(); i++) {
     const KDL::Segment & child = GetTreeElementSegment(children[i]->second);
@@ -593,12 +614,29 @@ void RobotStatePublisher::publishTransforms(
   const std::map<std::string, double> & joint_positions,
   const builtin_interfaces::msg::Time & time)
 {
-  RCLCPP_DEBUG(get_logger(), "Publishing transforms for moving joints");
-
   std::string frame_prefix = get_parameter("frame_prefix").get_value<std::string>();
+  geometry_msgs::msg::TransformStamped tf_transform;
+  tf_transform.header.stamp = time;
+  //将根坐标系嫁接到世界坐标系上
+  tf_transform.header.frame_id = "world"; // 假设根坐标系是 world
+  tf_transform.child_frame_id = frame_prefix + root_link_name_; // 假设机器人基坐标系是 base_link
+  
+  // 设置平移（如果需要）
+  tf_transform.transform.translation.x = 0.0;
+  tf_transform.transform.translation.y = 0.0;
+  tf_transform.transform.translation.z = 0.0;
+
+  // 设置旋转（使用 IMU 四元数）
+  tf_transform.transform.rotation.w = imu_quaternion_.w;
+  tf_transform.transform.rotation.x = imu_quaternion_.x;
+  tf_transform.transform.rotation.y = imu_quaternion_.y;
+  tf_transform.transform.rotation.z = imu_quaternion_.z;
+
+  // 发布变换
+  tf_broadcaster_->sendTransform(tf_transform);
 
   std::vector<geometry_msgs::msg::TransformStamped> tf_transforms;
-
+  
   // loop over all joints
   for (const std::pair<const std::string, double> & jnt : joint_positions) {
     std::map<std::string, SegmentPair>::iterator seg = segments_.find(jnt.first);

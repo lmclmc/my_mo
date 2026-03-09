@@ -224,13 +224,19 @@ private:
   void legStateCallback(const lcm_to_ros2::msg::LegControlDataLcmt::SharedPtr msg);
   void armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr msg);
   void waistStateCallback(const lcm_to_ros2::msg::WaistControlDataLcmt::SharedPtr msg);
-
+  void stateEstimatorCallback(const lcm_to_ros2::msg::StateEstimatorLcmt::SharedPtr msg);
+  
   rclcpp::Subscription<lcm_to_ros2::msg::LegControlDataLcmt>::SharedPtr leg_state_sub;
   rclcpp::Subscription<lcm_to_ros2::msg::ArmControlDataLcmt>::SharedPtr arm_state_sub;
   rclcpp::Subscription<lcm_to_ros2::msg::WaistControlDataLcmt>::SharedPtr waist_state_sub;
+  rclcpp::Subscription<lcm_to_ros2::msg::StateEstimatorLcmt>::SharedPtr state_estimator_sub;
+
+  geometry_msgs::msg::Quaternion imu_quaternion_;
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr pub_;
+
+  std::string root_link_name_ = "pelvis";
 
   std::map<std::string, Joint> free_joints_;
   std::vector<std::string> joint_list_;

@@ -119,49 +119,52 @@ Visualization Manager:
           Value: true
         waist_yaw_link:
           Value: true
+        world:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        pelvis:
-          left_hip_pitch_link:
-            left_hip_roll_link:
-              left_hip_yaw_link:
-                left_knee_pitch_link:
-                  left_ankle_pitch_link:
-                    left_ankle_roll_link:
+        world:
+          pelvis:
+            left_hip_pitch_link:
+              left_hip_roll_link:
+                left_hip_yaw_link:
+                  left_knee_pitch_link:
+                    left_ankle_pitch_link:
+                      left_ankle_roll_link:
+                        {}
+            right_hip_pitch_link:
+              right_hip_roll_link:
+                right_hip_yaw_link:
+                  right_knee_pitch_link:
+                    right_ankle_pitch_link:
+                      right_ankle_roll_link:
+                        {}
+            waist_yaw_link:
+              waist_roll_link:
+                waist_pitch_link:
+                  head_yaw_link:
+                    head_pitch_link:
                       {}
-          right_hip_pitch_link:
-            right_hip_roll_link:
-              right_hip_yaw_link:
-                right_knee_pitch_link:
-                  right_ankle_pitch_link:
-                    right_ankle_roll_link:
-                      {}
-          waist_yaw_link:
-            waist_roll_link:
-              waist_pitch_link:
-                head_yaw_link:
-                  head_pitch_link:
-                    {}
-                left_shoulder_pitch_link:
-                  left_shoulder_roll_link:
-                    left_shoulder_yaw_link:
-                      left_elbow_pitch_link:
-                        left_wrist_yaw_link:
-                          left_wrist_pitch_link:
-                            left_wrist_roll_link:
-                              {}
-                right_shoulder_pitch_link:
-                  right_shoulder_roll_link:
-                    right_shoulder_yaw_link:
-                      right_elbow_pitch_link:
-                        right_wrist_yaw_link:
-                          right_wrist_pitch_link:
-                            right_wrist_roll_link:
-                              {}
+                  left_shoulder_pitch_link:
+                    left_shoulder_roll_link:
+                      left_shoulder_yaw_link:
+                        left_elbow_pitch_link:
+                          left_wrist_yaw_link:
+                            left_wrist_pitch_link:
+                              left_wrist_roll_link:
+                                {}
+                  right_shoulder_pitch_link:
+                    right_shoulder_roll_link:
+                      right_shoulder_yaw_link:
+                        right_elbow_pitch_link:
+                          right_wrist_yaw_link:
+                            right_wrist_pitch_link:
+                              right_wrist_roll_link:
+                                {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -353,7 +356,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: pelvis
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -411,10 +414,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.785398006439209
+      Pitch: 0.7553980350494385
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.785398006439209
+      Yaw: 1.0103977918624878
     Saved: ~
 Window Geometry:
   Displays:
@@ -432,5 +435,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 66
-  Y: 60
+  X: 2739
+  Y: 79
