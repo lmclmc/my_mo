@@ -30,12 +30,12 @@ fi
 
 # 显示选择菜单
 echo "请选择要运行的Python脚本："
-echo "1) magic_humanoid.py"
-echo "2) big_dog.py"
-echo "3) magic_humanoid_gen2_v2.py"
-echo "4) magicdog.py"
-echo "5) DreameZ1HumanoidV3_ankle80.py"
-echo "6) A2601-M-MINI-BOT.py"
+echo "1) magic_humanoid.py              (大人形)"
+echo "2) big_dog.py                    （大狗）"
+echo "3) magic_humanoid_gen2_v2.py     （第二代大人形）"
+echo "4) magicdog.py                   （小狗）"
+echo "5) DreameZ1HumanoidV3_ankle80.py （小人形）"
+echo "6) A2601-M-MINI-BOT.py           （迷你小机器人）"
 
 # 读取用户输入
 read -p "请输入选择 (1 2 3 4 5 6): " choice
