@@ -159,6 +159,9 @@ void TopicPublisherROS2::setEnabled(bool to_enable)
 
   ScriptResult result = executeScript("/opt/ros/motion_studio_mode_switch.sh", "playback", to_enable);
   if (result.returnCode != 0) {
+    _enabled = false;
+    emit closed();
+    std::cout << "Error: Failed to switch to playback mode. Return msg: " << result.output << std::endl;
     QMessageBox::critical(nullptr, "错误", result.output.c_str());
     return;
   }
