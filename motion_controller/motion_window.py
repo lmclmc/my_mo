@@ -87,9 +87,9 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.online_debug_button, 0, Qt.AlignCenter)
         
         # 创建IP地址输入框
-        self.ip_input = QLineEdit('192.168.54.1', self)
+        self.ip_input = QLineEdit('', self)
+        self.ip_input.setPlaceholderText('请输入运控板IP地址')
         self.ip_input.setFixedSize(200, 30)
-        self.ip_input.setPlaceholderText('请输入IPv4地址')
         button_layout.addWidget(self.ip_input, 0, Qt.AlignCenter)
         
         # 创建 ROS2 bag 录制按钮
@@ -110,9 +110,16 @@ class MainWindow(QMainWindow):
         
         # 创建分割器，将按钮区域和日志区域分开
         splitter = QSplitter(Qt.Vertical)
+        # 设置按钮区域的最小和最大高度，使其保持固定大小
+        button_widget.setMinimumHeight(300)
+        button_widget.setMaximumHeight(300)
         splitter.addWidget(button_widget)
         splitter.addWidget(self.log_text)
-        splitter.setSizes([200, 150])  # 设置初始大小，减少日志区域高度
+        # 设置初始大小，确保按钮区域有足够空间
+        splitter.setSizes([300, 100])  # 按钮区域300，日志区域100
+        # 设置分割器的拉伸因子，让日志区域能够自动扩展
+        splitter.setStretchFactor(0, 0)  # 按钮区域不拉伸
+        splitter.setStretchFactor(1, 1)  # 日志区域拉伸
         
         # 添加分割器到主布局
         main_layout.addWidget(splitter)
