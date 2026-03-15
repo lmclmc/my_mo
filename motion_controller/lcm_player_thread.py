@@ -83,7 +83,7 @@ class LCMPlayerThread(threading.Thread, QObject):
                 #     print(event.data)
                 # if event.channel == "leg_control_data":
                 #     print(event.data)
-                print(event.channel, event.timestamp)
+                #print(event.channel, event.timestamp)
                 self.lc.publish(event.channel, event.data)
                 
                 # # 打印进度 (可选)

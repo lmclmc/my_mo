@@ -140,7 +140,7 @@ class LcmTcpClient:
                 if not data_len_data:
                     break
                 data_len = struct.unpack('<I', data_len_data)[0]
-                if data_len > 1600:
+                if data_len > 3200:
                     if self.error_callback:
                         self.error_callback(f"数据长度异常: {data_len}")
                     continue
