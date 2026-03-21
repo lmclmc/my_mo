@@ -135,6 +135,9 @@ void TopicPublisherROS2::setEnabled(bool to_enable)
     auto node_opts = rclcpp::NodeOptions();
     node_opts.context(_context);
     _node = std::make_shared<rclcpp::Node>("plotjuggler", node_opts);
+    state_estimator_publisher_ = _node->create_publisher<lcm_to_ros2::msg::StateEstimatorLcmt>(
+      "/robot_lcm/state_estimator",
+      10);
     leg_data_publisher_ = _node->create_publisher<lcm_to_ros2::msg::LegControlDataLcmt>(
       "/robot_lcm/leg_control_data",
       10);
@@ -388,6 +391,20 @@ void TopicPublisherROS2::updateState(double current_time)
 }
 
 void TopicPublisherROS2::publish_data(double current_time) {
+  auto state_estimator_msg = std::make_shared<lcm_to_ros2::msg::StateEstimatorLcmt>();
+  for (int i = 0; i < 4; i++) {
+    std::string str_quat = std::string("/robot_lcm/state_estimator/quat[") + 
+                           std::to_string(i) + std::string("]");
+    auto data_it = _datamap->numeric.find(str_quat);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      state_estimator_msg->quat[i] = data_it->second.at(index).y;
+    } else {
+      state_estimator_msg->quat[i] = 0;
+    }
+  }
+  state_estimator_publisher_->publish(*state_estimator_msg);
+
   auto leg_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>();
   for (int i = 0; i < 12; i++) {
     std::string str_q = std::string("/robot_lcm/leg_control_data/q[") + 

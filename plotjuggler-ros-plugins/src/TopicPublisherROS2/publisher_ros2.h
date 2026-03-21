@@ -91,6 +91,7 @@ private:
   void updatePublishers();
 
 private:
+  rclcpp::Publisher<lcm_to_ros2::msg::StateEstimatorLcmt>::SharedPtr state_estimator_publisher_;
   rclcpp::Publisher<lcm_to_ros2::msg::LegControlDataLcmt>::SharedPtr leg_data_publisher_;
   rclcpp::Publisher<lcm_to_ros2::msg::WaistControlDataLcmt>::SharedPtr waist_data_publisher_;
   rclcpp::Publisher<lcm_to_ros2::msg::HeadControlDataLcmt>::SharedPtr head_data_publisher_;
