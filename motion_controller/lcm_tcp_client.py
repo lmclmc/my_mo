@@ -33,10 +33,8 @@ class LcmTcpClient:
         self.lock = threading.Lock()
         self.ping_timestamp = 0 # 上次心跳时间
         self.ping_timeout = 0 # 心跳超时时间
-    
-        lcm_url = f"udpm://239.255.76.67:56666"
-        self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
-    
+        self.lc = None # LCM 实例用于发送数据
+
     def start(self):
         """启动客户端，开始接收消息"""
         with self.lock:
@@ -46,6 +44,9 @@ class LcmTcpClient:
                 return False
             
             try:
+                lcm_url = f"udpm://239.255.76.67:56666"
+                self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
+        
                 # 创建 TCP 套接字
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.connect((self.server_ip, self.server_port))
