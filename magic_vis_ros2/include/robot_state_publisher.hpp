@@ -73,7 +73,7 @@ struct Joint
   bool continuous;
   bool forward;
   
-  Joint() : min(0.0), max(0.0), zero(0.0), position(0.0), velocity(0.0), effort(0.0), continuous(false), forward(true), idx(-1) {}
+  Joint() : idx(-1), min(0.0), max(0.0), zero(0.0), position(0.0), velocity(0.0), effort(0.0), continuous(false), forward(true) {}
 };
 
 /// A class that represents a mapping between a KDL segment and its root and tip.

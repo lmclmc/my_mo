@@ -227,8 +227,8 @@ void RobotStatePublisher::stateEstimatorCallback(const lcm_to_ros2::msg::StateEs
 
 void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr state_msg) 
 {
-  for (int i=0; i<14; i++) {
-    if (i+16 >= joint_list_.size()) {
+  for (size_t i = 0; i < 14; i++) {
+    if (i + 16 >= joint_list_.size()) {
       continue;
     }
 
@@ -239,8 +239,8 @@ void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDat
 
 void RobotStatePublisher::waistStateCallback(const lcm_to_ros2::msg::WaistControlDataLcmt::SharedPtr state_msg) 
 {
-  for (int i=0; i<2; i++) {
-    if (i+12 >= joint_list_.size()) {
+  for (size_t i = 0; i < 2; i++) {
+    if (i + 12 >= joint_list_.size()) {
       continue;
     }
 

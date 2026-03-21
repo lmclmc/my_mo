@@ -57,6 +57,7 @@ public:
 
 private:
     void handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& chan) {
+        RCLCPP_DEBUG(this->get_logger(), "Received message on channel \"%s\"", chan.c_str());
         if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
 
         // 1. 提取消息头部的 64 位指纹 (Big-Endian)

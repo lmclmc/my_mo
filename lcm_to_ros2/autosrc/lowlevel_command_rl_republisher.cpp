@@ -59,6 +59,7 @@ private:
             const std::string& channel_name,
             const exlcm::lowlevel_command_struct* msg)
     {
+        (void)rbuf;
         RCLCPP_DEBUG(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
         
         // Use reinterpret_cast to convert LCM message to ROS2 message
