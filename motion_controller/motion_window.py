@@ -360,7 +360,7 @@ class MainWindow(QMainWindow):
             self.log_message_updated.emit('lcm_turn_server垃圾清理成功')
 
             # 使用scp传输文件，设置10秒超时
-            scp_cmd = f'sshpass -p "123" scp -o ConnectTimeout=10 {lcm_turn_server_path} eame@{ip_address}:/home/eame/lcm_turn_server'
+            scp_cmd = f'sshpass -p "123" scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 {lcm_turn_server_path} eame@{ip_address}:/home/eame/lcm_turn_server'
             self.log_message_updated.emit(f'执行命令: {scp_cmd}')
             result = subprocess.run(scp_cmd, timeout=5, shell=True, capture_output=True, text=True)
             
