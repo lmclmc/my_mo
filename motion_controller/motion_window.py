@@ -16,6 +16,7 @@ import os
 from lcm_player_thread import LCMPlayerThread
 import threading
 import asyncio
+from lcm_tcp_client import LcmTcpClient
 
 class MainWindow(QMainWindow):
     """主窗口类"""
@@ -51,6 +52,8 @@ class MainWindow(QMainWindow):
         self.setStatusBar(status_bar)
         
         self.lcm_player_thread = LCMPlayerThread(None)  # 初始化线程对象，但不启动
+        # 创建监听客户端
+        self.lcm_client = LcmTcpClient()
         
         # 创建日志窗口
         self.create_log_window()
@@ -396,20 +399,14 @@ class MainWindow(QMainWindow):
             
             # 3. 启动lcm_tcp_client客户端
             self.log_message_updated.emit('正在启动LCM TCP客户端...')
-            from lcm_tcp_client import LcmTcpClient
-            # 定义消息回调函数
 
+            #延时五秒等待服务器启动完成
             import time
             time.sleep(5)
             # 创建并启动客户端
-            self.lcm_client = LcmTcpClient(
-                server_ip=ip_address,
-                server_port=58888,
-                message_callback=self.ping_callback,
-                error_callback=self.error_callback,
-            )
-            
-            if self.lcm_client.start():
+            if self.lcm_client.start(server_ip=ip_address, server_port=58888,
+                                     message_callback=self.ping_callback,
+                                     error_callback=self.error_callback):
                 self.log_message_updated.emit('LCM TCP客户端启动成功')
                 # 修改按钮文本为停止监听
                 self.online_debug_button.setText('停止在线监听')

@@ -12,19 +12,14 @@ import time
 class LcmTcpClient:
     """LCM TCP 客户端类，带有独立线程处理消息接收"""
     
-    def __init__(self, server_ip='192.168.54.110', server_port=58888, message_callback=None, error_callback=None):
+    def __init__(self):
         """
         初始化客户端
-        
-        Args:
-            server_ip (str): 服务器 IP 地址
-            server_port (int): 服务器端口
-            message_callback (callable): 消息回调函数，格式为 callback(channel, data)
         """
-        self.server_ip = server_ip
-        self.server_port = server_port
-        self.message_callback = message_callback
-        self.error_callback = error_callback
+        self.server_ip = None
+        self.server_port = None
+        self.message_callback = None
+        self.error_callback = None
         
         self.client_socket = None
         self.thread = None
@@ -33,9 +28,9 @@ class LcmTcpClient:
         self.lock = threading.Lock()
         self.ping_timestamp = 0 # 上次心跳时间
         self.ping_timeout = 0 # 心跳超时时间
-        self.lc = None # LCM 实例用于发送数据
+        self.lc = lcm.LCM("udpm://239.255.76.67:56666")
 
-    def start(self):
+    def start(self, server_ip='192.168.54.110', server_port=58888, message_callback=None, error_callback=None):
         """启动客户端，开始接收消息"""
         with self.lock:
             if self.running:
@@ -44,9 +39,10 @@ class LcmTcpClient:
                 return False
             
             try:
-                lcm_url = f"udpm://239.255.76.67:56666"
-                self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
-        
+                self.server_ip = server_ip
+                self.server_port = server_port
+                self.message_callback = message_callback
+                self.error_callback = error_callback
                 # 创建 TCP 套接字
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.connect((self.server_ip, self.server_port))

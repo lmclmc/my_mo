@@ -32,7 +32,8 @@ class LCMPlayerThread(threading.Thread, QObject):
         self.speed = speed
         self._stop_event = threading.Event()
         self.log = None
-        self.lc = None
+        lcm_url = f"udpm://239.255.76.67:56666"
+        self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
     
     def run(self):
         """
@@ -40,8 +41,6 @@ class LCMPlayerThread(threading.Thread, QObject):
         """
         try:
             self.log = lcm.EventLog(self.file_path, "r")
-            lcm_url = f"udpm://239.255.76.67:56666"
-            self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
         except IOError:
             print(f"无法打开文件: {self.file_path}")
             return
