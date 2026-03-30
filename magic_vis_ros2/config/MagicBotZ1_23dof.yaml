@@ -3,10 +3,10 @@ legs:
   count: 12
 waist:
   start_index: 12
-  count: 2
+  count: 1
 head:
-  start_index: 14
-  count: 2
+  start_index: 13
+  count: 1
 arms:
-  start_index: 16
-  count: 14
+  start_index: 14
+  count: 10

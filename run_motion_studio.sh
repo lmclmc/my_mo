@@ -40,7 +40,7 @@ echo "6) A2601-M-MINI-BOT.py           （迷你小机器人）"
 # 读取用户输入
 read -p "请输入选择 (1 2 3 4 5 6): " choice
 
-echo $password | sudo -S chown -R $(id -gn):$(id -un) /opt/ros/
+#echo $password | sudo -S chown -R $(id -gn):$(id -un) /opt/ros/
 rm -rf /opt/ros/motionstudio_mode
 # 根据用户选择执行相应的命令
 case $choice in
@@ -61,8 +61,8 @@ case $choice in
         nohup ros2 launch magic_vis_ros2 magicdog.py >> log/magic_vis_ros2.log 2>&1 &
         ;;
     5)
-        echo "正在启动 DreameZ1HumanoidV3_ankle80.py..."
-        nohup ros2 launch magic_vis_ros2 DreameZ1HumanoidV3_ankle80.py >> log/magic_vis_ros2.log 2>&1 &
+        echo "正在启动 MagicBotZ1_23dof.py..."
+        nohup ros2 launch magic_vis_ros2 MagicBotZ1_23dof.py >> log/magic_vis_ros2.log 2>&1 &
         ;;
     6)
         echo "正在启动 A2601-M-MINI-BOT.py..."

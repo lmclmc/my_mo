@@ -113,10 +113,10 @@ std::string readTextFileToString(const std::string& file_path) {
 RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 : rclcpp::Node("robot_state_publisher", options)
 {
-  RCLCPP_INFO(this->get_logger(), "RobotStatePublisher start");
+  RCLCPP_INFO(this->get_logger(), "%s:%d, RobotStatePublisher start", __func__, __LINE__);
   leg_state_sub = this->create_subscription<lcm_to_ros2::msg::LegControlDataLcmt>(
     "/robot_lcm/leg_control_data", 5, std::bind(&magic::RobotStatePublisher::legStateCallback, this, std::placeholders::_1));
-  RCLCPP_INFO(this->get_logger(), "leg_control_data publisher created");
+  RCLCPP_INFO(this->get_logger(), "%s:%d, leg_control_data publisher created", __func__, __LINE__);
 
   waist_state_sub = this->create_subscription<lcm_to_ros2::msg::WaistControlDataLcmt>(
     "/robot_lcm/waist_control_data", 5, std::bind(&magic::RobotStatePublisher::waistStateCallback, this, std::placeholders::_1));
@@ -127,7 +127,7 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
   state_estimator_sub = this->create_subscription<lcm_to_ros2::msg::StateEstimatorLcmt>(
     "/robot_lcm/state_estimator", 5, std::bind(&magic::RobotStatePublisher::stateEstimatorCallback, this, std::placeholders::_1));
 
-  RCLCPP_INFO(this->get_logger(), "state_estimator publisher created");
+  RCLCPP_INFO(this->get_logger(), "%s:%d, state_estimator publisher created", __func__, __LINE__);
 
   // // subscribe to joint state
   // joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
@@ -161,20 +161,20 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
     std::cout << "\narm_count: " << arm_count_ << std::endl;
     std::cout << "\narm_start_index_: " << arm_start_index_ << std::endl;
   } catch (const YAML::Exception& e) {
-    RCLCPP_ERROR(this->get_logger(), "YAML 解析错误: %s", e.what());
+    RCLCPP_ERROR(this->get_logger(), "%s:%d, YAML 解析错误: %s", __func__, __LINE__, e.what());
     exit(1);
   }
 
   
   // 声明URDF文件路径参数
   std::string urdf_file_path = this->declare_parameter("urdf_file_path", "magic_vis_ros2/p5_humanoid.urdf");
-  RCLCPP_INFO(this->get_logger(), "URDF file path: %s", urdf_file_path.c_str());
+  RCLCPP_INFO(this->get_logger(), "%s:%d, URDF file path: %s", __func__, __LINE__, urdf_file_path.c_str());
   // get the XML
   std::string urdf_xml = readTextFileToString(urdf_file_path);
 
   tinyxml2::XMLDocument doc;
   if (doc.Parse(urdf_xml.c_str()) != tinyxml2::XML_SUCCESS) {
-    RCLCPP_WARN(this->get_logger(), "Invalid robot_description given, ignoring");
+    RCLCPP_WARN(this->get_logger(), "%s:%d, Invalid robot_description given, ignoring", __func__, __LINE__);
     return;
   }
 
@@ -275,7 +275,7 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
   int joint_idx = 0;
   auto robot = doc.FirstChildElement("robot");
   if (!robot) {
-    RCLCPP_WARN(this->get_logger(), "No robot element found in URDF");
+    RCLCPP_WARN(this->get_logger(), "%s:%d, No robot element found in URDF", __func__, __LINE__);
     return;
   }
   
@@ -285,6 +285,7 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
     if (jtype == "gearbox" || jtype == "revolute2" || jtype == "ball" || jtype == "screw" || jtype == "universal" || jtype == "fixed") {
       continue;
     }
+
     std::string name = child->Attribute("name");
     
     double minval, maxval;
@@ -294,14 +295,14 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
     } else {
       auto limit = child->FirstChildElement("limit");
       if (!limit) {
-        RCLCPP_WARN(this->get_logger(), "%s is not fixed, nor continuous, but limits are not specified!", name.c_str());
+        RCLCPP_WARN(this->get_logger(), "%s:%d, %s is not fixed, nor continuous, but limits are not specified!", __func__, __LINE__, name.c_str());
         continue;
       }
       
       auto lower = limit->Attribute("lower");
       auto upper = limit->Attribute("upper");
       if (!lower || !upper) {
-        RCLCPP_WARN(this->get_logger(), "%s limits are not valid!", name.c_str());
+        RCLCPP_WARN(this->get_logger(), "%s:%d, %s limits are not valid!", __func__, __LINE__, name.c_str());
         continue;
       }
       
@@ -309,7 +310,7 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
         minval = std::stod(lower);
         maxval = std::stod(upper);
       } catch (const std::invalid_argument &) {
-        RCLCPP_WARN(this->get_logger(), "%s limits are not valid!", name.c_str());
+        RCLCPP_WARN(this->get_logger(), "%s:%d, %s limits are not valid!", __func__, __LINE__, name.c_str());
         continue;
       }
     }
@@ -376,14 +377,14 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
       }
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Check if this joint is already a dependent joint
-    if (dependent_joints_.find(name) != dependent_joints_.end()) {
-      continue;
-    }
+    // // Check if this joint is already a dependent joint
+    // if (dependent_joints_.find(name) != dependent_joints_.end()) {
+    //   continue;
+    // }
 
     auto joint = initJoint(minval, maxval, zeroval, jtype == "continuous");
     joint.idx = joint_idx;
-    RCLCPP_INFO(this->get_logger(), "joint %s idx %d", name.c_str(), joint.idx);
+    RCLCPP_INFO(this->get_logger(), "%s:%d, joint %s idx %d", __func__, __LINE__, name.c_str(), joint.idx);
     joint_idx++;
     free_joints_[name] = joint;
     std::cout << "joint" << name << " idx " << joint.idx << std::endl;
@@ -394,41 +395,41 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
 void RobotStatePublisher::reRank(std::vector<std::string> &joint_list, const std::string &xml_file_path) {
   // 声明URDF文件路径参数
   std::vector<std::string> new_joint_list;
-  RCLCPP_INFO(this->get_logger(), "XML file path: %s", xml_file_path.c_str());
+  RCLCPP_INFO(this->get_logger(), "%s:%d, XML file path: %s", __func__, __LINE__, xml_file_path.c_str());
   // get the XML
 
   std::string xml_content = readTextFileToString(xml_file_path);
   if (xml_content.empty()) {
-    RCLCPP_WARN(this->get_logger(), "Failed to read XML file content");
+    RCLCPP_WARN(this->get_logger(), "%s:%d, Failed to read XML file content", __func__, __LINE__);
     return;
   }
 
   tinyxml2::XMLDocument doc;
   if (doc.Parse(xml_content.c_str()) != tinyxml2::XML_SUCCESS) {
-    RCLCPP_WARN(this->get_logger(), "Invalid magicbot_gen2_v2.xml content given, ignoring");
+    RCLCPP_WARN(this->get_logger(), "%s:%d, Invalid magicbot_gen2_v2.xml content given, ignoring", __func__, __LINE__);
     return;
   }
   
   // Get the mujoco root element
   auto mujoco = doc.FirstChildElement("mujoco");
   if (!mujoco) {
-    RCLCPP_WARN(this->get_logger(), "No mujoco element found in XML");
+    RCLCPP_WARN(this->get_logger(), "%s:%d, No mujoco element found in XML", __func__, __LINE__);
     return;
   }
   
   // Get the actuator element to map actuators to joints
   auto actuator = mujoco->FirstChildElement("actuator");
   if (actuator) {
-    RCLCPP_INFO(this->get_logger(), "Parsing actuators");
+    RCLCPP_INFO(this->get_logger(), "%s:%d, Parsing actuators", __func__, __LINE__);
   
     for (auto motor = actuator->FirstChildElement("motor"); motor; motor = motor->NextSiblingElement("motor")) {
       std::string motor_name = motor->Attribute("name") ? motor->Attribute("name") : "unknown";
       std::string joint_name = motor->Attribute("joint") ? motor->Attribute("joint") : "unknown";
       
-      RCLCPP_INFO(this->get_logger(), "Found actuator: %s mapping to joint: %s", motor_name.c_str(), joint_name.c_str());
+      RCLCPP_INFO(this->get_logger(), "%s:%d, Found actuator: %s mapping to joint: %s", __func__, __LINE__, motor_name.c_str(), joint_name.c_str());
       for (auto &j : joint_list) {
         if (j == joint_name) {
-          RCLCPP_INFO(this->get_logger(), "joint %s is found", joint_name.c_str());
+          RCLCPP_INFO(this->get_logger(), "%s:%d, joint %s is found", __func__, __LINE__, joint_name.c_str());
           new_joint_list.push_back(joint_name);
         }
       }
@@ -436,7 +437,7 @@ void RobotStatePublisher::reRank(std::vector<std::string> &joint_list, const std
     }
   }
   if (new_joint_list.size() == joint_list.size()) {
-    RCLCPP_INFO(this->get_logger(), "joint list rank is the same");
+    RCLCPP_INFO(this->get_logger(), "%s:%d, joint list rank is the same", __func__, __LINE__);
     joint_list = new_joint_list;
   }
 }
@@ -527,11 +528,11 @@ void RobotStatePublisher::timerCallback()
         std::vector<std::string> recursive_mimic_chain_joints = {name};
         while (dependent_joints_.find(parent) != dependent_joints_.end()) {
           if (std::find(recursive_mimic_chain_joints.begin(), recursive_mimic_chain_joints.end(), parent) != recursive_mimic_chain_joints.end()) {
-            RCLCPP_ERROR(this->get_logger(), "Found an infinite recursive mimic chain:");
+            RCLCPP_ERROR(this->get_logger(), "%s:%d, Found an infinite recursive mimic chain:", __func__, __LINE__);
             for (const auto & joint_name : recursive_mimic_chain_joints) {
-              RCLCPP_ERROR(this->get_logger(), "  %s", joint_name.c_str());
+              RCLCPP_ERROR(this->get_logger(), "%s:%d,  %s", __func__, __LINE__, joint_name.c_str());
             }
-            RCLCPP_ERROR(this->get_logger(), "  %s", parent.c_str());
+            RCLCPP_ERROR(this->get_logger(), "%s:%d,  %s", __func__, __LINE__, parent.c_str());
             rclcpp::shutdown();
             exit(1);
           }
@@ -627,7 +628,7 @@ void RobotStatePublisher::setupURDF(const std::string & urdf_xml)
 
   KDL::SegmentMap segments_map = tree.getSegments();
   for (const std::pair<const std::string, KDL::TreeElement> & segment : segments_map) {
-    RCLCPP_DEBUG(get_logger(), "Got segment %s", segment.first.c_str());
+    RCLCPP_DEBUG(get_logger(), "%s:%d, Got segment %s", __func__, __LINE__, segment.first.c_str());
   }
 
   // walk the tree and add segments to segments_
@@ -642,7 +643,7 @@ void RobotStatePublisher::setupURDF(const std::string & urdf_xml)
   // Publish the robot description
   description_pub_->publish(std::move(msg));
 
-  RCLCPP_INFO(get_logger(), "Robot initialized");
+  RCLCPP_INFO(get_logger(), "%s:%d, Robot initialized", __func__, __LINE__);
 }
 
 // add children to correct maps
@@ -667,18 +668,18 @@ void RobotStatePublisher::addChildren(
         model.getJoint(child.getJoint().getName())->type == urdf::Joint::FLOATING)
       {
         RCLCPP_DEBUG(
-          get_logger(), "Floating joint is not supported; skipping segment from %s to %s.",
+          get_logger(), "%s:%d, Floating joint is not supported; skipping segment from %s to %s.", __func__, __LINE__,
           root.c_str(), child.getName().c_str());
       } else {
         segments_fixed_.insert(make_pair(child.getJoint().getName(), s));
         RCLCPP_DEBUG(
-          get_logger(), "Adding fixed segment from %s to %s", root.c_str(),
+          get_logger(), "%s:%d, Adding fixed segment from %s to %s", __func__, __LINE__, root.c_str(),
           child.getName().c_str());
       }
     } else {
       segments_.insert(make_pair(child.getJoint().getName(), s));
       RCLCPP_DEBUG(
-        get_logger(), "Adding moving segment from %s to %s", root.c_str(),
+        get_logger(), "%s:%d, Adding moving segment from %s to %s", __func__, __LINE__, root.c_str(),
         child.getName().c_str());
     }
     addChildren(model, children[i]);
@@ -731,7 +732,7 @@ void RobotStatePublisher::publishTransforms(
 // publish fixed transforms
 void RobotStatePublisher::publishFixedTransforms()
 {
-  RCLCPP_DEBUG(get_logger(), "Publishing transforms for fixed joints");
+  RCLCPP_DEBUG(get_logger(), "%s:%d, Publishing transforms for fixed joints", __func__, __LINE__);
 
   std::string frame_prefix = get_parameter("frame_prefix").get_value<std::string>();
 
@@ -756,23 +757,23 @@ void RobotStatePublisher::callbackJointState(
   // RCLCPP_INFO(get_logger(), "Received JointState message with %zu joints", state->name.size());
   // RCLCPP_INFO(get_logger(), "Received JointState message with %zu positions", state->position.size());
 
-  if (state->name.size() != state->position.size()) {
-    if (state->position.empty()) {
-      RCLCPP_WARN(
-        get_logger(), "Robot state publisher ignored a JointState message about joint(s) "
-        "\"%s\"(,...) whose position member was empty.", state->name[0].c_str());
-    } else {
-      RCLCPP_ERROR(get_logger(), "Robot state publisher ignored an invalid JointState message");
-    }
-    return;
-  }
+  // if (state->name.size() != state->position.size()) {
+  //   if (state->position.empty()) {
+  //     RCLCPP_WARN(
+  //       get_logger(), "%s:%d, Robot state publisher ignored a JointState message about joint(s) "
+  //       "\"%s\"(,...) whose position member was empty.", __func__, __LINE__, state->name[0].c_str());
+  //   } else {
+  //     RCLCPP_ERROR(get_logger(), "%s:%d, Robot state publisher ignored an invalid JointState message", __func__, __LINE__);
+  //   }
+  //   return;
+  // }
 
   // check if we moved backwards in time (e.g. when playing a bag file)
   rclcpp::Time now = this->now();
   if (last_callback_time_.nanoseconds() > now.nanoseconds()) {
     // force re-publish of joint ransforms
     RCLCPP_WARN(
-      get_logger(), "Moved backwards in time, re-publishing joint transforms!");
+      get_logger(), "%s:%d, Moved backwards in time, re-publishing joint transforms!", __func__, __LINE__);
     last_publish_time_.clear();
   }
   last_callback_time_ = now;
@@ -839,7 +840,7 @@ rcl_interfaces::msg::SetParametersResult RobotStatePublisher::parameterUpdate(
         urdf::Model dummy_model;
         parseURDF(new_urdf, dummy_model);
       } catch (const std::runtime_error & err) {
-        RCLCPP_WARN(get_logger(), "%s", err.what());
+        RCLCPP_WARN(get_logger(), "%s:%d, Failed to parse new URDF: %s", __func__, __LINE__, err.what());
         result.successful = false;
         result.reason = err.what();
         break;
@@ -874,7 +875,7 @@ void RobotStatePublisher::onParameterEvent(
         setupURDF(it.second->value.string_value);
         publishFixedTransforms();
       } catch (const std::runtime_error & err) {
-        RCLCPP_WARN(get_logger(), "Failed to parse new URDF: %s", err.what());
+        RCLCPP_WARN(get_logger(), "%s:%d, Failed to parse new URDF: %s", __func__, __LINE__, err.what());
       }
     }
   }
