@@ -250,6 +250,15 @@ private:
   bool pub_def_vels_;
   bool pub_def_efforts_;
   double delta_;
+
+  size_t leg_count_ = 0;
+  size_t leg_start_index_ = 0;
+  size_t waist_count_ = 0;
+  size_t waist_start_index_ = 0;
+  size_t head_count_ = 0;
+  size_t head_start_index_ = 0;
+  size_t arm_count_ = 0;
+  size_t arm_start_index_ = 0;
 };
 
 }  // namespace robot_state_publisher

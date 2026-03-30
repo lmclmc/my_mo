@@ -20,6 +20,7 @@ find_package(std_msgs REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tinyxml2 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 include_directories(
   include
@@ -38,10 +39,12 @@ ament_target_dependencies(magic_vis_ros2
   rclcpp_components
   tinyxml2
   lcm_to_ros2
+  yaml-cpp
 )
 
 target_link_libraries(magic_vis_ros2
   tinyxml2::tinyxml2
+  yaml-cpp
 )
 
 # Install libraries and executables
@@ -58,7 +61,7 @@ install(DIRECTORY launch/
 )
 
 # Install URDF and mesh files
-install(DIRECTORY urdf/ meshes/ rviz/ xml/
+install(DIRECTORY urdf/ meshes/ rviz/ xml/ config/
   DESTINATION share/${PROJECT_NAME}
 )
 

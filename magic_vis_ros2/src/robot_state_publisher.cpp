@@ -52,7 +52,7 @@
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "urdf/model.h"
-
+#include "yaml-cpp/yaml.h"
 namespace magic
 {
 
@@ -73,7 +73,6 @@ geometry_msgs::msg::TransformStamped kdlToTransform(const KDL::Frame & k)
 }
 
 }  // namespace
-
 
 std::string readTextFileToString(const std::string& file_path) {
     std::string file_content;
@@ -136,6 +135,36 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
   //   rclcpp::SensorDataQoS(),
   //   std::bind(&RobotStatePublisher::callbackJointState, this, std::placeholders::_1),
   //   subscriber_options);
+
+  std::string yaml_file_path_ = this->declare_parameter("yaml_file_path", "magic_vis_ros25_human.yaml");
+  RCLCPP_INFO(this->get_logger(), "YAML file path: %s", yaml_file_path_.c_str());
+  try {
+    YAML::Node config = YAML::LoadFile(yaml_file_path_);
+
+    leg_start_index_ = config["legs"]["start_index"].as<int>();
+    leg_count_ = config["legs"]["count"].as<int>();
+    std::cout << "\nleg_count: " << leg_count_ << std::endl;
+    std::cout << "\nleg_start_index: " << leg_start_index_ << std::endl;
+    
+    waist_start_index_ = config["waist"]["start_index"].as<int>();
+    waist_count_ = config["waist"]["count"].as<int>();
+    std::cout << "\nwaist_count: " << waist_count_ << std::endl;
+    std::cout << "\nwaist_start_index: " << waist_start_index_ << std::endl;
+
+    head_start_index_ = config["head"]["start_index"].as<int>();
+    head_count_ = config["head"]["count"].as<int>();
+    std::cout << "\nhead_count: " << head_count_ << std::endl;
+    std::cout << "\nhead_start_index: " << head_start_index_ << std::endl;
+
+    arm_start_index_ = config["arms"]["start_index"].as<int>();
+    arm_count_ = config["arms"]["count"].as<int>();
+    std::cout << "\narm_count: " << arm_count_ << std::endl;
+    std::cout << "\narm_start_index_: " << arm_start_index_ << std::endl;
+  } catch (const YAML::Exception& e) {
+    RCLCPP_ERROR(this->get_logger(), "YAML 解析错误: %s", e.what());
+    exit(1);
+  }
+
   
   // 声明URDF文件路径参数
   std::string urdf_file_path = this->declare_parameter("urdf_file_path", "magic_vis_ros2/p5_humanoid.urdf");
@@ -212,9 +241,9 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 
 void RobotStatePublisher::legStateCallback(const lcm_to_ros2::msg::LegControlDataLcmt::SharedPtr state_msg)
 {
-  for (int i=0; i<12; i++) {
-    free_joints_[joint_list_[i]].position = state_msg->q[i];
-    free_joints_[joint_list_[i]].velocity = state_msg->qd[i];
+  for (size_t i = 0; i < leg_count_; i++) {
+    free_joints_[joint_list_[i + leg_start_index_]].position = state_msg->q[i];
+    free_joints_[joint_list_[i + leg_start_index_]].velocity = state_msg->qd[i];
   }
 }
 
@@ -227,25 +256,17 @@ void RobotStatePublisher::stateEstimatorCallback(const lcm_to_ros2::msg::StateEs
 
 void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr state_msg) 
 {
-  for (size_t i = 0; i < 14; i++) {
-    if (i + 16 >= joint_list_.size()) {
-      continue;
-    }
-
-    free_joints_[joint_list_[i+16]].position = state_msg->joint_cur_pos[i];
-    free_joints_[joint_list_[i+16]].velocity = state_msg->joint_cur_vel[i];
+  for (size_t i = 0; i < arm_count_; i++) {
+    free_joints_[joint_list_[i + arm_start_index_]].position = state_msg->joint_cur_pos[i];
+    free_joints_[joint_list_[i + arm_start_index_]].velocity = state_msg->joint_cur_vel[i];
   }
 }
 
 void RobotStatePublisher::waistStateCallback(const lcm_to_ros2::msg::WaistControlDataLcmt::SharedPtr state_msg) 
 {
-  for (size_t i = 0; i < 2; i++) {
-    if (i + 12 >= joint_list_.size()) {
-      continue;
-    }
-
-    free_joints_[joint_list_[i+12]].position = state_msg->q[i];
-    free_joints_[joint_list_[i+12]].velocity = state_msg->qd[i];
+  for (size_t i = 0; i < waist_count_; i++) {
+    free_joints_[joint_list_[i + waist_start_index_]].position = state_msg->q[i];
+    free_joints_[joint_list_[i + waist_start_index_]].velocity = state_msg->qd[i];
   }
 }
 
@@ -732,6 +753,9 @@ void RobotStatePublisher::publishFixedTransforms()
 void RobotStatePublisher::callbackJointState(
   const sensor_msgs::msg::JointState::ConstSharedPtr state)
 {
+  // RCLCPP_INFO(get_logger(), "Received JointState message with %zu joints", state->name.size());
+  // RCLCPP_INFO(get_logger(), "Received JointState message with %zu positions", state->position.size());
+
   if (state->name.size() != state->position.size()) {
     if (state->position.empty()) {
       RCLCPP_WARN(

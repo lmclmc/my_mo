@@ -18,6 +18,9 @@ def generate_launch_description():
     # Get XML path as direct string
     xml_file_path = os.path.join(pkg_share, '', 'magicbot_gen2_v2.xml')
     
+    # Get YAML path as direct string
+    yaml_file_path = os.path.join(pkg_share, '', 'A2601-M-MINI-BOT.yaml')
+    
     # Robot visualizer node
     magic_vis_ros2_node = Node(
         package='magic_vis_ros2',
@@ -27,6 +30,7 @@ def generate_launch_description():
         parameters=[{
             'urdf_file_path': urdf_file_path,
             'xml_file_path': xml_file_path,
+            'yaml_file_path': yaml_file_path,
             'urdf_binary_mode': True,
             'urdf_throw_on_error': True
         }]

@@ -1,0 +1,12 @@
+legs:
+  start_index: 0
+  count: 12
+waist:
+  start_index: 12
+  count: 2
+head:
+  start_index: 14
+  count: 0
+arms:
+  start_index: 14
+  count: 8

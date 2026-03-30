@@ -15,6 +15,9 @@ def generate_launch_description():
     # Get URDF path as direct string
     urdf_file_path = os.path.join(pkg_share, '', 'p5_humanoid.urdf')
     
+    # Get YAML path as direct string
+    yaml_file_path = os.path.join(pkg_share, '', 'p5_humanoid.yaml')
+    
     # Robot visualizer node
     magic_vis_ros2_node = Node(
         package='magic_vis_ros2',
@@ -23,6 +26,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'urdf_file_path': urdf_file_path,
+            'yaml_file_path': yaml_file_path,
             'urdf_binary_mode': True,
             'urdf_throw_on_error': True
         }]
