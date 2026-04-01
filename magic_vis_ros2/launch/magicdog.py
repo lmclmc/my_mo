@@ -29,7 +29,8 @@ def generate_launch_description():
             'yaml_file_path': yaml_file_path,
             'urdf_binary_mode': True,
             'urdf_throw_on_error': True
-        }]
+        }],
+        arguments=['--ros-args', '--log-level', 'debug', '--log-level', 'rcl:=info']
     )
     
     # RViz node

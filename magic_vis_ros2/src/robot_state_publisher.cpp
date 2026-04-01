@@ -445,6 +445,8 @@ void RobotStatePublisher::reRank(std::vector<std::string> &joint_list, const std
 void RobotStatePublisher::update(double delta)
 {
   for (auto & [name, joint] : free_joints_) {
+    RCLCPP_DEBUG(this->get_logger(), "%s:%d, Updating joint %s: position %f, forward %d, delta %f",
+                 __func__, __LINE__, name.c_str(), joint.position, joint.forward, delta);
     if (joint.forward) {
       joint.position += delta;
       if (joint.position > joint.max) {
@@ -550,9 +552,11 @@ void RobotStatePublisher::timerCallback()
         }
       }
     }
-    
+
     if (joint) {
       if (has_position) {
+        RCLCPP_DEBUG(this->get_logger(), "%s:%d, joint %s position is %f, factor is %f, offset is %f",
+                     __func__, __LINE__, name.c_str(), joint->position, factor, offset);
         msg->position[i] = joint->position * factor + offset;
       }
       if (has_velocity) {
@@ -717,6 +721,7 @@ void RobotStatePublisher::publishTransforms(
   // loop over all joints
   for (const std::pair<const std::string, double> & jnt : joint_positions) {
     std::map<std::string, SegmentPair>::iterator seg = segments_.find(jnt.first);
+    RCLCPP_DEBUG(get_logger(), "%s:%d, Processing joint %s, position %f", __func__, __LINE__, jnt.first.c_str(), jnt.second);
     if (seg != segments_.end()) {
       geometry_msgs::msg::TransformStamped tf_transform =
         kdlToTransform(seg->second.segment.pose(jnt.second));
