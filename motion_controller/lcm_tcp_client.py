@@ -3,6 +3,8 @@
 LCM 转发服务器的 Python 客户端类
 带有独立线程，可由主界面调用
 """
+from datetime import datetime
+
 import lcm
 import socket
 import struct
@@ -129,7 +131,7 @@ class LcmTcpClient:
                 channel_name = self._recv_all(channel_len).decode('utf-8')
                 if channel_name == '__heartbeat__':
                     if self.message_callback:
-                        print(f"收到心跳包，时间差: {time.time() - self.ping_timestamp}")
+                        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} 收到心跳包，时间差: {time.time() - self.ping_timestamp}")
                         self.message_callback(time.time() - self.ping_timestamp)
                     
                 # 接收数据长度（4字节，小端）
