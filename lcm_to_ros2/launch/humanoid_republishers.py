@@ -37,6 +37,14 @@ def generate_launch_description():
         ),
         Node(
             package='lcm_to_ros2',
+            executable='hw_temp_data_republisher',
+            name='hw_temp_data_republisher',
+            namespace='robot_lcm',
+            output='screen',
+            respawn=False
+        ),
+        Node(
+            package='lcm_to_ros2',
             executable='ecat_debug_cmdLEG_L_republisher',
             name='ecat_debug_cmdLEG_L_republisher',
             namespace='robot_lcm',

@@ -11,10 +11,13 @@ byte[7] hard_error_arm_left
 byte[7] hard_error_arm_right
 byte[2] hard_error_waist
 byte[2] hard_error_head
+
 byte[2] hard_error_hand
 byte[2] hard_error_gripper
+
 byte[2] hard_error_leg_ft
 byte[2] hard_error_arm_ft
+
 byte[8] hard_error_ecat_stack
 byte hard_error_imu
 byte hard_error_power

@@ -16,6 +16,7 @@ set(REPUBLISHER_NODES
     ecat_debug_cmdLEG_R_republisher
     ecat_debug_dataLEG_R_republisher
     error_data_republisher
+    hw_temp_data_republisher
     head_control_command_republisher
     head_control_data_republisher
     lcm_response_republisher
