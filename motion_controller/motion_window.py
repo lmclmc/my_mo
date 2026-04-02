@@ -202,10 +202,10 @@ class MainWindow(QMainWindow):
                 try:
                     # 确保文件路径存在
                     os.makedirs(os.path.dirname(file_name), exist_ok=True)
-                    
+
                     # 启动 ros2 bag 录制进程
                     self.ros2_bag_process = subprocess.Popen([
-                        'ros2', 'bag', 'record', '-o', file_name, '-a'
+                        'ros2', 'bag', 'record', '-o', file_name, '-e', '^/robot_lcm*'
                     ])
                     self.statusBar().showMessage(f'已开始录制ROS2 bag: {file_name}')
                     self.log_message(f'已开始录制ROS2 bag: {file_name}')
