@@ -20,6 +20,7 @@ set(REPUBLISHER_NODES
     head_control_command_republisher
     head_control_data_republisher
     lcm_response_republisher
+    lcm_command_republisher
     leg_command_republisher
     leg_control_command_republisher
     leg_control_data_republisher

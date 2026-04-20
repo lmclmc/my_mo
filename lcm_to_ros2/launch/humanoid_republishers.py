@@ -85,6 +85,14 @@ def generate_launch_description():
         ),
         Node(
             package='lcm_to_ros2',
+            executable='lcm_command_republisher',
+            name='lcm_command_republisher',
+            namespace='robot_lcm',
+            output='screen',
+            respawn=False
+        ),
+        Node(
+            package='lcm_to_ros2',
             executable='leg_command_republisher',
             name='leg_command_republisher',
             namespace='robot_lcm',
