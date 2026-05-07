@@ -45,6 +45,14 @@ def generate_launch_description():
         ),
         Node(
             package='lcm_to_ros2',
+            executable='robot_power_io_lcmt_republisher',
+            name='robot_power_io_lcmt_republisher',
+            namespace='robot_lcm',
+            output='screen',
+            respawn=False
+        ),
+        Node(
+            package='lcm_to_ros2',
             executable='ecat_debug_cmdLEG_L_republisher',
             name='ecat_debug_cmdLEG_L_republisher',
             namespace='robot_lcm',

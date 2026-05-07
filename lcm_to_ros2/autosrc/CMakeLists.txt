@@ -36,6 +36,7 @@ set(REPUBLISHER_NODES
     wbcho_lcm_nsp_veryify_data_republisher
     wbcho_lcm_time_data_republisher
     wbcho_lcm_veryify_data_republisher
+    robot_power_io_lcmt_republisher
 )
 
 # Create PascalCase symlinks for message headers (ROS2 generates lowercase filenames)
