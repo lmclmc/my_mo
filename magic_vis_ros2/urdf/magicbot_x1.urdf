@@ -1,0 +1,930 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com)
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="magicbot_x1">
+  <!-- <mujoco>
+    <compiler meshdir="package://meshes/magicbot_x1/" balanceinertia="true" discardvisual="false" />
+  </mujoco> -->
+  <!-- <link name="dummy_link" /> -->
+  <link name="pelvis">
+    <inertial>
+      <origin xyz="0.00039221 -4.444E-05 -0.0111284" rpy="0 0 0" />
+      <mass value="7.87388085" />
+      <inertia ixx="0.05385997" ixy="3.844E-05" ixz="0.00017643" iyy="0.03613924" iyz="2.461E-05" izz="0.04318022" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/pelvis.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/pelvis.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- <joint name="dummy_to_base_link" type="floating">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="dummy_link" />
+    <child link="pelvis" />
+  </joint> -->
+  <link name="left_hip_pitch_link">
+    <inertial>
+      <origin xyz="0.0044406 0.063789 -0.027904" rpy="0 0 0" />
+      <mass value="2.8396" />
+      <inertia ixx="0.0076253" ixy="-8.747E-05" ixz="6.721E-05" iyy="0.0057525" iyz="0.00055316" izz="0.0054895" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_hip_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="left_hip_pitch_joint" type="revolute">
+    <origin xyz="0 0.087092 -0.050282" rpy="-0.52359 0 0" />
+    <parent link="pelvis" />
+    <child link="left_hip_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-2.7925" upper="2.7925" effort="280" velocity="20" />
+  </joint>
+  <link name="left_hip_roll_link">
+    <inertial>
+      <origin xyz="0.0080483 -0.0015389 -0.030357" rpy="0 0 0" />
+      <mass value="1.3635" />
+      <inertia ixx="0.0035262" ixy="-1.696E-05" ixz="-3.227E-05" iyy="0.00474" iyz="-3.023E-05" izz="0.0047975" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_hip_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.0125" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.05" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_hip_roll_joint" type="revolute">
+    <origin xyz="0 0.070451 -0.03428" rpy="0.52359 0 0" />
+    <parent link="left_hip_pitch_link" />
+    <child link="left_hip_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-0.5236" upper="1.9199" effort="350" velocity="14" />
+  </joint>
+  <link name="left_hip_yaw_link">
+    <inertial>
+      <origin xyz="-0.0047283 -0.0042471 -0.10952" rpy="0 0 0" />
+      <mass value="5.1504" />
+      <inertia ixx="0.03407" ixy="0.0001117" ixz="-0.0026742" iyy="0.037098" iyz="-0.00018758" izz="0.012077" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_hip_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_hip_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_hip_yaw_joint" type="revolute">
+    <origin xyz="0 0 -0.084376" rpy="0 0 0" />
+    <parent link="left_hip_roll_link" />
+    <child link="left_hip_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.7925" upper="2.7925" effort="120" velocity="29" />
+  </joint>
+  <link name="left_knee_pitch_link">
+    <inertial>
+      <origin xyz="0.028088 0.00017027 -0.15605" rpy="0 0 0" />
+      <mass value="3.6351" />
+      <inertia ixx="0.06087" ixy="3.527E-05" ixz="0.0010322" iyy="0.061882" iyz="3.966E-05" izz="0.0049886" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_knee_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_knee_pitch_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_knee_pitch_joint" type="revolute">
+    <origin xyz="-0.042 0 -0.30072" rpy="0 0 0" />
+    <parent link="left_hip_yaw_link" />
+    <child link="left_knee_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="2.618" effort="350" velocity="14" />
+  </joint>
+  <link name="left_ankle_pitch_link">
+    <inertial>
+      <origin xyz="0 0.00020645 -0.0011793" rpy="0 0 0" />
+      <mass value="0.20583" />
+      <inertia ixx="7.942E-05" ixy="0" ixz="0" iyy="2.306E-05" iyz="-5E-08" izz="7.867E-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_ankle_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="left_ankle_pitch_joint" type="revolute">
+    <origin xyz="0.033317 0 -0.43789" rpy="0 0 0" />
+    <parent link="left_knee_pitch_link" />
+    <child link="left_ankle_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.95993" upper="0.47124" effort="70" velocity="12" />
+  </joint>
+  <link name="left_ankle_roll_link">
+    <inertial>
+      <origin xyz="0.038191 -4.22E-06 -0.04551" rpy="0 0 0" />
+      <mass value="0.84168" />
+      <inertia ixx="0.00094185" ixy="5.2E-07" ixz="0.00044412" iyy="0.0039151" iyz="-2.6E-07" izz="0.003688" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_ankle_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.055 0.035 -0.079717" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.055 -0.035 -0.079748" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.175 0.03 -0.079264" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.175 -0.03 -0.079259" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_ankle_roll_joint" type="revolute">
+    <origin xyz="0 0 -0.011892" rpy="0 0 0" />
+    <parent link="left_ankle_pitch_link" />
+    <child link="left_ankle_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-0.34907" upper="0.34907" effort="40" velocity="12" />
+  </joint>
+  <link name="right_hip_pitch_link">
+    <inertial>
+      <origin xyz="0.0042767 -0.063348 -0.027918" rpy="0 0 0" />
+      <mass value="2.84" />
+      <inertia ixx="0.0074733" ixy="8.61E-05" ixz="8.938E-05" iyy="0.0056268" iyz="-0.00051863" izz="0.005433" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_hip_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="right_hip_pitch_joint" type="revolute">
+    <origin xyz="0 -0.087091 -0.050283" rpy="0.5236 0 0" />
+    <parent link="pelvis" />
+    <child link="right_hip_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-2.7925" upper="2.7925" effort="280" velocity="20" />
+  </joint>
+  <link name="right_hip_roll_link">
+    <inertial>
+      <origin xyz="0.0080429 0.0015337 -0.030346" rpy="0 0 0" />
+      <mass value="1.3636" />
+      <inertia ixx="0.003527" ixy="1.673E-05" ixz="-3.13E-05" iyy="0.0047413" iyz="3.034E-05" izz="0.0047979" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_hip_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.0125" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.05" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_hip_roll_joint" type="revolute">
+    <origin xyz="0 -0.070451 -0.03428" rpy="-0.5236 0 0" />
+    <parent link="right_hip_pitch_link" />
+    <child link="right_hip_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-1.9199" upper="0.5236" effort="350" velocity="14" />
+  </joint>
+  <link name="right_hip_yaw_link">
+    <inertial>
+      <origin xyz="-0.0047245 0.0042471 -0.10945" rpy="0 0 0" />
+      <mass value="5.1574" />
+      <inertia ixx="0.034087" ixy="-9.178E-05" ixz="-0.0026514" iyy="0.037142" iyz="0.00015967" izz="0.012112" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_hip_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_hip_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_hip_yaw_joint" type="revolute">
+    <origin xyz="0 0 -0.084376" rpy="0 0 0" />
+    <parent link="right_hip_roll_link" />
+    <child link="right_hip_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.7925" upper="2.7925" effort="120" velocity="29" />
+  </joint>
+  <link name="right_knee_pitch_link">
+    <inertial>
+      <origin xyz="0.02812 -0.00016295 -0.1561" rpy="0 0 0" />
+      <mass value="3.6383" />
+      <inertia ixx="0.060906" ixy="-3.609E-05" ixz="0.0010385" iyy="0.061918" iyz="-4.87E-05" izz="0.0049957" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_knee_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_knee_pitch_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_knee_pitch_joint" type="revolute">
+    <origin xyz="-0.042 0 -0.30072" rpy="0 0 0" />
+    <parent link="right_hip_yaw_link" />
+    <child link="right_knee_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="2.618" effort="350" velocity="14" />
+  </joint>
+  <link name="right_ankle_pitch_link">
+    <inertial>
+      <origin xyz="0 -0.00020644 -0.0011793" rpy="0 0 0" />
+      <mass value="0.20583" />
+      <inertia ixx="7.942E-05" ixy="0" ixz="0" iyy="2.306E-05" iyz="5E-08" izz="7.867E-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_ankle_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="right_ankle_pitch_joint" type="revolute">
+    <origin xyz="0.033317 0 -0.43789" rpy="0 0 0" />
+    <parent link="right_knee_pitch_link" />
+    <child link="right_ankle_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.95993" upper="0.47124" effort="70" velocity="12" />
+  </joint>
+  <link name="right_ankle_roll_link">
+    <inertial>
+      <origin xyz="0.03817 -3.92E-06 -0.04551" rpy="0 0 0" />
+      <mass value="0.84195" />
+      <inertia ixx="0.00094211" ixy="-1.12E-06" ixz="0.0004443" iyy="0.0039165" iyz="1.7E-07" izz="0.0036896" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_ankle_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.055 0.035 -0.079806" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-0.055 -0.035 -0.079844" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.175 0.03 -0.079354" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.175 -0.03 -0.079355" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.005" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_ankle_roll_joint" type="revolute">
+    <origin xyz="0 0 -0.011892" rpy="0 0 0" />
+    <parent link="right_ankle_pitch_link" />
+    <child link="right_ankle_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-0.34907" upper="0.34907" effort="40" velocity="12" />
+  </joint>
+  <link name="waist_yaw_link">
+    <inertial>
+      <origin xyz="0.010729 -0.015731 -0.0024756" rpy="0 0 0" />
+      <mass value="2.3072" />
+      <inertia ixx="0.0039866" ixy="8.85E-06" ixz="-3.987E-05" iyy="0.0049321" iyz="8.276E-05" izz="0.0038204" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/waist_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="waist_yaw_joint" type="revolute">
+    <origin xyz="0 0 0.1591" rpy="0 0 0" />
+    <parent link="pelvis" />
+    <child link="waist_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.7925" upper="2.7925" effort="120" velocity="29" />
+  </joint>
+  <link name="waist_pitch_link">
+    <inertial>
+      <origin xyz="-0.030264 0.0063294 4.26E-06" rpy="0 0 0" />
+      <mass value="0.66725" />
+      <inertia ixx="0.0018927" ixy="-7.626E-05" ixz="5E-08" iyy="0.0015339" iyz="1.6E-07" izz="0.0022393" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/waist_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="waist_pitch_joint" type="revolute">
+    <origin xyz="0.011 0 0" rpy="0 0 0" />
+    <parent link="waist_yaw_link" />
+    <child link="waist_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.17453" upper="0.69813" effort="350" velocity="14" />
+  </joint>
+  <link name="waist_roll_link">
+    <inertial>
+      <origin xyz="-0.031199 0.00017435 0.1625" rpy="0 0 0" />
+      <mass value="17.379" />
+      <inertia ixx="0.26693" ixy="-0.00060376" ixz="-0.026947" iyy="0.26442" iyz="-0.0010123" izz="0.15702" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/waist_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/waist_roll_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="waist_roll_joint" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="waist_pitch_link" />
+    <child link="waist_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-0.34907" upper="0.34907" effort="350" velocity="14" />
+  </joint>
+  <link name="head_yaw_link">
+    <inertial>
+      <origin xyz="-0.00010638 0.00074734 -0.059991" rpy="0 0 0" />
+      <mass value="1.2813" />
+      <inertia ixx="0.0051272" ixy="2.4E-07" ixz="-1.7E-07" iyy="0.0051509" iyz="-7.694E-05" izz="0.00087676" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/head_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+  </link>
+  <joint name="head_yaw_joint" type="revolute">
+    <origin xyz="-0.008297 0 0.41478" rpy="0 0 0" />
+    <parent link="waist_roll_link" />
+    <child link="head_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.85" upper="1.85" effort="50" velocity="15" />
+  </joint>
+  <link name="head_pitch_link">
+    <inertial>
+      <origin xyz="0.02483915 -0.00098613 0.08305523" rpy="0 0 0" />
+      <mass value="1.29800113" />
+      <inertia ixx="0.00523892" ixy="-7.318E-05" ixz="0.000338" iyy="0.00709794" iyz="-0.00017813" izz="0.00606629" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/head_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/head_pitch_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="head_pitch_joint" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="head_yaw_link" />
+    <child link="head_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.34907" upper="0.34907" effort="50" velocity="15" />
+  </joint>
+  <link name="left_shoulder_pitch_link">
+    <inertial>
+      <origin xyz="-0.0014609 0.03377 0.00032044" rpy="0 0 0" />
+      <mass value="0.76517" />
+      <inertia ixx="0.0013091" ixy="-4.481E-05" ixz="-4.02E-06" iyy="0.0021964" iyz="-1.987E-05" izz="0.0021784" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_shoulder_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0.069021 0" rpy="0 1.57079632679 0" />
+      <geometry>
+        <cylinder radius="0.047" length="0.09" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_shoulder_pitch_joint" type="revolute">
+    <origin xyz="-0.022506 0.15425 0.27581" rpy="0.17454 0 0" />
+    <parent link="waist_roll_link" />
+    <child link="left_shoulder_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-2.7576" upper="2.7576" effort="125" velocity="29" />
+  </joint>
+  <link name="left_shoulder_roll_link">
+    <inertial>
+      <origin xyz="0.0043147 0.0011458 -0.018574" rpy="0 0 0" />
+      <mass value="1.7565" />
+      <inertia ixx="0.0037598" ixy="9.64E-06" ixz="-0.00012952" iyy="0.0037266" iyz="6.163E-05" izz="0.0021656" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_shoulder_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.08" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.045" length="0.052" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_shoulder_roll_joint" type="revolute">
+    <origin xyz="0 0.069021 0" rpy="-0.17454 0 0" />
+    <parent link="left_shoulder_pitch_link" />
+    <child link="left_shoulder_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-0.17453" upper="2.7402" effort="125" velocity="29" />
+  </joint>
+  <link name="left_shoulder_yaw_link">
+    <inertial>
+      <origin xyz="-0.00082431 -0.00061334 -0.046704" rpy="0 0 0" />
+      <mass value="0.94573" />
+      <inertia ixx="0.0024739" ixy="5.9E-07" ixz="-5.942E-05" iyy="0.0023488" iyz="-5.947E-05" izz="0.0011202" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_shoulder_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_shoulder_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_shoulder_yaw_joint" type="revolute">
+    <origin xyz="0 0 -0.11127" rpy="0 0 0" />
+    <parent link="left_shoulder_roll_link" />
+    <child link="left_shoulder_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.618" upper="2.618" effort="50" velocity="15" />
+  </joint>
+  <link name="left_elbow_pitch_link">
+    <inertial>
+      <origin xyz="0.052045 -0.00069987 -0.00054098" rpy="0 0 0" />
+      <mass value="1.3256" />
+      <inertia ixx="0.0009743" ixy="-6.345E-05" ixz="-3.05E-06" iyy="0.0049243" iyz="2.95E-06" izz="0.0048388" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_elbow_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_elbow_pitch_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_elbow_pitch_joint" type="revolute">
+    <origin xyz="0 0 -0.14595" rpy="0 0 0" />
+    <parent link="left_shoulder_yaw_link" />
+    <child link="left_elbow_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.8203" upper="1.5708" effort="50" velocity="15" />
+  </joint>
+  <link name="left_wrist_roll_link">
+    <inertial>
+      <origin xyz="0.029543 -0.0012959 3.251E-05" rpy="0 0 0" />
+      <mass value="0.21709" />
+      <inertia ixx="0.00027617" ixy="1.396E-05" ixz="6E-08" iyy="0.0001912" iyz="3.2E-07" izz="0.000331" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_wrist_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_wrist_roll_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_wrist_roll_joint" type="revolute">
+    <origin xyz="0.13365 0 0" rpy="0 0 0" />
+    <parent link="left_elbow_pitch_link" />
+    <child link="left_wrist_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-2.9147" upper="2.9147" effort="22" velocity="17" />
+  </joint>
+  <link name="left_wrist_pitch_link">
+    <inertial>
+      <origin xyz="0.031468 -0.0036736 -0.0042873" rpy="0 0 0" />
+      <mass value="1.2014" />
+      <inertia ixx="0.00088319" ixy="-0.00014127" ixz="0.00016115" iyy="0.0019433" iyz="1.4E-05" izz="0.0019305" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_wrist_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_wrist_pitch_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_wrist_pitch_joint" type="revolute">
+    <origin xyz="0.054441 0 0" rpy="0 0 0" />
+    <parent link="left_wrist_roll_link" />
+    <child link="left_wrist_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.5708" upper="1.5708" effort="22" velocity="17" />
+  </joint>
+  <link name="left_wrist_yaw_link">
+    <inertial>
+      <origin xyz="0.030333 -0.00013503 -0.0014362" rpy="0 0 0" />
+      <mass value="0.24348" />
+      <inertia ixx="0.00025848" ixy="4.9E-07" ixz="-8.7E-06" iyy="0.00033888" iyz="-5E-07" izz="0.00019977" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_wrist_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/left_wrist_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="left_wrist_yaw_joint" type="revolute">
+    <origin xyz="0.062563 0 0" rpy="0 0 0" />
+    <parent link="left_wrist_pitch_link" />
+    <child link="left_wrist_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.5272" upper="1.5272" effort="22" velocity="17" />
+  </joint>
+  <link name="right_shoulder_pitch_link">
+    <inertial>
+      <origin xyz="-0.0014631 -0.033872 0.00032193" rpy="0 0 0" />
+      <mass value="0.765" />
+      <inertia ixx="0.0013086" ixy="4.48E-05" ixz="-3.91E-06" iyy="0.0021958" iyz="1.981E-05" izz="0.0021774" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_shoulder_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 -0.069144 0" rpy="0 1.57079632679 0" />
+      <geometry>
+        <cylinder radius="0.047" length="0.09" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_shoulder_pitch_joint" type="revolute">
+    <origin xyz="-0.022518 -0.15425 0.2758" rpy="-0.17453 0 0" />
+    <parent link="waist_roll_link" />
+    <child link="right_shoulder_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-2.7576" upper="2.7576" effort="125" velocity="29" />
+  </joint>
+  <link name="right_shoulder_roll_link">
+    <inertial>
+      <origin xyz="0.0043121 -0.0011439 -0.018576" rpy="0 0 0" />
+      <mass value="1.7565" />
+      <inertia ixx="0.00376" ixy="-9.52E-06" ixz="-0.00012978" iyy="0.003727" iyz="-6.144E-05" izz="0.0021658" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_shoulder_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.08" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.045" length="0.052" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_shoulder_roll_joint" type="revolute">
+    <origin xyz="0 -0.069144 0" rpy="0.17453 0 0" />
+    <parent link="right_shoulder_pitch_link" />
+    <child link="right_shoulder_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-2.7402" upper="0.17453" effort="125" velocity="29" />
+  </joint>
+  <link name="right_shoulder_yaw_link">
+    <inertial>
+      <origin xyz="-0.00082646 0.00061963 -0.046711" rpy="0 0 0" />
+      <mass value="0.94598" />
+      <inertia ixx="0.0024744" ixy="-5.7E-07" ixz="-5.945E-05" iyy="0.0023492" iyz="5.968E-05" izz="0.0011206" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_shoulder_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_shoulder_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_shoulder_yaw_joint" type="revolute">
+    <origin xyz="0 0 -0.11127" rpy="0 0 0" />
+    <parent link="right_shoulder_roll_link" />
+    <child link="right_shoulder_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.618" upper="2.618" effort="50" velocity="15" />
+  </joint>
+  <link name="right_elbow_pitch_link">
+    <inertial>
+      <origin xyz="0.052044 0.0006991 -0.00054142" rpy="0 0 0" />
+      <mass value="1.3256" />
+      <inertia ixx="0.00097433" ixy="6.346E-05" ixz="-3.1E-06" iyy="0.0049243" iyz="-2.96E-06" izz="0.0048388" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_elbow_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_elbow_pitch_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_elbow_pitch_joint" type="revolute">
+    <origin xyz="0 0 -0.14595" rpy="0 0 0" />
+    <parent link="right_shoulder_yaw_link" />
+    <child link="right_elbow_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.8203" upper="1.5708" effort="50" velocity="15" />
+  </joint>
+  <link name="right_wrist_roll_link">
+    <inertial>
+      <origin xyz="0.029185 0.0013001 2.699E-05" rpy="0 0 0" />
+      <mass value="0.21709" />
+      <inertia ixx="0.00027616" ixy="-1.396E-05" ixz="5E-08" iyy="0.00019119" iyz="-3.2E-07" izz="0.00033098" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_wrist_roll_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_wrist_roll_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_wrist_roll_joint" type="revolute">
+    <origin xyz="0.13365 0 0" rpy="0 0 0" />
+    <parent link="right_elbow_pitch_link" />
+    <child link="right_wrist_roll_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-2.9147" upper="2.9147" effort="22" velocity="17" />
+  </joint>
+  <link name="right_wrist_pitch_link">
+    <inertial>
+      <origin xyz="0.031465 0.0036705 -0.0042878" rpy="0 0 0" />
+      <mass value="1.2015" />
+      <inertia ixx="0.00088329" ixy="0.00014114" ixz="0.0001611" iyy="0.0019434" iyz="-1.404E-05" izz="0.0019308" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_wrist_pitch_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_wrist_pitch_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_wrist_pitch_joint" type="revolute">
+    <origin xyz="0.054084 0 0" rpy="0 0 0" />
+    <parent link="right_wrist_roll_link" />
+    <child link="right_wrist_pitch_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.5708" upper="1.5708" effort="22" velocity="17" />
+  </joint>
+  <link name="right_wrist_yaw_link">
+    <inertial>
+      <origin xyz="0.030333 0.00013553 -0.001435" rpy="0 0 0" />
+      <mass value="0.2435" />
+      <inertia ixx="0.0002585" ixy="-4.9E-07" ixz="-8.7E-06" iyy="0.0003389" iyz="5E-07" izz="0.00019979" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_wrist_yaw_link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://meshes/magicbot_x1/right_wrist_yaw_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="right_wrist_yaw_joint" type="revolute">
+    <origin xyz="0.062563 0 0" rpy="0 0 0" />
+    <parent link="right_wrist_pitch_link" />
+    <child link="right_wrist_yaw_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.5272" upper="1.5272" effort="22" velocity="17" />
+  </joint>
+</robot>

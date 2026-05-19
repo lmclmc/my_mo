@@ -10,16 +10,16 @@ def generate_launch_description():
     pkg_share = FindPackageShare(package='magic_vis_ros2').find('magic_vis_ros2')
     
     # Get RViz config path
-    rviz_config_path = PathJoinSubstitution([pkg_share, 'magic_humanoid_gen2_v2.rviz'])
+    rviz_config_path = PathJoinSubstitution([pkg_share, 'magicbot_x1.rviz'])
     
     # Get URDF path as direct string
-    urdf_file_path = os.path.join(pkg_share, '', 'magicbot_gen2_v2.urdf')
+    urdf_file_path = os.path.join(pkg_share, '', 'magicbot_x1.urdf')
     
     # Get XML path as direct string
-    xml_file_path = os.path.join(pkg_share, '', 'magicbot_gen2_v2.xml')
+    xml_file_path = os.path.join(pkg_share, '', 'magicbot_x1.xml')
     
     # Get YAML path as direct string
-    yaml_file_path = os.path.join(pkg_share, '', 'magicbot_gen2_v2.yaml')
+    yaml_file_path = os.path.join(pkg_share, '', 'magicbot_x1.yaml')
     
     # Robot visualizer node
     magic_vis_ros2_node = Node(
