@@ -15,6 +15,7 @@
 #include <lcm/lcm-cpp.hpp>
 
 #include "lcm_to_ros2/msg/StateEstimatorLcmt.hpp"
+#include "exlcm/state_estimator_lcmt_magicdog_gen2.hpp"
 #include "exlcm/state_estimator_lcmt.hpp"
 #include "republisher_global.hpp"
 class LCMToROS2Republisher : public rclcpp::Node
@@ -39,7 +40,7 @@ public:
         
         // Subscribe to LCM channel
         lcm_->subscribe("state_estimator", 
-            &LCMToROS2Republisher::lcmCallback, 
+            &LCMToROS2Republisher::handleMessage, 
             this);
     }
 
@@ -55,13 +56,36 @@ public:
     }
 
 private:
-    void lcmCallback(const lcm::ReceiveBuffer* rbuf,
-            const std::string& channel_name,
-            const exlcm::state_estimator_lcmt* msg)
-    {
-        (void)rbuf;
-        RCLCPP_DEBUG(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
+    void handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& chan) {
         
+        RCLCPP_DEBUG(this->get_logger(), "Received message on channel \"%s\"", chan.c_str());
+        if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
+
+        // 1. 提取消息头部的 64 位指纹 (Big-Endian)
+        int64_t msg_hash;
+        memcpy(&msg_hash, recvbuf->data, sizeof(int64_t));
+        
+        // 转换字节序（LCM 传输使用的是大端序）
+        msg_hash = be64toh(msg_hash);
+
+        // 2. 与已知类型的 Hash 值进行比对
+        if (msg_hash == (int64_t)exlcm::state_estimator_lcmt::getHash()) {
+            exlcm::state_estimator_lcmt state_msg;
+            RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\" with state_estimator_lcmt hash", chan.c_str());
+            if (state_msg.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
+                processStateEstimatorData(&state_msg);
+            }
+        } 
+        else if (msg_hash == (int64_t)exlcm::state_estimator_lcmt_magicdog_gen2::getHash()) {
+            exlcm::state_estimator_lcmt_magicdog_gen2 magic_dog_gen2;
+            RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\" with state_estimator_lcmt_magicdog_gen2 hash", chan.c_str());
+            if (magic_dog_gen2.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
+                processStateEstimatorMagicDogGen2Data(&magic_dog_gen2);
+            }
+        } 
+    }
+
+    void processStateEstimatorData(const exlcm::state_estimator_lcmt* msg) {
         // Use reinterpret_cast to convert LCM message to ROS2 message
         // Note: This assumes LCM and ROS2 message layouts are identical
         const lcm_to_ros2::msg::StateEstimatorLcmt* ros2_msg = 
@@ -69,6 +93,24 @@ private:
         
         // Create a shared pointer copy for publishing
         auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::StateEstimatorLcmt>(*ros2_msg);
+        ros2_pub_->publish(*ros2_msg_shared);
+    }
+
+    void processStateEstimatorMagicDogGen2Data(const exlcm::state_estimator_lcmt_magicdog_gen2* msg) {
+        // Create a shared pointer copy for publishing
+        auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::StateEstimatorLcmt>();
+        std::copy(std::begin(msg->p), std::end(msg->p), ros2_msg_shared->p.begin());
+        std::copy(std::begin(msg->vBody), std::end(msg->vBody), ros2_msg_shared->v_body.begin());
+        std::copy(std::begin(msg->vWorld), std::end(msg->vWorld), ros2_msg_shared->v_world.begin());
+        std::copy(std::begin(msg->aBody), std::end(msg->aBody), ros2_msg_shared->a_body.begin());
+        std::copy(std::begin(msg->aWorld), std::end(msg->aWorld), ros2_msg_shared->a_world.begin());
+        std::copy(std::begin(msg->quat), std::end(msg->quat), ros2_msg_shared->quat.begin());
+        std::copy(std::begin(msg->rpy), std::end(msg->rpy), ros2_msg_shared->rpy.begin());
+        std::copy(std::begin(msg->omegaBody), std::end(msg->omegaBody), ros2_msg_shared->omega_body.begin());
+        std::copy(std::begin(msg->omegaWorld), std::end(msg->omegaWorld), ros2_msg_shared->omega_world.begin());
+        std::copy(std::begin(msg->contactEstimate), std::end(msg->contactEstimate), ros2_msg_shared->contact_estimate.begin());
+        ros2_msg_shared->timestamp = msg->timestamp;
+ 
         ros2_pub_->publish(*ros2_msg_shared);
     }
 

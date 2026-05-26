@@ -36,9 +36,10 @@ echo "3) magic_humanoid_gen2_v2.py     （第二代大人形）"
 echo "4) magicdog.py                   （小狗）"
 echo "5) DreameZ1HumanoidV3_ankle80.py （小人形）"
 echo "6) A2601-M-MINI-BOT.py           （迷你小机器人）"
+echo "7) magicdog_p3.py                （二代狗）"
 
 # 读取用户输入
-read -p "请输入选择 (1 2 3 4 5 6): " choice
+read -p "请输入选择 (1 2 3 4 5 6 7): " choice
 
 #echo $password | sudo -S chown -R $(id -gn):$(id -un) /opt/ros/
 rm -rf /opt/ros/motionstudio_mode
@@ -67,6 +68,10 @@ case $choice in
     6)
         echo "正在启动 A2601-M-MINI-BOT.py..."
         nohup ros2 launch magic_vis_ros2 A2601-M-MINI-BOT.py >> log/magic_vis_ros2.log 2>&1 &
+        ;;
+    7)
+        echo "正在启动 magicdog_p3.py..."
+        nohup ros2 launch magic_vis_ros2 magicdog_p3.py >> log/magic_vis_ros2.log 2>&1 &
         ;;
     *)
         echo "无效的选择，默认启动 magic_humanoid.py..."

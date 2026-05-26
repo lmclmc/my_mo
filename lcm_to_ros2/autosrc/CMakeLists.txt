@@ -47,6 +47,7 @@ set(REPUBLISHER_NODES
     magic_head_joint_state_republisher
     magic_estimator_state_republisher
     magic_body_imu_republisher
+    magic_dog_gen2_republisher
 )
 
 # Create PascalCase symlinks for message headers (ROS2 generates lowercase filenames)
