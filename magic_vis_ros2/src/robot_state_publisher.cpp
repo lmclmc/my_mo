@@ -233,7 +233,7 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 
   // Create timer
   timer_ = this->create_wall_timer(
-    std::chrono::duration<double>(0.1),
+    std::chrono::duration<double>(0.02),
     [this]() {
       this->timerCallback();
     });
