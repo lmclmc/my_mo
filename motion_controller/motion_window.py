@@ -7,8 +7,9 @@
 import subprocess
 import asyncio
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QPushButton, QVBoxLayout, QLineEdit,
-    QWidget, QFileDialog, QMessageBox, QStatusBar, QTextEdit, QSplitter, QLabel
+    QApplication, QMainWindow, QPushButton, QVBoxLayout, QLineEdit, QComboBox, QHBoxLayout,
+    QWidget, QFileDialog, QMessageBox, QStatusBar, QTextEdit, QSplitter, QLabel, QGroupBox,
+    QSlider
 )
 from PySide6.QtCore import Qt, QTime, Signal, QTimer
 import sys
@@ -75,56 +76,308 @@ class MainWindow(QMainWindow):
         
         # 创建按钮区域
         button_widget = QWidget()
-        button_layout = QVBoxLayout()
+        button_widget.setStyleSheet("""
+            QWidget {
+                background-color: #f8f9fa;
+                border-radius: 12px;
+                border: 1px solid #e0e0e0;
+            }
+        """)
+        #button_layout = QVBoxLayout(button_widget)
         
-        # 创建打开日志按钮
-        self.open_log_button = QPushButton('播放lcm日志', self)
-        self.open_log_button.setFixedSize(200, 50)
+        # 主按钮布局 - 使用垂直布局
+        button_layout = QVBoxLayout(button_widget)
+        button_layout.setSpacing(16)
+        button_layout.setContentsMargins(20, 20, 20, 20)
+        
+        # ========== LCM 日志播放组 ==========
+        lcm_group = QGroupBox('LCM 日志播放')
+        lcm_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                color: #333;
+                border: 1px solid #d0d0d0;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 8px 0 8px;
+            }
+        """)
+        lcm_layout = QVBoxLayout(lcm_group)
+        lcm_layout.setSpacing(20)
+        
+        # LCM播放按钮
+        self.open_log_button = QPushButton('播放 LCM 日志')
+        self.open_log_button.setFixedSize(200, 45)
+        self.open_log_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+        """)
         self.open_log_button.clicked.connect(self.on_play_lcm_log)
-        button_layout.addWidget(self.open_log_button, 0, Qt.AlignCenter)
+        lcm_layout.addWidget(self.open_log_button, 0, Qt.AlignCenter)
         
-        # 创建在线调试按钮
-        self.online_debug_button = QPushButton('开始在线监听', self)
-        self.online_debug_button.setFixedSize(200, 50)
+        # 播放控制区域
+        control_layout = QHBoxLayout()
+        control_layout.setSpacing(8)
+        
+        # 播放控制按钮
+        self.play_button = QPushButton('播放')
+        self.play_button.setFixedSize(60, 28)
+        self.play_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+            QPushButton:disabled {
+                background-color: #ccc;
+            }
+        """)
+        self.play_button.clicked.connect(self.on_play)
+        
+        self.pause_button = QPushButton('暂停')
+        self.pause_button.setFixedSize(60, 28)
+        self.pause_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FF9800;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #F57C00;
+            }
+            QPushButton:pressed {
+                background-color: #E65100;
+            }
+            QPushButton:disabled {
+                background-color: #ccc;
+            }
+        """)
+        self.pause_button.clicked.connect(self.on_pause)
+        self.pause_button.setEnabled(False)
+        
+        control_layout.addWidget(self.play_button)
+        control_layout.addWidget(self.pause_button)
+        
+        # 播放进度滑块（可手动拖动）
+        self.playback_progress = QSlider(Qt.Horizontal)
+        self.playback_progress.setFixedHeight(22)
+        self.playback_progress.setRange(0, 100)
+        self.playback_progress.setValue(0)
+        self.playback_progress.setStyleSheet("""
+            QSlider::groove:horizontal {
+                height: 8px;
+                background: #e0e0e0;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #2196F3;
+                width: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #2196F3;
+                border-radius: 4px;
+            }
+        """)
+        self.playback_progress.sliderMoved.connect(self.on_slider_moved)
+        self.playback_progress.sliderPressed.connect(self.on_slider_pressed)
+        self.playback_progress.sliderReleased.connect(self.on_slider_released)
+        self.is_playback_progress_released = True
+        control_layout.addWidget(self.playback_progress)
+        
+        # 倍速选择
+        speed_layout = QHBoxLayout()
+        speed_layout.setSpacing(8)
+        speed_label = QLabel('播放倍速:')
+        speed_label.setStyleSheet('color: #666; font-size: 13px;')
+        self.playback_speed_combo = QComboBox()
+        self.playback_speed_combo.addItems(['0.25', '0.5', '0.75', '1', '1.25', '1.5', '2', '3'])
+        self.playback_speed_combo.setCurrentText('1')
+        self.playback_speed_combo.setFixedSize(80, 28)
+        self.playback_speed_combo.currentIndexChanged.connect(self.on_speed_changed)
+        self.playback_speed_combo.setStyleSheet("""
+            QComboBox {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px;
+                font-size: 13px;
+            }
+        """)
+        control_layout.addWidget(speed_label)
+        control_layout.addWidget(self.playback_speed_combo)
+        
+        lcm_layout.addLayout(control_layout)
+        
+        button_layout.addWidget(lcm_group)
+        
+        # ========== 在线监听组 ==========
+        online_group = QGroupBox('在线监听')
+        online_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                color: #333;
+                border: 1px solid #d0d0d0;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 8px 0 8px;
+            }
+        """)
+        online_layout = QVBoxLayout(online_group)
+        online_layout.setSpacing(12)
+        
+        # 在线调试按钮
+        self.online_debug_button = QPushButton('开始在线监听')
+        self.online_debug_button.setFixedSize(200, 45)
+        self.online_debug_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+            QPushButton:pressed {
+                background-color: #1565C0;
+            }
+        """)
         self.online_debug_button.clicked.connect(self.on_online_watch)
-        button_layout.addWidget(self.online_debug_button, 0, Qt.AlignCenter)
+        online_layout.addWidget(self.online_debug_button, 0, Qt.AlignCenter)
         
-        # 创建IP地址输入框
-        self.ip_input = QLineEdit('', self)
+        # IP输入框
+        self.ip_input = QLineEdit()
         self.ip_input.setPlaceholderText('请输入运控板IP地址')
-        self.ip_input.setFixedSize(200, 30)
-        button_layout.addWidget(self.ip_input, 0, Qt.AlignCenter)
+        self.ip_input.setFixedSize(200, 32)
+        self.ip_input.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border-color: #2196F3;
+                outline: none;
+            }
+        """)
+        online_layout.addWidget(self.ip_input, 0, Qt.AlignCenter)
         
-        # 创建 ROS2 bag 录制按钮
-        self.ros2_bag_button = QPushButton('开始录制ROS2 bag', self)
-        self.ros2_bag_button.setFixedSize(200, 50)
+        button_layout.addWidget(online_group)
+        
+        # ========== ROS2 Bag 录制组 ==========
+        ros2_group = QGroupBox('ROS2 Bag 录制')
+        ros2_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                color: #333;
+                border: 1px solid #d0d0d0;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 8px 0 8px;
+            }
+        """)
+        ros2_layout = QVBoxLayout(ros2_group)
+        ros2_layout.setSpacing(12)
+        
+        # ROS2录制按钮
+        self.ros2_bag_button = QPushButton('开始录制 ROS2 Bag')
+        self.ros2_bag_button.setFixedSize(200, 45)
+        self.ros2_bag_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FF9800;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #F57C00;
+            }
+            QPushButton:pressed {
+                background-color: #E65100;
+            }
+        """)
         self.ros2_bag_button.clicked.connect(self.on_ros2_bag_record)
-        button_layout.addWidget(self.ros2_bag_button, 0, Qt.AlignCenter)
+        ros2_layout.addWidget(self.ros2_bag_button, 0, Qt.AlignCenter)
         
-        # 创建 ROS2 bag 录制时间标签
-        self.ros2_bag_timer_label = QLabel('录制时间: 00:00:00', self)
-        self.ros2_bag_timer_label.setFixedSize(200, 30)
+        # 录制时间标签
+        self.ros2_bag_timer_label = QLabel('录制时间: 00:00:00')
+        self.ros2_bag_timer_label.setFixedSize(200, 28)
         self.ros2_bag_timer_label.setAlignment(Qt.AlignCenter)
-        button_layout.addWidget(self.ros2_bag_timer_label, 0, Qt.AlignCenter)
+        self.ros2_bag_timer_label.setStyleSheet('color: #666; font-size: 13px;')
+        ros2_layout.addWidget(self.ros2_bag_timer_label, 0, Qt.AlignCenter)
         
-        # 设置按钮布局间距
-        button_layout.setSpacing(20)  # 减少按钮间距，使整体更紧凑
-        button_widget.setLayout(button_layout)
+        button_layout.addWidget(ros2_group)
         
-        # 创建分割器，将按钮区域和日志区域分开
+        # ========== 创建分割器 ==========
         splitter = QSplitter(Qt.Vertical)
-        # 设置按钮区域的最小和最大高度，使其保持固定大小
-        button_widget.setMinimumHeight(300)
-        button_widget.setMaximumHeight(300)
+        button_widget.setMinimumHeight(380)
+        button_widget.setMaximumHeight(400)
         splitter.addWidget(button_widget)
-        splitter.addWidget(self.log_text)
-        # 设置初始大小，确保按钮区域有足够空间
-        splitter.setSizes([300, 100])  # 按钮区域300，日志区域100
-        # 设置分割器的拉伸因子，让日志区域能够自动扩展
-        splitter.setStretchFactor(0, 0)  # 按钮区域不拉伸
-        splitter.setStretchFactor(1, 1)  # 日志区域拉伸
         
-        # 添加分割器到主布局
+        # 日志区域样式
+        self.log_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #1e1e1e;
+                color: #d4d4d4;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 11pt;
+                line-height: 1.4;
+                padding: 10px;
+                border: 1px solid #3c3c3c;
+                border-radius: 8px;
+            }
+        """)
+        splitter.addWidget(self.log_text)
+        
+        # 设置分割器
+        splitter.setSizes([380, 200])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        
+        # 添加到主布局
         main_layout.addWidget(splitter)
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
@@ -269,9 +522,59 @@ class MainWindow(QMainWindow):
         self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "play_lcm", 0)
         # 更新按钮文本
         self.open_log_button.setText('播放lcm日志')
+        # 更新播放控制按钮状态
+        self.play_button.setEnabled(True)
+        self.pause_button.setEnabled(False)
+        # 重置进度条
+        self.playback_progress.setValue(0)
         # 更新状态栏和日志
         self.statusBar().showMessage('LCM 日志回放已完成')
         self.log_message('LCM 日志回放已完成')
+        
+    def on_speed_changed(self, index):
+        """播放倍速选择框槽函数"""
+        self.lcm_player_thread.speed = float(self.playback_speed_combo.currentText())
+        self.lcm_player_thread.first_timestamp = 0
+        
+    def on_slider_pressed(self):
+        """进度条按下槽函数"""
+        self.is_playback_progress_released = False
+        
+    def on_slider_moved(self, position):
+        """进度条移动槽函数"""
+        print(f"进度条位置: {position}")
+        self.lcm_player_thread.file_seek = int(position * self.lcm_player_thread.log.size() / 100)
+        self.lcm_player_thread.first_timestamp = 0
+        self.lcm_player_thread.speed = float(self.playback_speed_combo.currentText())
+     #   self.lcm_player_thread.first_timestamp = position
+        
+    def on_slider_released(self):
+        """进度条释放槽函数"""
+        self.is_playback_progress_released = True
+        
+    def on_lcm_progress_updated(self, progress):
+        """LCM日志播放进度槽函数"""
+     #   print(f"当前进度: {progress:.2f}%")
+        if self.is_playback_progress_released:
+            self.playback_progress.setValue(int(progress))
+        
+    def on_play(self):
+        """播放按钮槽函数"""
+        if self.lcm_player_thread and hasattr(self.lcm_player_thread, 'resume'):
+            self.lcm_player_thread.resume()
+            self.play_button.setEnabled(False)
+            self.pause_button.setEnabled(True)
+            self.statusBar().showMessage('LCM 日志回放中')
+            self.log_message('LCM 日志继续播放')
+    
+    def on_pause(self):
+        """暂停按钮槽函数"""
+        if self.lcm_player_thread and hasattr(self.lcm_player_thread, 'pause'):
+            self.lcm_player_thread.pause()
+            self.play_button.setEnabled(True)
+            self.pause_button.setEnabled(False)
+            self.statusBar().showMessage('LCM 日志回放已暂停')
+            self.log_message('LCM 日志回放已暂停')
         
     def on_play_lcm_log(self):
         """打开日志槽函数"""
@@ -308,13 +611,17 @@ class MainWindow(QMainWindow):
                 
                 # 启动LCM播放器线程
                 try:
-                    self.lcm_player_thread = LCMPlayerThread(file_name)
+                    self.lcm_player_thread = LCMPlayerThread(file_name, speed = float(self.playback_speed_combo.currentText()))
                     # 连接播放完成信号
                     self.lcm_player_thread.playback_finished.connect(self.on_lcm_playback_finished, Qt.QueuedConnection)
+                    self.lcm_player_thread.progress_updated.connect(self.on_lcm_progress_updated, Qt.QueuedConnection)
                     self.lcm_player_thread.start()
                     self.statusBar().showMessage('已启动 LCM 日志回放')
                     self.log_message('已启动 LCM 日志回放')
                     self.open_log_button.setText('停止播放lcm')
+                    # 更新播放控制按钮状态
+                    self.play_button.setEnabled(False)
+                    self.pause_button.setEnabled(True)
                 except Exception as e:
                     self.execute_script("/opt/ros/motion_studio_mode_switch.sh", "play_lcm", 0)
                     QMessageBox.critical(self, '错误', f'启动 LCM 日志回放失败: {str(e)}')

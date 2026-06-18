@@ -19,6 +19,8 @@ class LCMPlayerThread(threading.Thread, QObject):
     
     # 定义播放完成信号
     playback_finished = Signal()
+    # 定义进度更新信号
+    progress_updated = Signal(int)
     
     def __init__(self, file_path, speed=1.0):
         """
@@ -29,8 +31,11 @@ class LCMPlayerThread(threading.Thread, QObject):
         QObject.__init__(self)
         threading.Thread.__init__(self)
         self.file_path = file_path
+        self.first_timestamp = 0
         self.speed = speed
+        self.file_seek = 0
         self._stop_event = threading.Event()
+        self.play_status = True
         self.log = None
         lcm_url = f"udpm://239.255.76.67:56666"
         self.lc = lcm.LCM(lcm_url) # 创建 LCM 实例用于发送数据
@@ -47,34 +52,56 @@ class LCMPlayerThread(threading.Thread, QObject):
 
         print(f"开始回放: {self.file_path} (倍速: {self.speed})")
         
-        first_timestamp = None
+        self.first_timestamp = 0
         start_wall_time = time.time()
+        self.play_status = True
 
         try:
-            for event in self.log:
+            self.log.seek(31190739)
+            log_iter = iter(self.log)
+            
+            #for event in log_iter:
+            while True:
+                try:
+                    if not self.play_status:
+                        time.sleep(0.1)
+                        continue
+                    event = next(log_iter)
+                except StopIteration:
+                    break
+                
+                if self.file_seek != 0:
+                    self.log.seek(self.file_seek)
+                    self.file_seek = 0
+                #print(self.log.tell())
+                self.progress_updated.emit(float((self.log.tell() / self.log.size()) * 100))
+                
                 # 检查是否需要停止
                 if self._stop_event.is_set():
                     print("\n播放已停止")
                     break
                 
                 # 初始化起始时间
-                if first_timestamp is None:
-                    first_timestamp = event.timestamp
+                if self.first_timestamp == 0:
+                    self.first_timestamp = event.timestamp
                     start_wall_time = time.time()
 
                 # 计算应该等待的时间 (基于日志里的时间戳差值)
-                elapsed_log_time = (event.timestamp - first_timestamp) / 1e6 # 微秒转秒
+                elapsed_log_time = (event.timestamp - self.first_timestamp) / 1e6 # 微秒转秒
                 current_wall_time = time.time() - start_wall_time
                 
                 # 计算等待时长
                 sleep_time = (elapsed_log_time / self.speed) - current_wall_time
-                
-                if sleep_time > 0:
+                # print(self.speed)
+                # print(sleep_time)
+                if sleep_time > 0 and sleep_time < 1:
                     # 在等待时检查是否需要停止
                     if self._stop_event.wait(sleep_time):
                         print("\n播放已停止")
                         break
-
+                else:
+                    self.first_timestamp = event.timestamp
+                    start_wall_time = time.time()
                 # 将数据重新发布到网络
                 # event.channel 是原通道名，event.data 是原始 bytes 字节流
                 #print(event.channel, event.timestamp)
@@ -82,7 +109,7 @@ class LCMPlayerThread(threading.Thread, QObject):
                 #     print(event.data)
                 # if event.channel == "leg_control_data":
                 #     print(event.data)
-                #print(event.channel, event.timestamp)
+               # print(log_iter.tell())
                 self.lc.publish(event.channel, event.data)
                 
                 # # 打印进度 (可选)
@@ -92,9 +119,8 @@ class LCMPlayerThread(threading.Thread, QObject):
         except KeyboardInterrupt:
             print("\n回放已由用户中止")
         finally:
-            print("\n播放结束")
-            if self.log:
-                self.log.close()
+            print("\n播放结束,重新开始")
+            self.log.seek(0)
             
             # 发送播放完成信号
             self.playback_finished.emit()
@@ -104,6 +130,18 @@ class LCMPlayerThread(threading.Thread, QObject):
         停止线程
         """
         self._stop_event.set()
+        
+    def pause(self):
+        """
+        暂停播放
+        """
+        self.play_status = False
+        
+    def resume(self):
+        """
+        继续播放
+        """
+        self.play_status = True
 
 
 def play_lcm_log(file_path, speed=1.0):
