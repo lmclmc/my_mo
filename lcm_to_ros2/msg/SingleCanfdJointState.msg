@@ -1,0 +1,9 @@
+int16    status_word
+int16    state_args
+float32      pos
+float32      vel
+float32      toq
+float32      current
+float32      para_data
+int16    err_code
+int16    reserved

@@ -1,0 +1,9 @@
+int16    can_node
+int16    operation_mode
+int16    cmd_args
+float32      pos
+float32      vel
+float32      toq
+float32      kp
+float32      kd
+int16    reserved
