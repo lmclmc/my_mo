@@ -158,11 +158,18 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 
     arm_start_index_ = config["arms"]["start_index"].as<int>();
     arm_count_ = config["arms"]["count"].as<int>();
+    arm_free_count_ = config["arms"]["free_count"].as<int>();
     std::cout << "\narm_count: " << arm_count_ << std::endl;
     std::cout << "\narm_start_index_: " << arm_start_index_ << std::endl;
+    std::cout << "\narm_free_count_: " << arm_free_count_ << std::endl;
+
+    arm_start_index_1 = config["arms1"]["start_index"].as<int>();
+    arm_count_1 = config["arms1"]["count"].as<int>();
+    std::cout << "\narm_count_1: " << arm_count_1 << std::endl;
+    std::cout << "\narm_start_index_1: " << arm_start_index_1 << std::endl;
   } catch (const YAML::Exception& e) {
     RCLCPP_ERROR(this->get_logger(), "%s:%d, YAML 解析错误: %s", __func__, __LINE__, e.what());
-    exit(1);
+    //exit(1);
   }
 
   
@@ -259,6 +266,11 @@ void RobotStatePublisher::armStateCallback(const lcm_to_ros2::msg::ArmControlDat
   for (size_t i = 0; i < arm_count_; i++) {
     free_joints_[joint_list_[i + arm_start_index_]].position = state_msg->joint_cur_pos[i];
     free_joints_[joint_list_[i + arm_start_index_]].velocity = state_msg->joint_cur_vel[i];
+  }
+
+  for (size_t i = 0; i < arm_count_1; i++) {
+    free_joints_[joint_list_[i + arm_start_index_1]].position = state_msg->joint_cur_pos[i + arm_count_ + arm_free_count_];
+    free_joints_[joint_list_[i + arm_start_index_1]].velocity = state_msg->joint_cur_vel[i + arm_count_ + arm_free_count_];
   }
 }
 
@@ -555,8 +567,8 @@ void RobotStatePublisher::timerCallback()
 
     if (joint) {
       if (has_position) {
-        RCLCPP_DEBUG(this->get_logger(), "%s:%d, joint %s position is %f, factor is %f, offset is %f",
-                     __func__, __LINE__, name.c_str(), joint->position, factor, offset);
+        // RCLCPP_DEBUG(this->get_logger(), "%s:%d, joint %s position is %f, factor is %f, offset is %f",
+        //              __func__, __LINE__, name.c_str(), joint->position, factor, offset);
         msg->position[i] = joint->position * factor + offset;
       }
       if (has_velocity) {
@@ -721,7 +733,7 @@ void RobotStatePublisher::publishTransforms(
   // loop over all joints
   for (const std::pair<const std::string, double> & jnt : joint_positions) {
     std::map<std::string, SegmentPair>::iterator seg = segments_.find(jnt.first);
-    RCLCPP_DEBUG(get_logger(), "%s:%d, Processing joint %s, position %f", __func__, __LINE__, jnt.first.c_str(), jnt.second);
+   // RCLCPP_DEBUG(get_logger(), "%s:%d, Processing joint %s, position %f", __func__, __LINE__, jnt.first.c_str(), jnt.second);
     if (seg != segments_.end()) {
       geometry_msgs::msg::TransformStamped tf_transform =
         kdlToTransform(seg->second.segment.pose(jnt.second));

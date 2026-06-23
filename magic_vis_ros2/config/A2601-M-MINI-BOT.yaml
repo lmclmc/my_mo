@@ -9,4 +9,9 @@ head:
   count: 0
 arms:
   start_index: 14
-  count: 8
+  count: 4
+  free_count: 3
+arms1:
+  start_index: 18
+  count: 4
+  free_count: 3

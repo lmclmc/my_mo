@@ -259,6 +259,9 @@ private:
   size_t head_start_index_ = 0;
   size_t arm_count_ = 0;
   size_t arm_start_index_ = 0;
+  size_t arm_free_count_ = 0;
+  size_t arm_count_1 = 0;
+  size_t arm_start_index_1 = 0;
 };
 
 }  // namespace robot_state_publisher
