@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QWidget, QFileDialog, QMessageBox, QStatusBar, QTextEdit, QSplitter, QLabel, QGroupBox,
     QSlider
 )
-from PySide6.QtCore import Qt, QTime, Signal, QTimer
+from PySide6.QtCore import Qt, QTime, Signal, QTimer, QEventLoop
 import sys
 import os
 from lcm_player_thread import LCMPlayerThread
@@ -90,8 +90,8 @@ class MainWindow(QMainWindow):
         button_layout.setSpacing(16)
         button_layout.setContentsMargins(20, 20, 20, 20)
         
-        # ========== LCM 日志播放组 ==========
-        lcm_group = QGroupBox('LCM 日志播放')
+        # ========== LCM 日志操作组 ==========
+        lcm_group = QGroupBox('LCM 日志操作')
         lcm_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -107,8 +107,9 @@ class MainWindow(QMainWindow):
                 padding: 0 8px 0 8px;
             }
         """)
+        lcm_group.setMinimumHeight(280)  # 单独拉高 LCM 日志播放组的高度
         lcm_layout = QVBoxLayout(lcm_group)
-        lcm_layout.setSpacing(20)
+        lcm_layout.setSpacing(14)
         
         # LCM播放按钮
         self.open_log_button = QPushButton('播放 LCM 日志')
@@ -236,6 +237,118 @@ class MainWindow(QMainWindow):
         
         lcm_layout.addLayout(control_layout)
         
+        # LCM转ROS2 Bag按钮（在进度条下方）
+        self.lcm_to_bag_button = QPushButton('LCM快速转ROS2 Bag')
+        self.lcm_to_bag_button.setFixedSize(200, 45)
+        self.lcm_to_bag_button.setStyleSheet("""
+            QPushButton {
+                background-color: #9C27B0;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #7B1FA2;
+            }
+            QPushButton:pressed {
+                background-color: #6A1B9A;
+            }
+        """)
+        self.lcm_to_bag_button.clicked.connect(self.on_lcm_convert_ros2_bag)
+        lcm_layout.addWidget(self.lcm_to_bag_button, 0, Qt.AlignCenter)
+        
+        # 输入框区域
+        input_layout = QVBoxLayout()
+        input_layout.setSpacing(8)
+        
+        # LCM文件输入框
+        lcm_file_layout = QHBoxLayout()
+        lcm_file_label = QLabel('LCM文件:')
+        lcm_file_label.setFixedWidth(60)
+        lcm_file_label.setStyleSheet('color: #555; font-size: 12px;')
+        self.lcm_file_edit = QLineEdit()
+        self.lcm_file_edit.setPlaceholderText('请输入LCM日志文件路径')
+        self.lcm_file_edit.setFixedHeight(28)
+        self.lcm_file_edit.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            QLineEdit:focus {
+                border-color: #9C27B0;
+                outline: none;
+            }
+        """)
+        lcm_file_browse = QPushButton('浏览')
+        lcm_file_browse.setFixedSize(55, 28)
+        lcm_file_browse.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f0f0;
+                color: #333;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
+        lcm_file_browse.clicked.connect(self.on_browse_lcm_file)
+        lcm_file_layout.addWidget(lcm_file_label)
+        lcm_file_layout.addWidget(self.lcm_file_edit)
+        lcm_file_layout.addWidget(lcm_file_browse)
+        input_layout.addLayout(lcm_file_layout)
+        
+        # ROS2 Bag输出路径输入框
+        bag_path_layout = QHBoxLayout()
+        bag_path_label = QLabel('输出路径:')
+        bag_path_label.setFixedWidth(60)
+        bag_path_label.setStyleSheet('color: #555; font-size: 12px;')
+        self.bag_path_edit = QLineEdit()
+        self.bag_path_edit.setPlaceholderText('请输入ROS2 Bag输出路径')
+        self.bag_path_edit.setFixedHeight(28)
+        self.bag_path_edit.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            QLineEdit:focus {
+                border-color: #9C27B0;
+                outline: none;
+            }
+        """)
+        bag_path_browse = QPushButton('浏览')
+        bag_path_browse.setFixedSize(55, 28)
+        bag_path_browse.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f0f0;
+                color: #333;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """)
+        bag_path_browse.clicked.connect(self.on_browse_bag_path)
+        bag_path_layout.addWidget(bag_path_label)
+        bag_path_layout.addWidget(self.bag_path_edit)
+        bag_path_layout.addWidget(bag_path_browse)
+        input_layout.addLayout(bag_path_layout)
+        
+        lcm_layout.addLayout(input_layout)
+        
+        
+        # 添加底部间距
+        lcm_layout.addStretch(1)
+        
         button_layout.addWidget(lcm_group)
         
         # ========== 在线监听组 ==========
@@ -353,8 +466,8 @@ class MainWindow(QMainWindow):
         
         # ========== 创建分割器 ==========
         splitter = QSplitter(Qt.Vertical)
-        button_widget.setMinimumHeight(380)
-        button_widget.setMaximumHeight(400)
+        button_widget.setMinimumHeight(600)  # 增加按钮区域最小高度，避免分组重叠
+        button_widget.setMaximumHeight(750)  # 增加最大高度
         splitter.addWidget(button_widget)
         
         # 日志区域样式
@@ -373,7 +486,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.log_text)
         
         # 设置分割器
-        splitter.setSizes([380, 200])
+        splitter.setSizes([500, 200])  # 同步增加按钮区域初始大小
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         
@@ -385,6 +498,79 @@ class MainWindow(QMainWindow):
         # 记录初始日志
         self.log_message('应用程序已启动')
     
+    def on_lcm_convert_ros2_bag(self):
+        """将LCM日志文件转换为ROS2 Bag"""
+        if not self.lcm_file_edit.text():
+            self.log_message('请先选择LCM日志文件')
+            return
+        
+        if not self.bag_path_edit.text():
+            self.log_message('请先选择ros2 bag输出目录')
+            return
+        
+        # ========== 完全禁用所有控件槽函数 ==========
+        # 1. 处理所有待处理事件，清空事件队列
+        QApplication.processEvents(QEventLoop.AllEvents)
+        
+        # 2. 设置应用程序级别的等待光标
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        
+        # 3. 禁用主窗口及其所有子控件（这会阻止所有控件接收用户输入事件）
+        self.setDisabled(True)
+        
+        # 4. 再次处理事件确保禁用状态完全生效
+        QApplication.processEvents(QEventLoop.AllEvents)
+
+        # 启动lcm 转换 ros2 bag 进程
+        self.ros2_bag_process = subprocess.Popen([
+            'ros2', 'run', 'lcm_to_ros2', 'lcm_convert_ros2bag', self.lcm_file_edit.text(), self.bag_path_edit.text()],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # 将 stderr 合并到 stdout
+            text=True)  # 以文本模式读取
+        
+        # 等待进程完成并获取输出（会阻塞）
+        stdout, _ = self.ros2_bag_process.communicate()
+
+        # 检查返回码
+        if self.ros2_bag_process.returncode == 0:
+            self.statusBar().showMessage(f'已转换ROS2 bag完成: : { stdout }')
+            self.log_message(f'已转换ROS2 bag完成: : { stdout }')
+        else:
+            self.statusBar().showMessage(f'转换失败: : { stdout }')
+            self.log_message(f'转换失败: : { stdout }')
+        
+        # ========== 恢复所有控件槽函数 ==========
+        # 1. 恢复光标
+        QApplication.restoreOverrideCursor()
+        
+        # 2. 启用主窗口及其所有子控件
+        self.setDisabled(False)
+        
+        # 3. 清除禁用期间积累的用户输入事件（关键！确保不会触发延迟的槽函数）
+        QApplication.processEvents(QEventLoop.ExcludeUserInputEvents)
+        
+        # 4. 处理所有剩余事件
+        QApplication.processEvents(QEventLoop.AllEvents)
+        return
+    
+    
+    def on_browse_lcm_file(self):
+        """浏览LCM日志文件"""
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, '选择LCM日志文件', '', 'LCM日志文件; 所有文件 (*)'
+        )
+        if file_name:
+            self.lcm_file_edit.setText(file_name)
+    
+    def on_browse_bag_path(self):
+        """浏览ROS2 Bag输出路径"""
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, '选择输出文件', '', 'ROS2 Bag文件 (*)'
+        )
+ 
+        if file_name:
+            self.bag_path_edit.setText(file_name)
+            
     def update_ros2_bag_timer(self):
         """更新ROS2 bag录制时间"""
         self.ros2_bag_time += 1

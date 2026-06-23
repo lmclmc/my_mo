@@ -339,8 +339,7 @@ def generate_launch_description():
             name='hal_canfd_command_republisher',
             namespace='robot_lcm',
             output='screen',
-            respawn=False,
-            arguments=['--ros-args', '--log-level', 'debug', '--log-level', 'rcl:=info']
+            respawn=False
         ),
         Node(
             package='lcm_to_ros2',
@@ -348,8 +347,7 @@ def generate_launch_description():
             name='hal_canfd_state_republisher',
             namespace='robot_lcm',
             output='screen',
-            respawn=False,
-            arguments=['--ros-args', '--log-level', 'debug', '--log-level', 'rcl:=info']
+            respawn=False
         ),
     ]
     return LaunchDescription(nodes)

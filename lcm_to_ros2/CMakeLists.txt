@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(rosbag2_cpp REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 # Find LCM
@@ -37,6 +38,8 @@ get_filename_component(_fullPath autosrc ABSOLUTE)
 if(EXISTS ${_fullPath}/CMakeLists.txt)
     add_subdirectory(autosrc)
 endif()
+
+add_subdirectory(convert)
 
 # Install launch files
 install(DIRECTORY launch

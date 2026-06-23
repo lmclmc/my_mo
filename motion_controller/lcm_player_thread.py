@@ -57,7 +57,6 @@ class LCMPlayerThread(threading.Thread, QObject):
         self.play_status = True
 
         try:
-            self.log.seek(31190739)
             log_iter = iter(self.log)
             
             #for event in log_iter:
