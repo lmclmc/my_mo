@@ -87,8 +87,8 @@ class MainWindow(QMainWindow):
         
         # 主按钮布局 - 使用垂直布局
         button_layout = QVBoxLayout(button_widget)
-        button_layout.setSpacing(16)
-        button_layout.setContentsMargins(20, 20, 20, 20)
+        button_layout.setSpacing(12)
+        button_layout.setContentsMargins(20, 30, 20, 30)
         
         # ========== LCM 日志操作组 ==========
         lcm_group = QGroupBox('LCM 日志操作')
@@ -109,7 +109,7 @@ class MainWindow(QMainWindow):
         """)
         lcm_group.setMinimumHeight(280)  # 单独拉高 LCM 日志播放组的高度
         lcm_layout = QVBoxLayout(lcm_group)
-        lcm_layout.setSpacing(14)
+        lcm_layout.setSpacing(12)
         
         # LCM播放按钮
         self.open_log_button = QPushButton('播放 LCM 日志')
@@ -353,6 +353,7 @@ class MainWindow(QMainWindow):
         
         # ========== 在线监听组 ==========
         online_group = QGroupBox('在线监听')
+        online_group.setMinimumHeight(150)
         online_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -369,7 +370,7 @@ class MainWindow(QMainWindow):
             }
         """)
         online_layout = QVBoxLayout(online_group)
-        online_layout.setSpacing(12)
+        online_layout.setSpacing(0)
         
         # 在线调试按钮
         self.online_debug_button = QPushButton('开始在线监听')
@@ -411,10 +412,14 @@ class MainWindow(QMainWindow):
         """)
         online_layout.addWidget(self.ip_input, 0, Qt.AlignCenter)
         
+        # 在在线监听组上方添加间距，使其往下拉
+        button_layout.addSpacing(10)
         button_layout.addWidget(online_group)
         
         # ========== ROS2 Bag 录制组 ==========
         ros2_group = QGroupBox('ROS2 Bag 录制')
+        ros2_group.setMinimumHeight(220)
+        #ros2_group.setMinimumHeight(280)
         ros2_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -432,6 +437,103 @@ class MainWindow(QMainWindow):
         """)
         ros2_layout = QVBoxLayout(ros2_group)
         ros2_layout.setSpacing(12)
+        
+        # CSV快速转换按钮
+        self.csv_convert_button = QPushButton('CSV快速转换 ROS2 Bag')
+        self.csv_convert_button.setFixedSize(200, 45)
+        self.csv_convert_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f87171;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #ef4444;
+            }
+            QPushButton:pressed {
+                background-color: #dc2626;
+            }
+        """)
+        self.csv_convert_button.clicked.connect(self.on_csv_convert_ros2_bag)
+        ros2_layout.addWidget(self.csv_convert_button, 0, Qt.AlignCenter)
+        
+        # CSV文件加载区域
+        csv_files_layout = QVBoxLayout()
+        csv_files_layout.setSpacing(12)
+        
+        # 加载quat文件
+        quat_layout = QHBoxLayout()
+        self.quat_button = QPushButton('加载quat文件')
+        self.quat_button.setFixedSize(100, 28)
+        self.quat_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.quat_button.clicked.connect(self.on_browse_quat_file)
+        self.quat_file_label = QLabel('未选择')
+        self.quat_file_label.setStyleSheet('color: #666; font-size: 12px;')
+        quat_layout.addWidget(self.quat_button)
+        quat_layout.addWidget(self.quat_file_label)
+        csv_files_layout.addLayout(quat_layout)
+        
+        # 加载pos文件
+        pos_layout = QHBoxLayout()
+        self.pos_button = QPushButton('加载pos文件')
+        self.pos_button.setFixedSize(100, 28)
+        self.pos_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.pos_button.clicked.connect(self.on_browse_pos_file)
+        self.pos_file_label = QLabel('未选择')
+        self.pos_file_label.setStyleSheet('color: #666; font-size: 12px;')
+        pos_layout.addWidget(self.pos_button)
+        pos_layout.addWidget(self.pos_file_label)
+        csv_files_layout.addLayout(pos_layout)
+        
+        # 加载vel文件
+        vel_layout = QHBoxLayout()
+        self.vel_button = QPushButton('加载vel文件')
+        self.vel_button.setFixedSize(100, 28)
+        self.vel_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.vel_button.clicked.connect(self.on_browse_vel_file)
+        self.vel_file_label = QLabel('未选择')
+        self.vel_file_label.setStyleSheet('color: #666; font-size: 12px;')
+        vel_layout.addWidget(self.vel_button)
+        vel_layout.addWidget(self.vel_file_label)
+        csv_files_layout.addLayout(vel_layout)
+        
+        ros2_layout.addLayout(csv_files_layout)
         
         # ROS2录制按钮
         self.ros2_bag_button = QPushButton('开始录制 ROS2 Bag')
@@ -466,8 +568,8 @@ class MainWindow(QMainWindow):
         
         # ========== 创建分割器 ==========
         splitter = QSplitter(Qt.Vertical)
-        button_widget.setMinimumHeight(600)  # 增加按钮区域最小高度，避免分组重叠
-        button_widget.setMaximumHeight(750)  # 增加最大高度
+        button_widget.setMinimumHeight(800)  # 增加按钮区域最小高度，避免分组重叠
+        button_widget.setMaximumHeight(1500)  # 增加最大高度
         splitter.addWidget(button_widget)
         
         # 日志区域样式
@@ -561,6 +663,62 @@ class MainWindow(QMainWindow):
         )
         if file_name:
             self.lcm_file_edit.setText(file_name)
+            
+    def on_browse_quat_file(self):
+        """浏览quat文件"""
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, '选择quat文件', '', 'CSV文件 (*.csv); 所有文件 (*)'
+        )
+        if file_name:
+            self.quat_file_label.setText(os.path.basename(file_name))
+            self.quat_file_path = file_name
+    
+    def on_browse_pos_file(self):
+        """浏览pos文件"""
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, '选择pos文件', '', 'CSV文件 (*.csv); 所有文件 (*)'
+        )
+        if file_name:
+            self.pos_file_label.setText(os.path.basename(file_name))
+            self.pos_file_path = file_name
+    
+    def on_browse_vel_file(self):
+        """浏览vel文件"""
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, '选择vel文件', '', 'CSV文件 (*.csv); 所有文件 (*)'
+        )
+        if file_name:
+            self.vel_file_label.setText(os.path.basename(file_name))
+            self.vel_file_path = file_name
+    
+    def on_csv_convert_ros2_bag(self):
+        """CSV快速转换为ROS2 Bag"""
+        # 检查是否已选择文件
+        if not hasattr(self, 'quat_file_path') or not self.quat_file_path:
+            self.log_message('请先选择quat文件')
+            QMessageBox.warning(self, '警告', '请先选择quat文件')
+            return
+        
+        if not hasattr(self, 'pos_file_path') or not self.pos_file_path:
+            self.log_message('请先选择pos文件')
+            QMessageBox.warning(self, '警告', '请先选择pos文件')
+            return
+        
+        if not hasattr(self, 'vel_file_path') or not self.vel_file_path:
+            self.log_message('请先选择vel文件')
+            QMessageBox.warning(self, '警告', '请先选择vel文件')
+            return
+        
+        # 弹出保存对话框
+        file_name, _ = QFileDialog.getSaveFileName(
+            self, '保存ROS2 Bag文件', '', 'ROS2 Bag文件 (*)'
+        )
+        
+        if file_name:
+            self.log_message(f'开始转换CSV到ROS2 Bag: {file_name}')
+            QMessageBox.information(self, '信息', f'开始转换CSV到ROS2 Bag: {file_name}')
+            # 这里可以添加实际的转换逻辑
+            self.log_message('CSV转换功能已触发（待实现具体转换逻辑）')
     
     def on_browse_bag_path(self):
         """浏览ROS2 Bag输出路径"""
