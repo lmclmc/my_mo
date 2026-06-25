@@ -718,7 +718,49 @@ class MainWindow(QMainWindow):
             self.log_message(f'开始转换CSV到ROS2 Bag: {file_name}')
             QMessageBox.information(self, '信息', f'开始转换CSV到ROS2 Bag: {file_name}')
             # 这里可以添加实际的转换逻辑
-            self.log_message('CSV转换功能已触发（待实现具体转换逻辑）')
+            # ========== 完全禁用所有控件槽函数 ==========
+            # 1. 处理所有待处理事件，清空事件队列
+            QApplication.processEvents(QEventLoop.AllEvents)
+            
+            # 2. 设置应用程序级别的等待光标
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            
+            # 3. 禁用主窗口及其所有子控件（这会阻止所有控件接收用户输入事件）
+            self.setDisabled(True)
+            
+            # 4. 再次处理事件确保禁用状态完全生效
+            QApplication.processEvents(QEventLoop.AllEvents)
+
+            # 启动lcm 转换 ros2 bag 进程
+            self.ros2_bag_process = subprocess.Popen([
+                'ros2', 'run', 'lcm_to_ros2', 'csv_convert_ros2bag', self.quat_file_path, self.pos_file_path, self.vel_file_path, file_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # 将 stderr 合并到 stdout
+                text=True)  # 以文本模式读取
+            
+            # 等待进程完成并获取输出（会阻塞）
+            stdout, _ = self.ros2_bag_process.communicate()
+
+            # 检查返回码
+            if self.ros2_bag_process.returncode == 0:
+                self.statusBar().showMessage(f'已转换ROS2 bag完成: : { stdout }')
+                self.log_message(f'已转换ROS2 bag完成: : { stdout }')
+            else:
+                self.statusBar().showMessage(f'转换失败: : { stdout }')
+                self.log_message(f'转换失败: : { stdout }')
+            
+            # ========== 恢复所有控件槽函数 ==========
+            # 1. 恢复光标
+            QApplication.restoreOverrideCursor()
+            
+            # 2. 启用主窗口及其所有子控件
+            self.setDisabled(False)
+            
+            # 3. 清除禁用期间积累的用户输入事件（关键！确保不会触发延迟的槽函数）
+            QApplication.processEvents(QEventLoop.ExcludeUserInputEvents)
+            
+            # 4. 处理所有剩余事件
+            QApplication.processEvents(QEventLoop.AllEvents)
     
     def on_browse_bag_path(self):
         """浏览ROS2 Bag输出路径"""
