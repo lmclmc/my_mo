@@ -110,6 +110,88 @@ std::string readTextFileToString(const std::string& file_path) {
     return file_content;
 }
 
+// 添加ghost前缀
+std::string addGhostPrefix(const std::string& name) {
+    // 如果已经有ghost前缀，不再添加
+    if (name.substr(0, 5) == "ghost") {
+        return name;
+    }
+    return "ghost_" + name;
+}
+
+std::string add_prefix_ghost(const std::string& str) {
+    // 创建XML文档对象
+    tinyxml2::XMLDocument doc;
+    if (doc.Parse(str.c_str()) != tinyxml2::XML_SUCCESS) {
+        std::cerr << "XML文件解析失败" << std::endl;
+        return "";
+    }
+
+    // 获取根元素
+    tinyxml2::XMLElement* root = doc.RootElement();
+    if (!root) {
+        std::cerr << "XML文件没有根元素" << std::endl;
+        return "";
+    }
+
+    std::cout << "开始处理URDF文件..." << std::endl;
+
+    // 1. 修改所有<link>元素的name属性
+    tinyxml2::XMLElement* link = root->FirstChildElement("link");
+    while (link) {
+        const char* name = link->Attribute("name");
+        if (name) {
+            std::string new_name = addGhostPrefix(name);
+            link->SetAttribute("name", new_name.c_str());
+            std::cout << "修改link name: " << name << " -> " << new_name << std::endl;
+        }
+        link = link->NextSiblingElement("link");
+    }
+
+    // 2. 修改所有<joint>元素中的parent和child link属性
+    tinyxml2::XMLElement* joint = root->FirstChildElement("joint");
+    while (joint) {
+        // 修改parent的link属性
+        tinyxml2::XMLElement* parent = joint->FirstChildElement("parent");
+        if (parent) {
+            const char* link_name = parent->Attribute("link");
+            if (link_name) {
+                std::string new_name = addGhostPrefix(link_name);
+                parent->SetAttribute("link", new_name.c_str());
+                std::cout << "修改parent link: " << link_name << " -> " << new_name << std::endl;
+            }
+        }
+
+        // 修改child的link属性
+        tinyxml2::XMLElement* child = joint->FirstChildElement("child");
+        if (child) {
+            const char* link_name = child->Attribute("link");
+            if (link_name) {
+                std::string new_name = addGhostPrefix(link_name);
+                child->SetAttribute("link", new_name.c_str());
+                std::cout << "修改child link: " << link_name << " -> " << new_name << std::endl;
+            }
+        }
+
+        joint = joint->NextSiblingElement("joint");
+    }
+
+    // ========== 将XML文档保存成字符串 ==========
+    tinyxml2::XMLPrinter printer;
+    doc.Print(&printer);  // 将文档输出到printer
+    // // 保存修改后的文件
+    // error = doc.SaveFile(output_file.c_str());
+    // if (error != XML_SUCCESS) {
+    //     std::cerr << "无法保存文件: " << output_file << std::endl;
+    //     std::cerr << "错误: " << doc.ErrorName() << std::endl;
+    //     return 1;
+    // }
+
+    // std::cout << "\n处理完成! 输出文件: " << output_file << std::endl;
+
+    return printer.CStr();
+}
+
 RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
 : rclcpp::Node("robot_state_publisher", options)
 {
@@ -127,7 +209,11 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
   state_estimator_sub = this->create_subscription<lcm_to_ros2::msg::StateEstimatorLcmt>(
     "/robot_lcm/state_estimator", 5, std::bind(&magic::RobotStatePublisher::stateEstimatorCallback, this, std::placeholders::_1));
 
-  RCLCPP_INFO(this->get_logger(), "%s:%d, state_estimator publisher created", __func__, __LINE__);
+  ghost_quat_sub = this->create_subscription<geometry_msgs::msg::Quaternion>(
+    "csv_quat", 5, std::bind(&magic::RobotStatePublisher::quatCallback, this, std::placeholders::_1));
+
+  ghost_joint_state_sub = this->create_subscription<sensor_msgs::msg::JointState>(
+    "csv_pos", 5, std::bind(&magic::RobotStatePublisher::csvPosCallback, this, std::placeholders::_1));
 
   // // subscribe to joint state
   // joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
@@ -169,7 +255,6 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
     std::cout << "\narm_start_index_1: " << arm_start_index_1 << std::endl;
   } catch (const YAML::Exception& e) {
     RCLCPP_ERROR(this->get_logger(), "%s:%d, YAML 解析错误: %s", __func__, __LINE__, e.what());
-    //exit(1);
   }
 
   
@@ -205,6 +290,11 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
     // Transient local is similar to latching in ROS 1.
     rclcpp::QoS(1).transient_local());
 
+  ghost_description_pub_ = this->create_publisher<std_msgs::msg::String>(
+    "ghost_robot_description",
+    // Transient local is similar to latching in ROS 1.
+    rclcpp::QoS(1).transient_local());
+
   setupURDF(urdf_xml);
 
   initUrdf(doc);
@@ -222,8 +312,15 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
     std::bind(&RobotStatePublisher::callbackJointState, this, std::placeholders::_1),
     subscriber_options);
 
-  publishFixedTransforms();
+  // subscribe to joint state
+  ghost_joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+    "ghost_joint_states",
+    rclcpp::SensorDataQoS(),
+    std::bind(&RobotStatePublisher::callbackGhostJointState, this, std::placeholders::_1),
+    subscriber_options);
 
+  publishFixedTransforms();
+  publishGhostFixedTransforms();
   // Now that we have successfully declared the parameters and done all
   // necessary setup, install the callback for updating parameters.
   param_cb_ = add_on_set_parameters_callback(
@@ -238,6 +335,9 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
   // Create publisher
   pub_ = this->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
 
+  // Create publisher
+  ghost_pub_ = this->create_publisher<sensor_msgs::msg::JointState>("ghost_joint_states", 10);
+
   // Create timer
   timer_ = this->create_wall_timer(
     std::chrono::duration<double>(0.02),
@@ -246,11 +346,27 @@ RobotStatePublisher::RobotStatePublisher(const rclcpp::NodeOptions & options)
     });
 }
 
+void RobotStatePublisher::quatCallback(const geometry_msgs::msg::Quaternion::SharedPtr msg) {
+  ghost_imu_quaternion_.w = msg->w;
+  ghost_imu_quaternion_.x = msg->x;
+  ghost_imu_quaternion_.y = msg->y;
+  ghost_imu_quaternion_.z = msg->z;
+}
+
+void RobotStatePublisher::csvPosCallback(const sensor_msgs::msg::JointState::SharedPtr msg) {
+  for (size_t i = 0; i < msg->position.size(); i++) {
+    if (i >= ghost_joint_list_.size()) {
+      continue;
+    }
+    ghost_free_joints_[ghost_joint_list_[i]].position = msg->position[i];
+  }
+}
+
 void RobotStatePublisher::legStateCallback(const lcm_to_ros2::msg::LegControlDataLcmt::SharedPtr state_msg)
 {
   for (size_t i = 0; i < leg_count_; i++) {
     free_joints_[joint_list_[i + leg_start_index_]].position = state_msg->q[i];
-    free_joints_[joint_list_[i + leg_start_index_]].velocity = state_msg->qd[i];
+   // free_joints_[joint_list_[i + leg_start_index_]].velocity = state_msg->qd[i];
   }
 }
 
@@ -382,8 +498,9 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
           }
           
           dependent_joints_[name] = dep_joint;
-
+          ghost_dependent_joints_[name] = dep_joint;
           joint_list_.push_back(name);
+          ghost_joint_list_.push_back(name);
           continue;
         }
       }
@@ -399,8 +516,10 @@ void RobotStatePublisher::initUrdf(tinyxml2::XMLDocument & doc)
     RCLCPP_INFO(this->get_logger(), "%s:%d, joint %s idx %d", __func__, __LINE__, name.c_str(), joint.idx);
     joint_idx++;
     free_joints_[name] = joint;
+    ghost_free_joints_[name] = joint;
     std::cout << "joint" << name << " idx " << joint.idx << std::endl;
     joint_list_.push_back(name);
+    ghost_joint_list_.push_back(name);
   }
 }
 
@@ -584,6 +703,114 @@ void RobotStatePublisher::timerCallback()
   if (!msg->name.empty() || !msg->position.empty() || !msg->velocity.empty() || !msg->effort.empty()) {
     pub_->publish(*msg);
   }
+
+  ghostUpdate();
+}
+
+void RobotStatePublisher::ghostUpdate() {
+  // Publish Joint States
+  auto msg = std::make_shared<sensor_msgs::msg::JointState>();
+  msg->header.stamp = this->now();
+  
+  if (delta_ > 0.0) {
+    update(delta_);
+  }
+  
+  // Initialize msg.position, msg.velocity, and msg.effort.
+  bool has_position = !ghost_dependent_joints_.empty();
+  bool has_velocity = false;
+  bool has_effort = false;
+  
+  for (const auto & [name, joint] : ghost_free_joints_) {
+    if (!has_position) {
+      has_position = true;  // Free joints always have position
+    }
+    if (!has_velocity && joint.velocity != 0.0) {
+      has_velocity = true;
+    }
+    if (!has_effort && joint.effort != 0.0) {
+      has_effort = true;
+    }
+  }
+  
+  size_t num_joints = ghost_free_joints_.size() + ghost_dependent_joints_.size();
+  if (has_position) {
+    msg->position.resize(num_joints, 0.0);
+  }
+  if (has_velocity) {
+    msg->velocity.resize(num_joints, 0.0);
+  }
+  if (has_effort) {
+    msg->effort.resize(num_joints, 0.0);
+  }
+  
+  for (size_t i = 0; i < ghost_joint_list_.size(); ++i) {
+    const std::string & name = ghost_joint_list_[i];
+    msg->name.push_back(name);
+    
+    const Joint * joint = nullptr;
+    double factor = 1.0;
+    double offset = 0.0;
+    
+    // Add Free Joint
+    auto free_it = ghost_free_joints_.find(name);
+    if (free_it != ghost_free_joints_.end()) {
+      joint = &free_it->second;
+    } 
+    // Add Dependent Joint
+    else {
+      auto dep_it = ghost_dependent_joints_.find(name);
+      if (dep_it != ghost_dependent_joints_.end()) {
+        std::string parent = dep_it->second.parent;
+        factor = dep_it->second.factor;
+        offset = dep_it->second.offset;
+        
+        // Handle recursive mimic chain
+        std::vector<std::string> recursive_mimic_chain_joints = {name};
+        while (ghost_dependent_joints_.find(parent) != ghost_dependent_joints_.end()) {
+          if (std::find(recursive_mimic_chain_joints.begin(), recursive_mimic_chain_joints.end(), parent) != recursive_mimic_chain_joints.end()) {
+            RCLCPP_ERROR(this->get_logger(), "%s:%d, Found an infinite recursive mimic chain:", __func__, __LINE__);
+            for (const auto & joint_name : recursive_mimic_chain_joints) {
+              RCLCPP_ERROR(this->get_logger(), "%s:%d,  %s", __func__, __LINE__, joint_name.c_str());
+            }
+            RCLCPP_ERROR(this->get_logger(), "%s:%d,  %s", __func__, __LINE__, parent.c_str());
+            rclcpp::shutdown();
+            exit(1);
+          }
+          
+          recursive_mimic_chain_joints.push_back(parent);
+          auto parent_dep = ghost_dependent_joints_.find(parent);
+          parent = parent_dep->second.parent;
+          offset += factor * parent_dep->second.offset;
+          factor *= parent_dep->second.factor;
+        }
+        
+        auto free_parent_it = ghost_free_joints_.find(parent);
+        if (free_parent_it != ghost_free_joints_.end()) {
+          joint = &free_parent_it->second;
+        }
+      }
+    }
+
+    if (joint) {
+      if (has_position) {
+        // RCLCPP_DEBUG(this->get_logger(), "%s:%d, joint %s position is %f, factor is %f, offset is %f",
+        //              __func__, __LINE__, name.c_str(), joint->position, factor, offset);
+        msg->position[i] = joint->position * factor + offset;
+      }
+      if (has_velocity) {
+        msg->velocity[i] = joint->velocity * factor;
+      }
+      if (has_effort) {
+        msg->effort[i] = joint->effort;
+      }
+    }
+  }
+  
+  // Only publish non-empty messages
+  if (!msg->name.empty() || !msg->position.empty() || !msg->velocity.empty() || !msg->effort.empty()) {
+    ghost_pub_->publish(*msg);
+  }
 }
 
 Joint RobotStatePublisher::initJoint(double minval, double maxval, double zeroval, bool continuous)
@@ -653,11 +880,13 @@ void RobotStatePublisher::setupURDF(const std::string & urdf_xml)
 
   addChildren(model, tree.getRootSegment());
 
-  auto msg = std::make_unique<std_msgs::msg::String>();
-  msg->data = urdf_xml;
-
+  std_msgs::msg::String msg;
+  msg.data = urdf_xml;
   // Publish the robot description
-  description_pub_->publish(std::move(msg));
+  description_pub_->publish(msg);
+
+  msg.data = add_prefix_ghost(msg.data);
+  ghost_description_pub_->publish(msg);
 
   RCLCPP_INFO(get_logger(), "%s:%d, Robot initialized", __func__, __LINE__);
 }
@@ -702,11 +931,56 @@ void RobotStatePublisher::addChildren(
   }
 }
 
+void RobotStatePublisher::publishGhostTransforms(
+  const std::map<std::string, double> & joint_positions,
+  const builtin_interfaces::msg::Time & time)
+{
+  std::vector<geometry_msgs::msg::TransformStamped> tf_transforms;
+  std::string frame_prefix = "ghost_";//get_parameter("frame_prefix").get_value<std::string>();
+  geometry_msgs::msg::TransformStamped tf_transform;
+  tf_transform.header.stamp = time;
+  //将根坐标系嫁接到世界坐标系上
+  tf_transform.header.frame_id = "world"; // 假设根坐标系是 world
+  tf_transform.child_frame_id = frame_prefix + root_link_name_; // 假设机器人基坐标系是 base_link
+  
+  // 设置平移（如果需要）
+  tf_transform.transform.translation.x = 0.0;
+  tf_transform.transform.translation.y = 0.0;
+  tf_transform.transform.translation.z = 0.0;
+
+  // 设置旋转（使用 IMU 四元数）
+  tf_transform.transform.rotation.w = ghost_imu_quaternion_.w;
+  tf_transform.transform.rotation.x = ghost_imu_quaternion_.x;
+  tf_transform.transform.rotation.y = ghost_imu_quaternion_.y;
+  tf_transform.transform.rotation.z = ghost_imu_quaternion_.z;
+
+  // 发布变换
+  tf_transforms.push_back(tf_transform);
+  //tf_broadcaster_->sendTransform(tf_transform);
+
+  
+  // loop over all joints
+  for (const std::pair<const std::string, double> & jnt : joint_positions) {
+    std::map<std::string, SegmentPair>::iterator seg = segments_.find(jnt.first);
+   // RCLCPP_DEBUG(get_logger(), "%s:%d, Processing joint %s, position %f", __func__, __LINE__, jnt.first.c_str(), jnt.second);
+    if (seg != segments_.end()) {
+      geometry_msgs::msg::TransformStamped tf_transform =
+        kdlToTransform(seg->second.segment.pose(jnt.second));
+      tf_transform.header.stamp = time;
+      tf_transform.header.frame_id = frame_prefix + seg->second.root;
+      tf_transform.child_frame_id = frame_prefix + seg->second.tip;
+      tf_transforms.push_back(tf_transform);
+    }
+  }
+  tf_broadcaster_->sendTransform(tf_transforms);
+}
+
 // publish moving transforms
 void RobotStatePublisher::publishTransforms(
   const std::map<std::string, double> & joint_positions,
   const builtin_interfaces::msg::Time & time)
 {
+  std::vector<geometry_msgs::msg::TransformStamped> tf_transforms;
   std::string frame_prefix = get_parameter("frame_prefix").get_value<std::string>();
   geometry_msgs::msg::TransformStamped tf_transform;
   tf_transform.header.stamp = time;
@@ -726,9 +1000,8 @@ void RobotStatePublisher::publishTransforms(
   tf_transform.transform.rotation.z = imu_quaternion_.z;
 
   // 发布变换
-  tf_broadcaster_->sendTransform(tf_transform);
-
-  std::vector<geometry_msgs::msg::TransformStamped> tf_transforms;
+  tf_transforms.push_back(tf_transform);
+  //tf_broadcaster_->sendTransform(tf_transform);
   
   // loop over all joints
   for (const std::pair<const std::string, double> & jnt : joint_positions) {
@@ -766,6 +1039,95 @@ void RobotStatePublisher::publishFixedTransforms()
     tf_transforms.push_back(tf_transform);
   }
   static_tf_broadcaster_->sendTransform(tf_transforms);
+}
+
+// publish fixed transforms
+void RobotStatePublisher::publishGhostFixedTransforms()
+{
+  RCLCPP_DEBUG(get_logger(), "%s:%d, Publishing transforms for fixed joints", __func__, __LINE__);
+
+  std::string frame_prefix = "ghost_";
+
+  std::vector<geometry_msgs::msg::TransformStamped> tf_transforms;
+
+  // loop over all fixed segments
+  rclcpp::Time now = this->now();
+  for (const std::pair<const std::string, SegmentPair> & seg : segments_fixed_) {
+    geometry_msgs::msg::TransformStamped tf_transform = kdlToTransform(seg.second.segment.pose(0));
+    tf_transform.header.stamp = now;
+
+    tf_transform.header.frame_id = frame_prefix + seg.second.root;
+    tf_transform.child_frame_id = frame_prefix + seg.second.tip;
+    tf_transforms.push_back(tf_transform);
+  }
+  static_tf_broadcaster_->sendTransform(tf_transforms);
+}
+
+void RobotStatePublisher::callbackGhostJointState(
+  const sensor_msgs::msg::JointState::ConstSharedPtr state)
+{
+  // RCLCPP_INFO(get_logger(), "Received JointState message with %zu joints", state->name.size());
+  // RCLCPP_INFO(get_logger(), "Received JointState message with %zu positions", state->position.size());
+
+  // if (state->name.size() != state->position.size()) {
+  //   if (state->position.empty()) {
+  //     RCLCPP_WARN(
+  //       get_logger(), "%s:%d, Robot state publisher ignored a JointState message about joint(s) "
+  //       "\"%s\"(,...) whose position member was empty.", __func__, __LINE__, state->name[0].c_str());
+  //   } else {
+  //     RCLCPP_ERROR(get_logger(), "%s:%d, Robot state publisher ignored an invalid JointState message", __func__, __LINE__);
+  //   }
+  //   return;
+  // }
+
+  // check if we moved backwards in time (e.g. when playing a bag file)
+  rclcpp::Time now = this->now();
+  if (last_ghost_callback_time_.nanoseconds() > now.nanoseconds()) {
+    // force re-publish of joint ransforms
+    RCLCPP_WARN(
+      get_logger(), "%s:%d, Moved backwards in time, re-publishing joint transforms!", __func__, __LINE__);
+    last_ghost_publish_time_.clear();
+  }
+  last_ghost_callback_time_ = now;
+
+  // determine least recently published joint
+  rclcpp::Time last_published = now;
+  for (size_t i = 0; i < state->name.size(); i++) {
+    rclcpp::Time t(last_ghost_publish_time_[state->name[i]]);
+    last_published = (t.nanoseconds() < last_published.nanoseconds()) ? t : last_published;
+  }
+  // note: if a joint was seen for the first time,
+  //       then last_published is zero.
+
+  // check if we need to publish
+  rclcpp::Time current_time(state->header.stamp);
+  double publish_freq = this->get_parameter("publish_frequency").get_value<double>();
+  std::chrono::milliseconds publish_interval_ms =
+    std::chrono::milliseconds(static_cast<uint64_t>(1000.0 / publish_freq));
+  rclcpp::Time max_publish_time = last_published + rclcpp::Duration(publish_interval_ms);
+  if (get_parameter("ignore_timestamp").get_value<bool>() ||
+    current_time.nanoseconds() >= max_publish_time.nanoseconds())
+  {
+    // get joint positions from state message
+    std::map<std::string, double> joint_positions;
+    for (size_t i = 0; i < state->name.size(); i++) {
+      joint_positions.insert(std::make_pair(state->name[i], state->position[i]));
+    }
+
+    for (const std::pair<const std::string, urdf::JointMimicSharedPtr> & i : mimic_) {
+      if (joint_positions.find(i.second->joint_name) != joint_positions.end()) {
+        double pos = joint_positions[i.second->joint_name] * i.second->multiplier +
+          i.second->offset;
+        joint_positions.insert(std::make_pair(i.first, pos));
+      }
+    }
+
+    publishGhostTransforms(joint_positions, state->header.stamp);
+    // store publish time in joint map
+    for (size_t i = 0; i < state->name.size(); i++) {
+      last_ghost_publish_time_[state->name[i]] = state->header.stamp;
+    }
+  }
 }
 
 void RobotStatePublisher::callbackJointState(
@@ -828,7 +1190,6 @@ void RobotStatePublisher::callbackJointState(
     }
 
     publishTransforms(joint_positions, state->header.stamp);
-
     // store publish time in joint map
     for (size_t i = 0; i < state->name.size(); i++) {
       last_publish_time_[state->name[i]] = state->header.stamp;

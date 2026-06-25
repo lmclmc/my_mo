@@ -8,9 +8,11 @@ get_filename_component(PARENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} DIRECTORY)
 # List of all republisher executables
 set(CONVERT_NODES
     lcm_convert_ros2bag
+    csv_convert_ros2bag
 )
 
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 # Create executables for each republisher
 foreach(NODE_NAME ${CONVERT_NODES})
@@ -22,6 +24,7 @@ foreach(NODE_NAME ${CONVERT_NODES})
         std_msgs
         rosbag2_cpp
         sensor_msgs
+        geometry_msgs
     )
     
     # Link LCM library

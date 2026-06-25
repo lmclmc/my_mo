@@ -142,8 +142,15 @@ protected:
     const std::map<std::string, double> & joint_positions,
     const builtin_interfaces::msg::Time & time);
 
-  /// Publish fixed transforms at startup time to /tf2_static.
+  void publishGhostTransforms(
+    const std::map<std::string, double> & joint_positions,
+    const builtin_interfaces::msg::Time & time);
+
+  // Publish fixed transforms at startup time to /tf2_static.
   void publishFixedTransforms();
+
+  // Publish fixed transforms at startup time to /tf2_static.
+  void publishGhostFixedTransforms();
 
   /// Initialize the URDF from the XML document.
   /**
@@ -167,6 +174,15 @@ protected:
    * \param[in] state The JointState message that was delivered.
    */
   void callbackJointState(const sensor_msgs::msg::JointState::ConstSharedPtr state);
+
+  /// The callback that is called when a new JointState message is received.
+  /**
+   * This method examines the incoming JointStates and applies a series of checks to
+   * see if new transforms should be published.  If so, it calls publishTransforms() to do so.
+   *
+   * \param[in] state The JointState message that was delivered.
+   */
+  void callbackGhostJointState(const sensor_msgs::msg::JointState::ConstSharedPtr state);
 
   /// The callback that is called to check that new parameters are valid.
   /**
@@ -201,14 +217,26 @@ protected:
   /// A pointer to the ROS 2 publisher for the robot_description
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr description_pub_;
 
+  /// A pointer to the ROS 2 publisher for the ghost_robot_description
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr ghost_description_pub_;
+  
   /// A pointer to the ROS 2 subscription for the joint states
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
+
+  /// A pointer to the ROS 2 subscription for the ghost joint states
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr ghost_joint_state_sub_;
 
   /// The last time a joint state message was received
   rclcpp::Time last_callback_time_;
 
+  /// The last time a ghost joint state message was received
+  rclcpp::Time last_ghost_callback_time_;
+
   /// A map between a joint name and the last time its state was published
   std::map<std::string, builtin_interfaces::msg::Time> last_publish_time_;
+
+  /// A map between a ghost joint name and the last time its state was published
+  std::map<std::string, builtin_interfaces::msg::Time> last_ghost_publish_time_;
 
   /// A map of the mimic joints that should be published
   MimicMap mimic_;
@@ -225,24 +253,38 @@ private:
   void armStateCallback(const lcm_to_ros2::msg::ArmControlDataLcmt::SharedPtr msg);
   void waistStateCallback(const lcm_to_ros2::msg::WaistControlDataLcmt::SharedPtr msg);
   void stateEstimatorCallback(const lcm_to_ros2::msg::StateEstimatorLcmt::SharedPtr msg);
+  void quatCallback(const geometry_msgs::msg::Quaternion::SharedPtr msg);
+  void csvPosCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
 
   void reRank(std::vector<std::string> &joint_list, const std::string &xml_file_path);
+
+  void ghostUpdate();
   
   rclcpp::Subscription<lcm_to_ros2::msg::LegControlDataLcmt>::SharedPtr leg_state_sub;
   rclcpp::Subscription<lcm_to_ros2::msg::ArmControlDataLcmt>::SharedPtr arm_state_sub;
   rclcpp::Subscription<lcm_to_ros2::msg::WaistControlDataLcmt>::SharedPtr waist_state_sub;
   rclcpp::Subscription<lcm_to_ros2::msg::StateEstimatorLcmt>::SharedPtr state_estimator_sub;
 
+  rclcpp::Subscription<geometry_msgs::msg::Quaternion>::SharedPtr ghost_quat_sub;
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr ghost_joint_state_sub;
+
   geometry_msgs::msg::Quaternion imu_quaternion_;
+  geometry_msgs::msg::Quaternion ghost_imu_quaternion_;
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr pub_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr ghost_pub_;
 
   std::string root_link_name_ = "pelvis";
 
   std::map<std::string, Joint> free_joints_;
   std::vector<std::string> joint_list_;
   std::map<std::string, DependentJoint> dependent_joints_;
+
+  std::map<std::string, Joint> ghost_free_joints_;
+  std::vector<std::string> ghost_joint_list_;
+  std::map<std::string, DependentJoint> ghost_dependent_joints_;
+  
   std::map<std::string, double> zeros_;
   bool use_mimic_;
   bool use_small_;

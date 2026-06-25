@@ -3,6 +3,8 @@ add_definitions(-DQT_PLUGIN)
 add_definitions(-DQT_SHARED)
 
 find_package(lcm_to_ros2 REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 QT5_WRAP_UI ( COMMON_UI_SRC
     qnodedialog.ui
@@ -48,6 +50,8 @@ target_link_libraries( TopicPublisherROS2 commonROS)
 
 ament_target_dependencies(TopicPublisherROS2
   lcm_to_ros2
+  sensor_msgs
+  geometry_msgs
 )
 
 message("AMENT_PREFIX_PATH = ${AMENT_PREFIX_PATH}")

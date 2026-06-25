@@ -27,6 +27,9 @@
 #include <lcm_to_ros2/msg/wbc_test_data_t.hpp>
 #include <lcm_to_ros2/msg/trajectory_joint_lcmt.hpp>
 
+#include "geometry_msgs/msg/quaternion.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
+
 using MessageRefPtr = std::shared_ptr<rosbag2_storage::SerializedBagMessage>;
 
 class TopicPublisherROS2 : public PJ::StatePublisher
@@ -91,6 +94,9 @@ private:
   void updatePublishers();
 
 private:
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr sensor_joint_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::Quaternion>::SharedPtr quat_publisher_;
+
   rclcpp::Publisher<lcm_to_ros2::msg::StateEstimatorLcmt>::SharedPtr state_estimator_publisher_;
   rclcpp::Publisher<lcm_to_ros2::msg::LegControlDataLcmt>::SharedPtr leg_data_publisher_;
   rclcpp::Publisher<lcm_to_ros2::msg::WaistControlDataLcmt>::SharedPtr waist_data_publisher_;
@@ -98,7 +104,13 @@ private:
   rclcpp::Publisher<lcm_to_ros2::msg::ArmControlDataLcmt>::SharedPtr arm_data_publisher_;
   
   void publish_data(double current_time);
-  bool checkRos2ModeFile(bool enable);
+  void publish_state_estimator(double current_time);
+  void publish_leg_data(double current_time);
+  void publish_arm_data(double current_time);
+  void publish_waist_data(double current_time);
+  void publish_head_data(double current_time);
+  void publish_csv_quaternion(double current_time);
+  void publish_sensor_joint(double current_time);
 };
 
 #endif  // STATE_PUBLISHER_ROS2TOPIC_H

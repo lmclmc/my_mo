@@ -135,6 +135,13 @@ void TopicPublisherROS2::setEnabled(bool to_enable)
     auto node_opts = rclcpp::NodeOptions();
     node_opts.context(_context);
     _node = std::make_shared<rclcpp::Node>("plotjuggler", node_opts);
+    sensor_joint_publisher_ = _node->create_publisher<sensor_msgs::msg::JointState>(
+      "csv_pos",
+      10);
+    quat_publisher_ = _node->create_publisher<geometry_msgs::msg::Quaternion>(
+      "csv_quat",
+      10);
+
     state_estimator_publisher_ = _node->create_publisher<lcm_to_ros2::msg::StateEstimatorLcmt>(
       "/robot_lcm/state_estimator",
       10);
@@ -160,15 +167,15 @@ void TopicPublisherROS2::setEnabled(bool to_enable)
     }).detach();
   }
 
-  ScriptResult result = executeScript("/opt/ros/motion_studio_mode_switch.sh", "playback", to_enable);
-  if (result.returnCode != 0) {
-    _enabled = false;
-    emit closed();
-    std::cout << "Error: Failed to switch to playback mode. Return msg: " << result.output << std::endl;
-    QMessageBox::critical(nullptr, "错误", result.output.c_str());
-    return;
-  }
- 
+  // ScriptResult result = executeScript("/opt/ros/motion_studio_mode_switch.sh", "playback", to_enable);
+  // if (result.returnCode != 0) {
+  //   _enabled = false;
+  //   emit closed();
+  //   std::cout << "Error: Failed to switch to playback mode. Return msg: " << result.output << std::endl;
+  //   QMessageBox::critical(nullptr, "错误", result.output.c_str());
+  //   return;
+  // }
+
   _enabled = (to_enable && _node);
 
   if (_enabled)
@@ -390,21 +397,24 @@ void TopicPublisherROS2::updateState(double current_time)
   publish_data(current_time);
 }
 
-void TopicPublisherROS2::publish_data(double current_time) {
+void TopicPublisherROS2::publish_state_estimator(double current_time) {
   auto state_estimator_msg = std::make_shared<lcm_to_ros2::msg::StateEstimatorLcmt>();
   for (int i = 0; i < 4; i++) {
     std::string str_quat = std::string("/robot_lcm/state_estimator/quat[") + 
-                           std::to_string(i) + std::string("]");
+                          std::to_string(i) + std::string("]");
     auto data_it = _datamap->numeric.find(str_quat);
     if (data_it != _datamap->numeric.end()) {
       int index = data_it->second.getIndexFromX(current_time);
       state_estimator_msg->quat[i] = data_it->second.at(index).y;
     } else {
       state_estimator_msg->quat[i] = 0;
+      return;
     }
   }
   state_estimator_publisher_->publish(*state_estimator_msg);
+}
 
+void TopicPublisherROS2::publish_leg_data(double current_time) {
   auto leg_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>();
   for (int i = 0; i < 12; i++) {
     std::string str_q = std::string("/robot_lcm/leg_control_data/q[") + 
@@ -415,38 +425,13 @@ void TopicPublisherROS2::publish_data(double current_time) {
       leg_data_ros2_msg->q[i] = data_it->second.at(index).y;
     } else {
       leg_data_ros2_msg->q[i] = 0;
+      return;
     }
   }
   leg_data_publisher_->publish(*leg_data_ros2_msg);
+}
 
-  auto waist_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::WaistControlDataLcmt>();
-  for (int i = 0; i < 3; i++) {
-    std::string str_q = std::string("/robot_lcm/waist_control_data/q[") + 
-                        std::to_string(i) + std::string("]");
-    auto data_it = _datamap->numeric.find(str_q);
-    if (data_it != _datamap->numeric.end()) {
-      int index = data_it->second.getIndexFromX(current_time);
-      waist_data_ros2_msg->q[i] = data_it->second.at(index).y;
-    } else {
-      waist_data_ros2_msg->q[i] = 0;
-    }
-  }
-  waist_data_publisher_->publish(*waist_data_ros2_msg);
-
-  auto head_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::HeadControlDataLcmt>();
-  for (int i = 0; i < 2; i++) {
-    std::string str_q = std::string("/robot_lcm/head_control_data/q[") + 
-                        std::to_string(i) + std::string("]");
-    auto data_it = _datamap->numeric.find(str_q);
-    if (data_it != _datamap->numeric.end()) {
-      int index = data_it->second.getIndexFromX(current_time);
-      head_data_ros2_msg->q[i] = data_it->second.at(index).y;
-    } else {
-      head_data_ros2_msg->q[i] = 0;
-    }
-  }
-  head_data_publisher_->publish(*head_data_ros2_msg);
-
+void TopicPublisherROS2::publish_arm_data(double current_time) {
   auto arm_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::ArmControlDataLcmt>();
   for (int i = 0; i < 14; i++) {
     std::string str_q = std::string("/robot_lcm/arm_control_data/joint_cur_pos[") + 
@@ -457,9 +442,119 @@ void TopicPublisherROS2::publish_data(double current_time) {
       arm_data_ros2_msg->joint_cur_pos[i] = data_it->second.at(index).y;
     } else {
       arm_data_ros2_msg->joint_cur_pos[i] = 0;
+      return;
     }
   }
   arm_data_publisher_->publish(*arm_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_waist_data(double current_time) {
+  auto waist_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::WaistControlDataLcmt>();
+  for (int i = 0; i < 3; i++) {
+    std::string str_q = std::string("/robot_lcm/waist_control_data/q[") + 
+                        std::to_string(i) + std::string("]");
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      waist_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      waist_data_ros2_msg->q[i] = 0;
+      return;
+    }
+  }
+  waist_data_publisher_->publish(*waist_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_head_data(double current_time) {
+  auto head_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::HeadControlDataLcmt>();
+  for (int i = 0; i < 2; i++) {
+    std::string str_q = std::string("/robot_lcm/head_control_data/q[") + 
+                        std::to_string(i) + std::string("]");
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      head_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      head_data_ros2_msg->q[i] = 0;
+      return;
+    }
+  }
+  head_data_publisher_->publish(*head_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_sensor_joint(double current_time) {
+  auto sensor_joint_msg = std::make_shared<sensor_msgs::msg::JointState>();
+  sensor_joint_msg->name.resize(30);
+  sensor_joint_msg->position.resize(30);
+  for (int i = 0; i < 30; i++) {
+    std::string str_csv_pos = std::string("csv_pos/") + std::to_string(i) + std::string("/position");
+    auto data_it = _datamap->numeric.find(str_csv_pos);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      sensor_joint_msg->position[i] = data_it->second.at(index).y;
+    } else {
+      sensor_joint_msg->position[i] = 0;
+      return;
+    }
+
+    sensor_joint_msg->name[i] = std::to_string(i);
+  }
+  sensor_joint_publisher_->publish(*sensor_joint_msg);
+}
+
+void TopicPublisherROS2::publish_csv_quaternion(double current_time) {
+  auto quat_msg = std::make_shared<geometry_msgs::msg::Quaternion>();
+{
+  auto data_it = _datamap->numeric.find("csv_quat/x");
+  if (data_it != _datamap->numeric.end()) {
+    int index = data_it->second.getIndexFromX(current_time);
+    quat_msg->x = data_it->second.at(index).y;
+  } else {
+    quat_msg->x = 0.0;
+    return;
+  }
+}
+{
+  auto data_it = _datamap->numeric.find("csv_quat/y");
+  if (data_it != _datamap->numeric.end()) {
+    int index = data_it->second.getIndexFromX(current_time);
+    quat_msg->y = data_it->second.at(index).y;
+  } else {
+    quat_msg->y = 0.0;
+    return;
+  }
+}
+{
+  auto data_it = _datamap->numeric.find("csv_quat/z");
+  if (data_it != _datamap->numeric.end()) {
+    int index = data_it->second.getIndexFromX(current_time);
+    quat_msg->z = data_it->second.at(index).y;
+  } else {
+    quat_msg->z = 0.0;
+    return;
+  }
+}
+{
+  auto data_it = _datamap->numeric.find("csv_quat/w");
+  if (data_it != _datamap->numeric.end()) {
+    int index = data_it->second.getIndexFromX(current_time);
+    quat_msg->w = data_it->second.at(index).y;
+  } else {
+    quat_msg->w = 0.0;
+    return;
+  }
+}
+  quat_publisher_->publish(*quat_msg);
+}
+
+void TopicPublisherROS2::publish_data(double current_time) {
+  publish_csv_quaternion(current_time);
+  publish_sensor_joint(current_time);
+  publish_state_estimator(current_time);
+  publish_leg_data(current_time);
+  publish_waist_data(current_time);
+  publish_head_data(current_time);
+  publish_arm_data(current_time);
 }
 
 void TopicPublisherROS2::play(double current_time)
