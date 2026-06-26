@@ -49,16 +49,45 @@
 #include "exlcm/canfd_state_t.hpp"
 #include "exlcm/canfd_command_t.hpp"
 
+#include "geometry_msgs/msg/quaternion.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
 
 #include "exlcm/state_estimator_lcmt.hpp"
 
 // 引入本地 LCM 核心头文件及你自研的 LCM 结构体
 #include <lcm/lcm-cpp.hpp>
+#include <fstream>
 
 template <typename lcm_type, typename ros2_type>
 static std::shared_ptr<rclcpp::SerializedMessage> convert_function(rclcpp::Serialization<ros2_type>& serializer, void* lcm_data, size_t lcm_size) {
     lcm_type lcm_msg;
     lcm_msg.decode(lcm_data, 0, lcm_size);
+    const ros2_type* ros2_msg = reinterpret_cast<const ros2_type*>(&lcm_msg);
+    auto serialized_msg = std::make_shared<rclcpp::SerializedMessage>(); 
+    serializer.serialize_message(ros2_msg, serialized_msg.get());
+    return serialized_msg;
+}
+
+template <typename lcm_type, typename ros2_type>
+static std::shared_ptr<rclcpp::SerializedMessage> lowlevel_convert_function(rclcpp::Serialization<ros2_type>& serializer, void* lcm_data, size_t lcm_size) {
+    lcm_type lcm_msg;
+    lcm_msg.decode(lcm_data, 0, lcm_size);
+    const ros2_type* ros2_msg = reinterpret_cast<const ros2_type*>(&lcm_msg);
+    auto serialized_msg = std::make_shared<rclcpp::SerializedMessage>(); 
+    serializer.serialize_message(ros2_msg, serialized_msg.get());
+    return serialized_msg;
+}
+
+static int csv_count = -1;
+static int g_fsm = -1;
+
+template <typename lcm_type, typename ros2_type>
+static std::shared_ptr<rclcpp::SerializedMessage> lcm_response_convert_function(rclcpp::Serialization<ros2_type>& serializer, void* lcm_data, size_t lcm_size) {
+    lcm_type lcm_msg;
+    lcm_msg.decode(lcm_data, 0, lcm_size);
+    if (g_fsm != -1 && lcm_msg.robot_fsm == g_fsm) {
+        csv_count++;
+    }
     const ros2_type* ros2_msg = reinterpret_cast<const ros2_type*>(&lcm_msg);
     auto serialized_msg = std::make_shared<rclcpp::SerializedMessage>(); 
     serializer.serialize_message(ros2_msg, serialized_msg.get());
@@ -140,11 +169,11 @@ static std::shared_ptr<rclcpp::SerializedMessage> leg_convert_function(rclcpp::S
     DEF_TOPIC("head_control_command",       exlcm::head_control_command_lcmt,  "/robot_lcm/head_control_command",  lcm_to_ros2::msg::HeadControlCommandLcmt, convert_function)\
     DEF_TOPIC("head_control_data",          exlcm::head_control_data_lcmt,     "/robot_lcm/head_control_data",     lcm_to_ros2::msg::HeadControlDataLcmt, convert_function)\
 \
-    DEF_TOPIC("lcm_response",               exlcm::lcm_response_lcmt,          "/robot_lcm/lcm_response",          lcm_to_ros2::msg::LcmResponseLcmt, convert_function)\
+    DEF_TOPIC("lcm_response",               exlcm::lcm_response_lcmt,          "/robot_lcm/lcm_response",          lcm_to_ros2::msg::LcmResponseLcmt, lcm_response_convert_function)\
 \
     DEF_TOPIC("leg_control_command",        exlcm::leg_control_command_lcmt,   "/robot_lcm/leg_control_command",   lcm_to_ros2::msg::LegControlCommandLcmt, convert_function)\
     DEF_TOPIC("leg_control_data",           exlcm::leg_control_data_lcmt,      "/robot_lcm/leg_control_data",      lcm_to_ros2::msg::LegControlDataLcmt, leg_convert_function)\
-    DEF_TOPIC("lowlevel_command_rl",        exlcm::lowlevel_command_struct,    "/robot_lcm/lowlevel_command_rl",   lcm_to_ros2::msg::LowlevelCommandStruct, convert_function)\
+    DEF_TOPIC("lowlevel_command_rl",        exlcm::lowlevel_command_struct,    "/robot_lcm/lowlevel_command_rl",   lcm_to_ros2::msg::LowlevelCommandStruct, lowlevel_convert_function)\
 \
     DEF_TOPIC("/magic/arm/joint_command",   exlcm::joint_command_t,            "/magic/arm/joint_command",         lcm_to_ros2::msg::JointCommand, convert_function)\
     DEF_TOPIC("/magic/arm/joint_state",     exlcm::joint_state_t,              "/magic/arm/joint_state",           lcm_to_ros2::msg::JointState, convert_function)\
@@ -215,6 +244,84 @@ int main(int argc, char** argv) {
     auto start_time = std::chrono::high_resolution_clock::now();
     uint64_t total_count = 0;
 
+    std::string quat_csv_path = "";
+    std::string pos_csv_path = "";
+    std::string vel_csv_path = "";
+    if (argc > 3) {
+        quat_csv_path = argv[3];
+        pos_csv_path = argv[4];
+        vel_csv_path = argv[5];
+        g_fsm = std::stoi(argv[6]);
+    } 
+    
+    rosbag2_storage::TopicMetadata meta;
+    meta.name = "csv_quat";
+    meta.type = rosidl_generator_traits::name<geometry_msgs::msg::Quaternion>();
+    meta.serialization_format = "cdr";
+    writer->create_topic(meta);
+
+    meta.name = "csv_pos";
+    meta.type = rosidl_generator_traits::name<sensor_msgs::msg::JointState>();
+    meta.serialization_format = "cdr";
+    writer->create_topic(meta);
+
+    meta.name = "csv_vel";
+    meta.type = rosidl_generator_traits::name<sensor_msgs::msg::JointState>();
+    meta.serialization_format = "cdr";
+    writer->create_topic(meta);
+
+    // 读取CSV文件的函数
+    auto read_csv = [](const std::string& file_path) -> std::vector<std::vector<double>> {
+        if (file_path.empty()) {
+            return std::vector<std::vector<double>>();
+        }
+
+        std::vector<std::vector<double>> data;
+        std::ifstream file(file_path);
+        
+        if (!file.is_open()) {
+            throw std::runtime_error("无法打开文件: " + file_path);
+        }
+ 
+        std::string line;
+        while (std::getline(file, line)) {
+            std::vector<double> row;
+            std::stringstream ss(line);
+            std::string token;
+ 
+            while (std::getline(ss, token, ',')) {
+                // 去除可能的空白字符
+                token.erase(token.find_last_not_of(" \t\r\n") + 1);
+                token.erase(0, token.find_first_not_of(" \t\r\n"));
+                
+                if (!token.empty()) {
+                    row.push_back(std::stod(token));
+                }
+            }
+ 
+            if (!row.empty()) {
+                data.push_back(row);
+            }
+        }
+ 
+        file.close();
+        return data;
+    };
+
+    std::vector<std::vector<double>> quat_data = read_csv(quat_csv_path);
+    std::vector<std::vector<double>> pos_data = read_csv(pos_csv_path);
+    std::vector<std::vector<double>> vel_data = read_csv(vel_csv_path);
+    float init_quaternion_w = 0.0f;
+    float init_quaternion_x = 0.0f;
+    float init_quaternion_y = 0.0f;
+    float init_quaternion_z = 0.0f;
+    if (!quat_data.empty() && !pos_data.empty() && !vel_data.empty()) {
+        init_quaternion_w = quat_data[0][0];
+        init_quaternion_x = quat_data[0][1];
+        init_quaternion_y = quat_data[0][2];
+        init_quaternion_z = quat_data[0][3];
+    }
+
     // 4. 核心快转主循环
     while (true) {
         const lcm::LogEvent* event = lcm_log.readNextEvent();
@@ -223,6 +330,35 @@ int main(int argc, char** argv) {
         std::string channel = event->channel;
         // 时间戳精准转换：LCM 标准微秒 (us) -> ROS2 标准纳秒 (ns)
         rcutils_time_point_value_t timestamp_ns = event->timestamp * 1000;
+        int local_csv_count = csv_count / 10;
+        static int last_csv_count = -1;
+        if (local_csv_count >= 0 && local_csv_count != last_csv_count && local_csv_count < quat_data.size()) {
+            geometry_msgs::msg::Quaternion quaternion;
+            quaternion.x = quat_data[local_csv_count][1] - init_quaternion_x;
+            quaternion.y = quat_data[local_csv_count][2] - init_quaternion_y;
+            quaternion.z = quat_data[local_csv_count][3] - init_quaternion_z;
+            quaternion.w = quat_data[local_csv_count][0] - init_quaternion_w + 1;
+            rclcpp::Serialization<geometry_msgs::msg::Quaternion> serializer;
+            auto serialized_msg = std::make_shared<rclcpp::SerializedMessage>(); 
+            serializer.serialize_message(&quaternion, serialized_msg.get());
+            writer->write(serialized_msg, "csv_quat", rosidl_generator_traits::name<geometry_msgs::msg::Quaternion>(), rclcpp::Time(timestamp_ns));
+
+            rclcpp::Serialization<sensor_msgs::msg::JointState> pos_serializer;
+            sensor_msgs::msg::JointState joint_state;
+
+            joint_state.name.resize(pos_data[local_csv_count].size());
+            joint_state.position.resize(pos_data[local_csv_count].size());
+            for (size_t i = 0; i < pos_data[local_csv_count].size(); i++) {
+                joint_state.name[i] = std::to_string(i);
+                joint_state.position[i] = pos_data[local_csv_count][i];
+            }
+            auto serialized_msg1 = std::make_shared<rclcpp::SerializedMessage>(); 
+            pos_serializer.serialize_message(&joint_state, serialized_msg1.get());
+            writer->write(serialized_msg1, "csv_pos", rosidl_generator_traits::name<sensor_msgs::msg::JointState>(), rclcpp::Time(timestamp_ns));
+            joint_state.position.clear();
+            joint_state.name.clear();
+            last_csv_count = local_csv_count;
+        }
         
         // 利用宏展开：自动生成纯强类型的高效路由分支树
         #define PROCESS_EVENT_BRANCH(lcm_ch, lcm_type, ros2_top, ros2_type, convert_cb) \

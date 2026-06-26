@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
                 padding: 0 8px 0 8px;
             }
         """)
-        lcm_group.setMinimumHeight(280)  # 单独拉高 LCM 日志播放组的高度
+       # lcm_group.setMinimumHeight(0)  # 单独拉高 LCM 日志播放组的高度
         lcm_layout = QVBoxLayout(lcm_group)
         lcm_layout.setSpacing(12)
         
@@ -346,8 +346,8 @@ class MainWindow(QMainWindow):
         lcm_layout.addLayout(input_layout)
         
         
-        # 添加底部间距
-        lcm_layout.addStretch(1)
+        # # 添加底部间距
+        # lcm_layout.addStretch(1)
         
         button_layout.addWidget(lcm_group)
         
@@ -416,10 +416,8 @@ class MainWindow(QMainWindow):
         button_layout.addSpacing(10)
         button_layout.addWidget(online_group)
         
-        # ========== ROS2 Bag 录制组 ==========
-        ros2_group = QGroupBox('ROS2 Bag 录制')
-        ros2_group.setMinimumHeight(220)
-        #ros2_group.setMinimumHeight(280)
+        # ========== ROS2 Bag 操作组 ==========
+        ros2_group = QGroupBox('ROS2 Bag 操作')
         ros2_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -439,7 +437,7 @@ class MainWindow(QMainWindow):
         ros2_layout.setSpacing(12)
         
         # CSV快速转换按钮
-        self.csv_convert_button = QPushButton('CSV快速转换 ROS2 Bag')
+        self.csv_convert_button = QPushButton('CSV融合LCM快转 ROS2Bag')
         self.csv_convert_button.setFixedSize(200, 45)
         self.csv_convert_button.setStyleSheet("""
             QPushButton {
@@ -533,6 +531,50 @@ class MainWindow(QMainWindow):
         vel_layout.addWidget(self.vel_file_label)
         csv_files_layout.addLayout(vel_layout)
         
+        # 加载lcmlog文件
+        lcmlog_layout = QHBoxLayout()
+        self.lcmlog_button = QPushButton('加载lcmlog文件')
+        self.lcmlog_button.setFixedSize(100, 28)
+        self.lcmlog_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.lcmlog_button.clicked.connect(self.on_browse_lcmlog_file)
+        self.lcmlog_file_label = QLabel('未选择')
+        self.lcmlog_file_label.setStyleSheet('color: #666; font-size: 12px;')
+        lcmlog_layout.addWidget(self.lcmlog_button)
+        lcmlog_layout.addWidget(self.lcmlog_file_label)
+        csv_files_layout.addLayout(lcmlog_layout)
+        
+        # 状态机编号输入框
+        state_machine_layout = QHBoxLayout()
+        self.state_machine_label = QLabel('状态机编号:')
+        self.state_machine_label.setStyleSheet('color: #666; font-size: 12px;')
+        self.state_machine_edit = QLineEdit()
+        self.state_machine_edit.setFixedSize(100, 28)
+        self.state_machine_edit.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 2px 5px;
+                font-size: 12px;
+            }
+        """)
+        self.state_machine_edit.setPlaceholderText('输入编号')
+        state_machine_layout.addWidget(self.state_machine_label)
+        state_machine_layout.addWidget(self.state_machine_edit)
+        
+        csv_files_layout.addLayout(state_machine_layout)
+        # 添加底部拉伸，防止 CSV 文件加载区域的按钮被拉伸
+        csv_files_layout.addStretch(1)
         ros2_layout.addLayout(csv_files_layout)
         
         # ROS2录制按钮
@@ -563,13 +605,17 @@ class MainWindow(QMainWindow):
         self.ros2_bag_timer_label.setAlignment(Qt.AlignCenter)
         self.ros2_bag_timer_label.setStyleSheet('color: #666; font-size: 13px;')
         ros2_layout.addWidget(self.ros2_bag_timer_label, 0, Qt.AlignCenter)
+        # 添加底部拉伸，防止 ros2_layout 内部部件被拉伸
+        ros2_layout.addStretch(1)
         
         button_layout.addWidget(ros2_group)
+        # 添加底部拉伸，防止各个 group 在窗口拉伸时自动变高
+        button_layout.addStretch(1)
         
         # ========== 创建分割器 ==========
         splitter = QSplitter(Qt.Vertical)
-        button_widget.setMinimumHeight(800)  # 增加按钮区域最小高度，避免分组重叠
-        button_widget.setMaximumHeight(1500)  # 增加最大高度
+        button_widget.setMinimumHeight(850)  # 增加按钮区域最小高度，避免分组重叠
+        button_widget.setMaximumHeight(850)  # 增加最大高度
         splitter.addWidget(button_widget)
         
         # 日志区域样式
@@ -588,7 +634,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.log_text)
         
         # 设置分割器
-        splitter.setSizes([500, 200])  # 同步增加按钮区域初始大小
+        splitter.setSizes([1, 200])  # 同步增加按钮区域初始大小
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         
@@ -599,6 +645,15 @@ class MainWindow(QMainWindow):
         
         # 记录初始日志
         self.log_message('应用程序已启动')
+        
+    def on_browse_lcmlog_file(self):
+        """浏览lcmlog文件"""
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, '选择lcmlog文件', '', 'LCM日志文件 (*.log); 所有文件 (*)'
+        )
+        if file_name:
+            self.lcmlog_file_label.setText(os.path.basename(file_name))
+            self.lcmlog_file_path = file_name
     
     def on_lcm_convert_ros2_bag(self):
         """将LCM日志文件转换为ROS2 Bag"""
@@ -709,6 +764,16 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, '警告', '请先选择vel文件')
             return
         
+        if not hasattr(self, 'lcmlog_file_path') or not self.lcmlog_file_path:
+            self.log_message('请先选择LCM日志文件')
+            QMessageBox.warning(self, '警告', '请先选择LCM日志文件')
+            return
+        
+        if not self.state_machine_edit or not self.state_machine_edit.text():
+            self.log_message('请先输入csv状态机编号')
+            QMessageBox.warning(self, '警告', '请先输入csv状态机编号')
+            return
+        
         # 弹出保存对话框
         file_name, _ = QFileDialog.getSaveFileName(
             self, '保存ROS2 Bag文件', '', 'ROS2 Bag文件 (*)'
@@ -733,7 +798,7 @@ class MainWindow(QMainWindow):
 
             # 启动lcm 转换 ros2 bag 进程
             self.ros2_bag_process = subprocess.Popen([
-                'ros2', 'run', 'lcm_to_ros2', 'csv_convert_ros2bag', self.quat_file_path, self.pos_file_path, self.vel_file_path, file_name],
+                'ros2', 'run', 'lcm_to_ros2', 'lcm_convert_ros2bag', self.lcmlog_file_path, file_name, self.quat_file_path, self.pos_file_path, self.vel_file_path, self.state_machine_edit.text()],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,  # 将 stderr 合并到 stdout
                 text=True)  # 以文本模式读取

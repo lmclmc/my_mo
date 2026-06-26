@@ -99,11 +99,13 @@ int main(int argc, char** argv) {
         geometry_msgs::msg::Quaternion quaternion;
         int count = 0;
         float init_quaternion_w = quat_data[0][0];
+        float init_quaternion_x = quat_data[0][1];
+        float init_quaternion_y = quat_data[0][2];
         float init_quaternion_z = quat_data[0][3];
         for (auto& v : quat_data) {
-            quaternion.x = v[1];
-            quaternion.y = v[2];
-            quaternion.z = v[3];// - init_quaternion_z;
+            quaternion.x = v[1] - init_quaternion_x;
+            quaternion.y = v[2] - init_quaternion_y;
+            quaternion.z = v[3] - init_quaternion_z;
             quaternion.w = v[0] - init_quaternion_w + 1;
             auto serialized_msg = std::make_shared<rclcpp::SerializedMessage>(); 
             serializer.serialize_message(&quaternion, serialized_msg.get());
@@ -117,7 +119,7 @@ int main(int argc, char** argv) {
         for (auto& v : pos_data) {
             joint_state.name.resize(v.size());
             joint_state.position.resize(v.size());
-            for (int i = 0; i < v.size(); i++) {
+            for (size_t i = 0; i < v.size(); i++) {
                 joint_state.name[i] = std::to_string(i);
                 joint_state.position[i] = v[i];
             }
