@@ -356,7 +356,17 @@ int main(int argc, char** argv) {
             pos_serializer.serialize_message(&joint_state, serialized_msg1.get());
             writer->write(serialized_msg1, "csv_pos", rosidl_generator_traits::name<sensor_msgs::msg::JointState>(), rclcpp::Time(timestamp_ns));
             joint_state.position.clear();
+
+            joint_state.velocity.resize(vel_data[local_csv_count].size());
+            for (size_t i = 0; i < vel_data[local_csv_count].size(); i++) {
+                joint_state.velocity[i] = vel_data[local_csv_count][i];
+            }
+            auto serialized_msg2 = std::make_shared<rclcpp::SerializedMessage>(); 
+            pos_serializer.serialize_message(&joint_state, serialized_msg2.get());
+            writer->write(serialized_msg2, "csv_vel", rosidl_generator_traits::name<sensor_msgs::msg::JointState>(), rclcpp::Time(timestamp_ns));
+            joint_state.velocity.clear();
             joint_state.name.clear();
+
             last_csv_count = local_csv_count;
         }
         
