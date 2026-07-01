@@ -26,9 +26,15 @@
 #include "lcm_to_ros2/msg/RobotPowerIoLcmt.hpp"
 #include "lcm_to_ros2/msg/WaistControlCommandLcmt.hpp"
 #include "lcm_to_ros2/msg/WaistControlDataLcmt.hpp"
-#include "lcm_to_ros2/msg/ArmControlCmdLcmt.hpp"
 #include "lcm_to_ros2/msg/ArmControlDataLcmt.hpp"
+#include "lcm_to_ros2/msg/ArmControlCmdRlLcmt.hpp"
+#include "lcm_to_ros2/msg/ArmControlCmdLcmt.hpp"
+#include "lcm_to_ros2/msg/LegControlCommandRlLcmt.hpp"
+#include "lcm_to_ros2/msg/WaistControlCmdRlLcmt.hpp"
 #include "exlcm/joint_state_t.hpp"
+#include "exlcm/waist_control_cmd_rl_lcmt.hpp"
+#include "exlcm/arm_control_cmd_rl_lcmt.hpp"
+#include "exlcm/leg_control_command_rl_lcmt.hpp"
 #include "exlcm/arm_control_MagicBotZ1_data_lcmt.hpp"
 #include "exlcm/arm_control_data_lcmt.hpp"
 #include "exlcm/arm_control_cmd_lcmt.hpp"
@@ -58,6 +64,10 @@
 #include <lcm/lcm-cpp.hpp>
 #include <fstream>
 
+static int csv_count = -1;
+static int g_fsm = -1;
+static double state_estimator_quat_0 = 0;
+
 template <typename lcm_type, typename ros2_type>
 static std::shared_ptr<rclcpp::SerializedMessage> convert_function(rclcpp::Serialization<ros2_type>& serializer, void* lcm_data, size_t lcm_size) {
     lcm_type lcm_msg;
@@ -69,6 +79,20 @@ static std::shared_ptr<rclcpp::SerializedMessage> convert_function(rclcpp::Seria
 }
 
 template <typename lcm_type, typename ros2_type>
+static std::shared_ptr<rclcpp::SerializedMessage> state_estimator_convert_function(rclcpp::Serialization<ros2_type>& serializer, void* lcm_data, size_t lcm_size) {
+    lcm_type lcm_msg;
+    lcm_msg.decode(lcm_data, 0, lcm_size);
+    if (csv_count == 0) {
+        state_estimator_quat_0 = lcm_msg.quat[0];
+    }
+    const ros2_type* ros2_msg = reinterpret_cast<const ros2_type*>(&lcm_msg);
+    auto serialized_msg = std::make_shared<rclcpp::SerializedMessage>(); 
+    serializer.serialize_message(ros2_msg, serialized_msg.get());
+    return serialized_msg;
+}
+
+
+template <typename lcm_type, typename ros2_type>
 static std::shared_ptr<rclcpp::SerializedMessage> lowlevel_convert_function(rclcpp::Serialization<ros2_type>& serializer, void* lcm_data, size_t lcm_size) {
     lcm_type lcm_msg;
     lcm_msg.decode(lcm_data, 0, lcm_size);
@@ -77,9 +101,6 @@ static std::shared_ptr<rclcpp::SerializedMessage> lowlevel_convert_function(rclc
     serializer.serialize_message(ros2_msg, serialized_msg.get());
     return serialized_msg;
 }
-
-static int csv_count = -1;
-static int g_fsm = -1;
 
 template <typename lcm_type, typename ros2_type>
 static std::shared_ptr<rclcpp::SerializedMessage> lcm_response_convert_function(rclcpp::Serialization<ros2_type>& serializer, void* lcm_data, size_t lcm_size) {
@@ -159,7 +180,8 @@ static std::shared_ptr<rclcpp::SerializedMessage> leg_convert_function(rclcpp::S
 // 格式：DEF_TOPIC(LCM通道名, LCM类名, ROS2话题名, ROS2消息完整类型)
 // 只要在这里加一行，底层的所有逻辑（注册、解包、路由、序列化）全部自动生成！
 #define TOPIC_LIST(DEF_TOPIC) \
-    DEF_TOPIC("state_estimator",            exlcm::state_estimator_lcmt,       "/robot_lcm/state_estimator",       lcm_to_ros2::msg::StateEstimatorLcmt, convert_function)\
+    DEF_TOPIC("state_estimator",            exlcm::state_estimator_lcmt,       "/robot_lcm/state_estimator",       lcm_to_ros2::msg::StateEstimatorLcmt, state_estimator_convert_function)\
+    DEF_TOPIC("arm_command",                exlcm::arm_control_cmd_rl_lcmt,    "/robot_lcm/arm_command",           lcm_to_ros2::msg::ArmControlCmdRlLcmt, convert_function)\
     DEF_TOPIC("arm_control_command",        exlcm::arm_control_cmd_lcmt,       "/robot_lcm/arm_control_command",   lcm_to_ros2::msg::ArmControlCmdLcmt, convert_function)\
     DEF_TOPIC("arm_control_data",           exlcm::arm_control_data_lcmt,      "/robot_lcm/arm_control_data",      lcm_to_ros2::msg::ArmControlDataLcmt, arm_convert_function)\
 \
@@ -171,6 +193,7 @@ static std::shared_ptr<rclcpp::SerializedMessage> leg_convert_function(rclcpp::S
 \
     DEF_TOPIC("lcm_response",               exlcm::lcm_response_lcmt,          "/robot_lcm/lcm_response",          lcm_to_ros2::msg::LcmResponseLcmt, lcm_response_convert_function)\
 \
+    DEF_TOPIC("leg_command",                exlcm::leg_control_command_rl_lcmt,"/robot_lcm/leg_command",           lcm_to_ros2::msg::LegControlCommandRlLcmt, convert_function)\
     DEF_TOPIC("leg_control_command",        exlcm::leg_control_command_lcmt,   "/robot_lcm/leg_control_command",   lcm_to_ros2::msg::LegControlCommandLcmt, convert_function)\
     DEF_TOPIC("leg_control_data",           exlcm::leg_control_data_lcmt,      "/robot_lcm/leg_control_data",      lcm_to_ros2::msg::LegControlDataLcmt, leg_convert_function)\
     DEF_TOPIC("lowlevel_command_rl",        exlcm::lowlevel_command_struct,    "/robot_lcm/lowlevel_command_rl",   lcm_to_ros2::msg::LowlevelCommandStruct, lowlevel_convert_function)\
@@ -187,6 +210,7 @@ static std::shared_ptr<rclcpp::SerializedMessage> leg_convert_function(rclcpp::S
 \
     DEF_TOPIC("robot_power_io_lcmt",        exlcm::robot_power_io_lcmt,        "/robot_lcm/robot_power_io",        lcm_to_ros2::msg::RobotPowerIoLcmt, convert_function)\
 \
+    DEF_TOPIC("waist_command",              exlcm::waist_control_cmd_rl_lcmt,          "/robot_lcm/waist_command",         lcm_to_ros2::msg::WaistControlCmdRlLcmt, convert_function)\
     DEF_TOPIC("waist_control_command",      exlcm::waist_control_command_lcmt, "/robot_lcm/waist_control_command", lcm_to_ros2::msg::WaistControlCommandLcmt, convert_function)\
     DEF_TOPIC("waist_control_data",         exlcm::waist_control_data_lcmt,    "/robot_lcm/waist_control_data",    lcm_to_ros2::msg::WaistControlDataLcmt, convert_function)\
     // 示例：未来扩展只需在此追加，如：

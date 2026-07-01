@@ -71,14 +71,12 @@ private:
         // 2. 与已知类型的 Hash 值进行比对
         if (msg_hash == (int64_t)exlcm::state_estimator_lcmt::getHash()) {
             exlcm::state_estimator_lcmt state_msg;
-            RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\" with state_estimator_lcmt hash", chan.c_str());
             if (state_msg.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
                 processStateEstimatorData(&state_msg);
             }
         } 
         else if (msg_hash == (int64_t)exlcm::state_estimator_lcmt_magicdog_gen2::getHash()) {
             exlcm::state_estimator_lcmt_magicdog_gen2 magic_dog_gen2;
-            RCLCPP_INFO(this->get_logger(), "Received message on channel \"%s\" with state_estimator_lcmt_magicdog_gen2 hash", chan.c_str());
             if (magic_dog_gen2.decode(recvbuf->data, 0, recvbuf->data_size) > 0) {
                 processStateEstimatorMagicDogGen2Data(&magic_dog_gen2);
             }

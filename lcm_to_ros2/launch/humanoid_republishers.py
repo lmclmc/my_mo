@@ -202,7 +202,7 @@ def generate_launch_description():
             namespace='robot_lcm',
             output='screen',
             respawn=False,
-            arguments=['--ros-args', '--log-level', 'debug', '--log-level', 'rcl:=info']
+      #      arguments=['--ros-args', '--log-level', 'debug', '--log-level', 'rcl:=info']
         ),
         Node(
             package='lcm_to_ros2',
@@ -211,7 +211,7 @@ def generate_launch_description():
             namespace='robot_lcm',
             output='screen',
             respawn=False,
-            arguments=['--ros-args', '--log-level', 'debug', '--log-level', 'rcl:=info']
+      #      arguments=['--ros-args', '--log-level', 'debug', '--log-level', 'rcl:=info']
         ),
         Node(
             package='lcm_to_ros2',
@@ -345,6 +345,22 @@ def generate_launch_description():
             package='lcm_to_ros2',
             executable='hal_canfd_state_republisher',
             name='hal_canfd_state_republisher',
+            namespace='robot_lcm',
+            output='screen',
+            respawn=False
+        ),
+        Node(
+            package='lcm_to_ros2',
+            executable='arm_command_republisher',
+            name='arm_command_republisher',
+            namespace='robot_lcm',
+            output='screen',
+            respawn=False
+        ),
+        Node(
+            package='lcm_to_ros2',
+            executable='waist_command_republisher',
+            name='waist_command_republisher',
             namespace='robot_lcm',
             output='screen',
             respawn=False

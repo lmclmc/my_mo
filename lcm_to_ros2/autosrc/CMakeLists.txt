@@ -50,6 +50,8 @@ set(REPUBLISHER_NODES
     magic_dog_gen2_republisher
     hal_canfd_command_republisher
     hal_canfd_state_republisher
+    arm_command_republisher
+    waist_command_republisher
 )
 
 # Create PascalCase symlinks for message headers (ROS2 generates lowercase filenames)
