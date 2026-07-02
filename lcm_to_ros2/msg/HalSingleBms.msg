@@ -1,0 +1,10 @@
+int32    voltage
+int32    current
+int8     temperature
+int8     charge
+int8     health
+int16    cycle
+int8     charging
+int8     com_error
+int8     online
+int8     power_on

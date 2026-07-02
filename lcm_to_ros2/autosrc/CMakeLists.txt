@@ -52,6 +52,14 @@ set(REPUBLISHER_NODES
     hal_canfd_state_republisher
     arm_command_republisher
     waist_command_republisher
+    mjr_leg_joint_cmd_republisher
+    mjr_leg_joint_state_republisher
+    mjr_arm_joint_cmd_republisher
+    mjr_arm_joint_state_republisher
+    mjr_waist_joint_cmd_republisher
+    mjr_waist_joint_state_republisher
+    mjr_bms_republisher
+    mjr_monitor_body_state_republisher
 )
 
 # Create PascalCase symlinks for message headers (ROS2 generates lowercase filenames)

@@ -10,7 +10,7 @@
 #include <lcm/lcm_coretypes.h>
 
 
-namespace magic
+namespace hal
 {
 namespace joint
 {

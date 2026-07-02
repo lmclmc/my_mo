@@ -34,9 +34,9 @@ class joint_command_t
 
         /**
          * 多个关节的状态集合，手臂关节顺序：左臂7关节、右臂7关节，腿部关节顺序：左腿6关节、右腿6关节，腰部关节顺序：腰部2关节，头部关节顺序：头部2关节
-         * LCM Type: magic.joint.single_joint_command_t[num_joints]
+         * LCM Type: hal.joint.single_joint_command_t[num_joints]
          */
-        std::vector< magic::joint::single_joint_command_t > joints;
+        std::vector< hal::joint::single_joint_command_t > joints;
 
     public:
         /**
@@ -191,7 +191,7 @@ uint64_t joint_command_t::_computeHash(const __lcm_hash_ptr *p)
     const __lcm_hash_ptr cp = { p, joint_command_t::getHash };
 
     uint64_t hash = 0xec273c130ce0cc76LL +
-         magic::joint::single_joint_command_t::_computeHash(&cp);
+         hal::joint::single_joint_command_t::_computeHash(&cp);
 
     return (hash<<1) + ((hash>>63)&1);
 }
