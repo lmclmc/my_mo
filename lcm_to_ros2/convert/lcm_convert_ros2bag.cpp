@@ -31,6 +31,22 @@
 #include "lcm_to_ros2/msg/ArmControlCmdLcmt.hpp"
 #include "lcm_to_ros2/msg/LegControlCommandRlLcmt.hpp"
 #include "lcm_to_ros2/msg/WaistControlCmdRlLcmt.hpp"
+#include "lcm_to_ros2/msg/HalArmCmdLcmt.hpp"
+#include "lcm_to_ros2/msg/HalArmStateLcmt.hpp"
+#include "lcm_to_ros2/msg/HalBmsLcmt.hpp"
+#include "lcm_to_ros2/msg/HalLegCmdLcmt.hpp"
+#include "lcm_to_ros2/msg/HalLegStateLcmt.hpp"
+#include "lcm_to_ros2/msg/MonitorBodyState.hpp"
+#include "lcm_to_ros2/msg/HalWaistCmdLcmt.hpp"
+#include "lcm_to_ros2/msg/HalWaistStateLcmt.hpp"
+#include "exlcm/hal_waist_joint_state_t.hpp"
+#include "exlcm/hal_waist_joint_command_t.hpp"
+#include "exlcm/monitor_body_state_t.hpp"
+#include "exlcm/hal_leg_joint_state_t.hpp"
+#include "exlcm/hal_leg_joint_command_t.hpp"
+#include "exlcm/hal_bms_t.hpp"
+#include "exlcm/hal_arm_joint_state_t.hpp"
+#include "exlcm/hal_arm_joint_command_t.hpp"
 #include "exlcm/joint_state_t.hpp"
 #include "exlcm/waist_control_cmd_rl_lcmt.hpp"
 #include "exlcm/arm_control_cmd_rl_lcmt.hpp"
@@ -180,6 +196,14 @@ static std::shared_ptr<rclcpp::SerializedMessage> leg_convert_function(rclcpp::S
 // 格式：DEF_TOPIC(LCM通道名, LCM类名, ROS2话题名, ROS2消息完整类型)
 // 只要在这里加一行，底层的所有逻辑（注册、解包、路由、序列化）全部自动生成！
 #define TOPIC_LIST(DEF_TOPIC) \
+    DEF_TOPIC("/mjr/arm/joint_cmd",         hal::arm::joint_command_t,         "/mjr/arm/joint_cmd",               lcm_to_ros2::msg::HalArmCmdLcmt, convert_function)\
+    DEF_TOPIC("/mjr/arm/joint_state",       hal::arm::joint_state_t,           "/mjr/arm/joint_state",             lcm_to_ros2::msg::HalArmStateLcmt, convert_function)\
+    DEF_TOPIC("/mjr/bms",                   hal::bms::bms_t,                   "/mjr/bms",                         lcm_to_ros2::msg::HalBmsLcmt, convert_function)\
+    DEF_TOPIC("/mjr/leg/joint_cmd",         hal::leg::joint_command_t,         "/mjr/leg/joint_cmd",               lcm_to_ros2::msg::HalLegCmdLcmt, convert_function)\
+    DEF_TOPIC("/mjr/leg/joint_state",       hal::leg::joint_state_t,           "/mjr/leg/joint_state",             lcm_to_ros2::msg::HalLegStateLcmt, convert_function)\
+    DEF_TOPIC("/mjr/waist/joint_cmd",       hal::waist::joint_command_t,       "/mjr/waist/joint_cmd",             lcm_to_ros2::msg::HalWaistCmdLcmt, convert_function)\
+    DEF_TOPIC("/mjr/waist/joint_state",     hal::waist::joint_state_t,         "/mjr/waist/joint_state",           lcm_to_ros2::msg::HalWaistStateLcmt, convert_function)\
+    DEF_TOPIC("/monitor/body/state",        monitor_body_state_t,              "/monitor/body/state",              lcm_to_ros2::msg::MonitorBodyState, convert_function)\
     DEF_TOPIC("state_estimator",            exlcm::state_estimator_lcmt,       "/robot_lcm/state_estimator",       lcm_to_ros2::msg::StateEstimatorLcmt, state_estimator_convert_function)\
     DEF_TOPIC("arm_command",                exlcm::arm_control_cmd_rl_lcmt,    "/robot_lcm/arm_command",           lcm_to_ros2::msg::ArmControlCmdRlLcmt, convert_function)\
     DEF_TOPIC("arm_control_command",        exlcm::arm_control_cmd_lcmt,       "/robot_lcm/arm_control_command",   lcm_to_ros2::msg::ArmControlCmdLcmt, convert_function)\
