@@ -39,6 +39,8 @@
 #include "lcm_to_ros2/msg/MonitorBodyState.hpp"
 #include "lcm_to_ros2/msg/HalWaistCmdLcmt.hpp"
 #include "lcm_to_ros2/msg/HalWaistStateLcmt.hpp"
+#include "lcm_to_ros2/msg/LcmCommandStruct.hpp"
+#include "exlcm/lcm_command_struct.hpp"
 #include "exlcm/hal_waist_joint_state_t.hpp"
 #include "exlcm/hal_waist_joint_command_t.hpp"
 #include "exlcm/monitor_body_state_t.hpp"
@@ -204,6 +206,8 @@ static std::shared_ptr<rclcpp::SerializedMessage> leg_convert_function(rclcpp::S
     DEF_TOPIC("/mjr/waist/joint_cmd",       hal::waist::joint_command_t,       "/mjr/waist/joint_cmd",             lcm_to_ros2::msg::HalWaistCmdLcmt, convert_function)\
     DEF_TOPIC("/mjr/waist/joint_state",     hal::waist::joint_state_t,         "/mjr/waist/joint_state",           lcm_to_ros2::msg::HalWaistStateLcmt, convert_function)\
     DEF_TOPIC("/monitor/body/state",        monitor_body_state_t,              "/monitor/body/state",              lcm_to_ros2::msg::MonitorBodyState, convert_function)\
+\
+    DEF_TOPIC("lcm_com_cmd",                exlcm::lcm_command_struct,         "/robot_lcm/lcm_com_cmd",           lcm_to_ros2::msg::LcmCommandStruct, convert_function)\
     DEF_TOPIC("state_estimator",            exlcm::state_estimator_lcmt,       "/robot_lcm/state_estimator",       lcm_to_ros2::msg::StateEstimatorLcmt, state_estimator_convert_function)\
     DEF_TOPIC("arm_command",                exlcm::arm_control_cmd_rl_lcmt,    "/robot_lcm/arm_command",           lcm_to_ros2::msg::ArmControlCmdRlLcmt, convert_function)\
     DEF_TOPIC("arm_control_command",        exlcm::arm_control_cmd_lcmt,       "/robot_lcm/arm_control_command",   lcm_to_ros2::msg::ArmControlCmdLcmt, convert_function)\
