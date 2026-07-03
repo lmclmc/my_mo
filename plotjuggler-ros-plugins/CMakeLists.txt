@@ -71,9 +71,6 @@ add_definitions(-DFMT_HEADER_ONLY)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-install(DIRECTORY launch
-	DESTINATION share/${PROJECT_NAME})
-
 add_subdirectory( src )
 
 ament_package()

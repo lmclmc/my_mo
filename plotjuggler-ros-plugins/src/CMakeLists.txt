@@ -36,14 +36,6 @@ target_link_libraries( commonROS
         ${tf2_msgs_TARGETS}
     )
 
-#######################################################################
-add_library( DataLoadROS2 SHARED    DataLoadROS2/dataload_ros2.cpp)
-target_link_libraries( DataLoadROS2 commonROS)
-
-
-add_library( DataStreamROS2 SHARED  DataStreamROS2/datastream_ros2.cpp)
-target_link_libraries( DataStreamROS2  commonROS)
-
 
 add_library( TopicPublisherROS2 SHARED TopicPublisherROS2/publisher_ros2.cpp)
 target_link_libraries( TopicPublisherROS2 commonROS)
@@ -59,7 +51,6 @@ message("ROS_DISTRO (env) = $ENV{ROS_DISTRO}")
 
 if("$ENV{ROS_DISTRO}" STREQUAL "humble")
         message(STATUS "Detected Humble")
-        target_compile_definitions(DataLoadROS2 PUBLIC ROS_HUMBLE)
         target_compile_definitions(TopicPublisherROS2 PUBLIC ROS_HUMBLE)
 endif()
 
@@ -67,8 +58,6 @@ endif()
 
 
 install(TARGETS
-        DataLoadROS2
-        DataStreamROS2
         TopicPublisherROS2
         DESTINATION  lib/${PROJECT_NAME}
     )
