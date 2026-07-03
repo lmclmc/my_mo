@@ -1,6 +1,5 @@
 #!/bin/bash
-#
-
+./stop_motion_studio.sh
 # 进入src目录并source setup文件
 ROS_DISTRO="jazzy"
 
