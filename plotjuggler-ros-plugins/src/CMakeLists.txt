@@ -36,6 +36,13 @@ target_link_libraries( commonROS
         ${tf2_msgs_TARGETS}
     )
 
+add_library( DataLoadLCM SHARED DataLoadLCM/dataload_lcm.cpp 
+                                DataLoadLCM/LcmTopicDialog.cpp
+                                DataLoadLCM/lcmgen.c
+                                DataLoadLCM/tokenize.c)
+                                
+target_include_directories(DataLoadLCM PRIVATE /usr/include/glib-2.0/ /usr/lib/x86_64-linux-gnu/glib-2.0/include/)
+target_link_libraries( DataLoadLCM commonROS lcm)
 
 add_library( TopicPublisherROS2 SHARED TopicPublisherROS2/publisher_ros2.cpp)
 target_link_libraries( TopicPublisherROS2 commonROS)
@@ -58,6 +65,7 @@ endif()
 
 
 install(TARGETS
+        DataLoadLCM
         TopicPublisherROS2
         DESTINATION  lib/${PROJECT_NAME}
     )
