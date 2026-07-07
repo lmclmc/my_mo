@@ -288,31 +288,6 @@ void semantic_warning(tokenize_t *t, const char *fmt, ...)
     va_end(ap);
 }
 
-// parsing error: we cannot continue. This function does not return.
-void parse_error(tokenize_t *t, const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-
-    printf("\n");
-    vprintf(fmt, ap);
-    printf("\n");
-
-    printf("%s : %i\n", t->path, t->token_line);
-    printf("%s", t->buffer);
-    for (int i = 0; i < t->token_column; i++) {
-        if (isspace(t->buffer[i]))
-            printf("%c", t->buffer[i]);
-        else
-            printf(" ");
-    }
-    printf("^\n");
-
-    va_end(ap);
-    fflush(stdout);
-    _exit(1);
-}
-
 // Consume any available comments and store them in lcmgen->comment_doc
 // Comments are allowed in most positions in the lcm grammar.
 // However they are only significant in specific positions.
@@ -769,8 +744,7 @@ int parse_entity(lcmgen_t *lcmgen, const char *lcmfile, tokenize_t *t)
         return 0;
     }
 
-    parse_error(t, "Missing struct token.");
-    return 1;
+    return -10;
 }
 
 int lcmgen_handle_file(lcmgen_t *lcmgen, const char *path)
