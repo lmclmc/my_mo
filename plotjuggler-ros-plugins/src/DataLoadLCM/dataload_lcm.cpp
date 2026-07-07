@@ -2,8 +2,6 @@
 #include "dialog_select_ros_topics.h"
 #include "LcmTopicDialog.h"
 #include "ros_parsers/ros2_parser.h"
-#include "lcmgen.h"
-#include "tokenize.h"
 
 #include <QTextStream>
 #include <QFile>
@@ -30,13 +28,11 @@
 #include <rmw/rmw.h>
 #include <rosbag2_storage/storage_options.hpp>
 #include <rosbag2_transport/reader_writer_factory.hpp>
-#include <lcm/lcm-cpp.hpp>
-#include <lcm/lcm_coretypes.h>
 
 DataLoadLCM::DataLoadLCM()
 {
-  _extensions.push_back("lcmlog");
-  loadDefaultSettings();
+    _extensions.push_back("lcmlog");
+    loadDefaultSettings();
 }
 
 #include <stdio.h>
@@ -76,13 +72,165 @@ long long get_file_size(FILE* fp)
 }
 #endif
 
-const std::vector<const char*>& DataLoadLCM::compatibleFileExtensions() const
-{
-  return _extensions;
+const std::vector<const char*>& DataLoadLCM::compatibleFileExtensions() const {
+    return _extensions;
 }
 
-bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& plot_map)
-{
+int DataLoadLCM::decode_type(const lcm::LogEvent* event, int offset,
+                             const std::string& type, const std::string& base, int deep) {
+    int pos_offset = offset;
+    int decode_len = 0;
+   // std::cout << "deep: " << deep << std::endl;
+   // std::cout << dec << std::endl;   // 255 切回十进制
+   // std::cout << "offset: " << pos_offset << std::endl;
+    if (auto lcm_struct_type = lcm_type_table.find(type); lcm_struct_type != lcm_type_table.end()) {
+        lcm_struct_t* struct_item = lcm_struct_type->second;
+        for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
+            lcm_member_t* member = (lcm_member_t*) g_ptr_array_index(struct_item->members, mind);
+            auto itr = plot_data->numeric.find(base + member->membername);
+            if (itr == plot_data->numeric.end()) {
+              itr = plot_data->addNumeric(base + member->membername);
+            }
+
+            if (g_ptr_array_size(member->dimensions) == 0) {
+               // std::cout << "1111111111 Received message on channel \"" << member->type->lctypename << "\"\n";
+                if (!strcmp(member->type->lctypename, "int8_t")) {
+                  int8_t value;
+                  int tlen = __int8_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ (double)event->timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "int16_t")) {
+                  int16_t value;
+                  int tlen = __int16_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ (double)event->timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "int32_t")) {
+                  int32_t value;
+                  int tlen = __int32_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ (double)event->timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "int64_t")) {
+                  int64_t value;
+                  int tlen = __int64_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ (double)event->timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "float")) {
+                  float value;
+                  int tlen = __float_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ (double)event->timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "double")) {
+                  double value;
+                  int tlen = __double_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ (double)event->timestamp, value });
+                } else {
+                  std::cout << "pos_offset  : " << pos_offset << std::endl;
+                  int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/", deep + 1);
+                  std::cout << "tlen decode_type : " << tlen << std::endl;
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                }
+            } else {
+                if (lcm_is_constant_size_array(member)) {
+                    for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
+                        lcm_dimension_t *ld =
+                            (lcm_dimension_t *) g_ptr_array_index(member->dimensions, d);
+                        
+                        for (size_t i = 0; i < atoi(ld->size); i++) {
+                            auto itr = plot_data->numeric.find(base + member->membername + "/" + std::to_string(i));
+                            if (itr == plot_data->numeric.end()) {
+                              itr = plot_data->addNumeric(base + member->membername + "/" + std::to_string(i));
+                            }
+
+                            if (!strcmp(member->type->lctypename, "int8_t")) {
+                              int8_t value;
+                              int tlen = __int8_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ (double)event->timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "int16_t")) {
+                              int16_t value;
+                              int tlen = __int16_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ (double)event->timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "int32_t")) {
+                              int32_t value;
+                              int tlen = __int32_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ (double)event->timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "int64_t")) {
+                              int64_t value;
+                              int tlen = __int64_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ (double)event->timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "float")) {
+                              float value;
+                              int tlen = __float_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ (double)event->timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "double")) {
+                              double value;
+                              int tlen = __double_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ (double)event->timestamp, value });
+                            } else {
+                              int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return decode_len;
+}
+
+bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& plot_map) {
+  plot_data = &plot_map;
   auto metadata_io = std::make_unique<rosbag2_storage::MetadataIo>();
   LcmTopicDialog* dialog = new LcmTopicDialog();
 
@@ -95,13 +243,21 @@ bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& p
 
   typedef struct TopicLcmItem {
     int64_t hash;
-    lcmgen_t* lcmgen = nullptr;
+    std::vector<lcmgen_t*> lcmgen_table;
     std::string lcmFilePath;
   } TopicLcmItem;
   
   std::unordered_map<std::string, TopicLcmItem> topic_map;
   auto _config = dialog->getConfig();
 
+  lcm_type_table.clear();
+  lcm_type_table["int8_t"] = nullptr;
+  lcm_type_table["int16_t"] = nullptr;
+  lcm_type_table["int32_t"] = nullptr;
+  lcm_type_table["int64_t"] = nullptr;
+  lcm_type_table["float"] = nullptr;
+  lcm_type_table["double"] = nullptr;
+  
   for (const auto& item : _config) {
     lcmgen_t* lcmgen = lcmgen_create();
     tokenize_t* t = tokenize_create(item.lcmFilePath.toStdString().c_str());
@@ -109,6 +265,12 @@ bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& p
     do {
         res = parse_entity(lcmgen, item.lcmFilePath.toStdString().c_str(), t);
     } while (res == 0);
+
+    for (int struct_idx = 0; struct_idx < lcmgen->structs->len; struct_idx++) {
+      lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, struct_idx);
+      lcm_type_table[struct_item->structname->lctypename] = struct_item;
+      std::cout << "struct_item->structname->lctypename: " << struct_item->structname->lctypename << std::endl;
+    }
 
     int64_t hash = 0;
     if (lcmgen->structs->len > 0) {
@@ -118,11 +280,55 @@ bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& p
 
     tokenize_destroy(t);
 
-    topic_map[item.topic.toStdString()] = {hash, lcmgen, item.lcmFilePath.toStdString()};
+    if (auto it = topic_map.find(item.topic.toStdString()); it == topic_map.end()) {
+      topic_map[item.topic.toStdString()] = {hash, {lcmgen}, item.lcmFilePath.toStdString()};
+    } else {
+      it->second.lcmgen_table.push_back(lcmgen);
+    }
+
     std::cout << "item.topic: " << item.topic.toStdString() << std::endl;
     std::cout << "item.lcmFilePath: " << item.lcmFilePath.toStdString() << std::endl;
   }
+
   delete dialog;
+  using namespace std;
+  for (auto& pair : topic_map) {
+    for (auto lcmgen : pair.second.lcmgen_table) {
+      for (int struct_idx = 0; struct_idx < lcmgen->structs->len; struct_idx++) {
+        lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, struct_idx);
+        if (g_ptr_array_size(struct_item->members)) {
+          for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
+            lcm_member_t *member = (lcm_member_t *) g_ptr_array_index(struct_item->members, mind);
+            if (auto it = lcm_type_table.find(member->type->lctypename); it != lcm_type_table.end()) {
+              if (it->second) {
+                std::cout << "member->type->lctypename: " << member->type->lctypename << std::endl;
+              //  uint64_t hash = (it->second->hash << 1) + ((it->second->hash>>63)&1);
+                // std::cout << "hash: " << hex << uppercase << setfill('0') << setw(16)  << it->second->hash << std::endl;
+                // std::cout << "hash1: " << hex << uppercase << setfill('0') << setw(16)  << (it->second->hash<<1) + ((it->second->hash>>63)&1) << std::endl;
+
+                
+                // std::cout << "hash: " << hex << uppercase << setfill('0') << setw(16)  <<  struct_item->hash << std::endl;
+
+                
+                uint64_t hash = struct_item->hash + (it->second->hash<<1) + ((it->second->hash>>63)&1);
+                int64_t hashs = static_cast<int64_t>(hash);
+            //    hash = struct_item->hash + (hash<<1) + ((hash>>63)&1);
+            //    std::cout << "hash111: " << hex << uppercase << setfill('0') << setw(16)  <<  hashs << std::endl;
+                struct_item->hash = hashs;
+           //     std::cout << "hash111222: " << hex << uppercase << setfill('0') << setw(16)  <<  struct_item->hash << std::endl;
+                pair.second.hash = hashs;
+
+              }
+             // struct_item->hash = struct_item->hash + (it->second->hash << 1) + ((it->second->hash>>63)&1);
+            } else {
+              QMessageBox::warning(nullptr, tr("Error"), "type  " + QString::fromStdString(member->type->lctypename) + " undefined. exit...........");
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
   
   // 3. 打开二进制 LCM 日志文件
   lcm::LogFile lcm_log(info->filename.toStdString(), "r");
@@ -153,127 +359,129 @@ bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& p
       }
     }
 
-
-    //   int64_t msg_hash;
-    // thislen = __int64_t_decode_array(buf, offset + pos, maxlen - pos, &msg_hash, 1);
-    // if (thislen < 0) return thislen; else pos += thislen;
-    // if (msg_hash != getHash()) return -1;
-
-    // thislen = this->_decodeNoHash(buf, offset + pos, maxlen - pos);
-    // if (thislen < 0) return thislen; else pos += thislen;
-    //std::string channel = event->channel;
     if (auto it = topic_map.find(event->channel); it != topic_map.end()) {
-      lcmgen_t* topic_lcmgen = it->second.lcmgen;
-      int64_t msg_hash;
-      int thislen = __int64_t_decode_array(event->data, 0, event->datalen, &msg_hash, 1);
-      if (msg_hash == ((it->second.hash<<1) + ((it->second.hash>>63)&1))) {
-     // if (true) {
-        lcm_struct_t* last_item = (lcm_struct_t*)g_ptr_array_index(topic_lcmgen->structs, topic_lcmgen->structs->len - 1);
-        if (g_ptr_array_size(last_item->members)) {
-          int pos = 8;
-          for (unsigned int mind = 0; mind < g_ptr_array_size(last_item->members); mind++) {
-            lcm_member_t *member = (lcm_member_t *) g_ptr_array_index(last_item->members, mind);
-          //  std::cout << "event->channel: " << event->channel << ", member->membername: " << member->membername << ", member->type->lctypename: " << member->type->lctypename << std::endl;
-            if (g_ptr_array_size(member->dimensions) == 0) {
-              auto itr = plot_map.numeric.find(event->channel + "/" + member->membername);
-              
-              if (itr == plot_map.numeric.end()) {
-                itr = plot_map.addNumeric(event->channel + "/" + member->membername);
-              }
+      bool channel_match = false;
+      for (auto topic_lcmgen : it->second.lcmgen_table) {
+        int64_t msg_hash;
+        int thislen = __int64_t_decode_array(event->data, 0, event->datalen, &msg_hash, 1);
+        for (int struct_idx = 0; struct_idx < topic_lcmgen->structs->len; struct_idx++) {
+          lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(topic_lcmgen->structs, struct_idx);
+          if (msg_hash == ((struct_item->hash<<1) + ((struct_item->hash>>63)&1))) {
+            decode_type(event, 8, struct_item->structname->lctypename, event->channel + "/");
 
-              if (!strcmp(member->type->lctypename, "int8_t")) {
-                int8_t value;
-                int tlen = __int8_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                if(tlen < 0) break; else pos += tlen;
-                itr->second.pushBack({ (double)event->timestamp * 1000, value });
-              } else if (!strcmp(member->type->lctypename, "int16_t")) {
-                int16_t value;
-                int tlen = __int16_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                if(tlen < 0) break; else pos += tlen;
-                itr->second.pushBack({ (double)event->timestamp * 1000, value });
-              } else if (!strcmp(member->type->lctypename, "int32_t")) {
-                int32_t value;
-                int tlen = __int32_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                if(tlen < 0) break; else pos += tlen;
-                itr->second.pushBack({ (double)event->timestamp * 1000, value });
-              } else if (!strcmp(member->type->lctypename, "int64_t")) {
-                int64_t value;
-                int tlen = __int64_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                if(tlen < 0) break; else pos += tlen;
-                itr->second.pushBack({ (double)event->timestamp * 1000, value });
-              } else if (!strcmp(member->type->lctypename, "float")) {
-                float value;
-                int tlen = __float_decode_array(event->data, pos, event->datalen, &value, 1);
-                if(tlen < 0) break; else pos += tlen;
-                itr->second.pushBack({ (double)event->timestamp * 1000, value });
-              } else if (!strcmp(member->type->lctypename, "double")) {
-                double value;
-                int tlen = __double_decode_array(event->data, pos, event->datalen, &value, 1);
-                if(tlen < 0) break; else pos += tlen;
-                itr->second.pushBack({ (double)event->timestamp * 1000, value });
-              }
-            } else {
-                if (lcm_is_constant_size_array(member)) {
-                  for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
-                      lcm_dimension_t *ld =
-                          (lcm_dimension_t *) g_ptr_array_index(member->dimensions, d);
-                      
-                      for (size_t i = 0; i < atoi(ld->size); i++) {
-                        auto itr = plot_map.numeric.find(event->channel + "/" + member->membername + "/" + std::to_string(i));
-                        if (itr == plot_map.numeric.end()) {
-                          itr = plot_map.addNumeric(event->channel + "/" + member->membername + "/" + std::to_string(i));
-                        }
+            // if (g_ptr_array_size(struct_item->members)) {
+            //   int pos = 8;
+            //   for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
+            //     lcm_member_t *member = (lcm_member_t *) g_ptr_array_index(struct_item->members, mind);
+            //   //  std::cout << "event->channel: " << event->channel << ", member->membername: " << struct_item->membername << ", member->type->lctypename: " << member->type->lctypename << "  leg:  " << topic_lcmgen->structs->len << std::endl;
+            //     if (g_ptr_array_size(member->dimensions) == 0) {
+            //       auto itr = plot_map.numeric.find(event->channel + "/" + member->membername);
+                  
+            //       if (itr == plot_map.numeric.end()) {
+            //         itr = plot_map.addNumeric(event->channel + "/" + member->membername);
+            //       }
 
-                        if (!strcmp(member->type->lctypename, "int8_t")) {
-                          int8_t value;
-                          int tlen = __int8_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                          if(tlen < 0) break; else pos += tlen;
-                          itr->second.pushBack({ (double)event->timestamp * 1000, value });
-                        } else if (!strcmp(member->type->lctypename, "int16_t")) {
-                          int16_t value;
-                          int tlen = __int16_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                          if(tlen < 0) break; else pos += tlen;
-                          itr->second.pushBack({ (double)event->timestamp * 1000, value });
-                        } else if (!strcmp(member->type->lctypename, "int32_t")) {
-                          int32_t value;
-                          int tlen = __int32_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                          if(tlen < 0) break; else pos += tlen;
-                          itr->second.pushBack({ (double)event->timestamp * 1000, value });
-                        } else if (!strcmp(member->type->lctypename, "int64_t")) {
-                          int64_t value;
-                          int tlen = __int64_t_decode_array(event->data, pos, event->datalen, &value, 1);
-                          if(tlen < 0) break; else pos += tlen;
-                          itr->second.pushBack({ (double)event->timestamp * 1000, value });
-                        } else if (!strcmp(member->type->lctypename, "float")) {
-                          float value;
-                          int tlen = __float_decode_array(event->data, pos, event->datalen, &value, 1);
-                          if(tlen < 0) break; else pos += tlen;
-                          itr->second.pushBack({ (double)event->timestamp * 1000, value });
-                        } else if (!strcmp(member->type->lctypename, "double")) {
-                          double value;
-                          int tlen = __double_decode_array(event->data, pos, event->datalen, &value, 1);
-                          if(tlen < 0) break; else pos += tlen;
-                          itr->second.pushBack({ (double)event->timestamp * 1000, value });
-                        }
+            //       if (!strcmp(member->type->lctypename, "int8_t")) {
+            //         int8_t value;
+            //         int tlen = __int8_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //         if(tlen < 0) break; else pos += tlen;
+            //         itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //       } else if (!strcmp(member->type->lctypename, "int16_t")) {
+            //         int16_t value;
+            //         int tlen = __int16_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //         if(tlen < 0) break; else pos += tlen;
+            //         itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //       } else if (!strcmp(member->type->lctypename, "int32_t")) {
+            //         int32_t value;
+            //         int tlen = __int32_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //         if(tlen < 0) break; else pos += tlen;
+            //         itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //       } else if (!strcmp(member->type->lctypename, "int64_t")) {
+            //         int64_t value;
+            //         int tlen = __int64_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //         if(tlen < 0) break; else pos += tlen;
+            //         itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //       } else if (!strcmp(member->type->lctypename, "float")) {
+            //         float value;
+            //         int tlen = __float_decode_array(event->data, pos, event->datalen, &value, 1);
+            //         if(tlen < 0) break; else pos += tlen;
+            //         itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //       } else if (!strcmp(member->type->lctypename, "double")) {
+            //         double value;
+            //         int tlen = __double_decode_array(event->data, pos, event->datalen, &value, 1);
+            //         if(tlen < 0) break; else pos += tlen;
+            //         itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //       }
+            //     } else {
+            //         if (lcm_is_constant_size_array(member)) {
+            //           for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
+            //               lcm_dimension_t *ld =
+            //                   (lcm_dimension_t *) g_ptr_array_index(member->dimensions, d);
+                          
+            //               for (size_t i = 0; i < atoi(ld->size); i++) {
+            //                 auto itr = plot_map.numeric.find(event->channel + "/" + member->membername + "/" + std::to_string(i));
+            //                 if (itr == plot_map.numeric.end()) {
+            //                   itr = plot_map.addNumeric(event->channel + "/" + member->membername + "/" + std::to_string(i));
+            //                 }
 
-                      }
+            //                 if (!strcmp(member->type->lctypename, "int8_t")) {
+            //                   int8_t value;
+            //                   int tlen = __int8_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //                   if(tlen < 0) break; else pos += tlen;
+            //                   itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //                 } else if (!strcmp(member->type->lctypename, "int16_t")) {
+            //                   int16_t value;
+            //                   int tlen = __int16_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //                   if(tlen < 0) break; else pos += tlen;
+            //                   itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //                 } else if (!strcmp(member->type->lctypename, "int32_t")) {
+            //                   int32_t value;
+            //                   int tlen = __int32_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //                   if(tlen < 0) break; else pos += tlen;
+            //                   itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //                 } else if (!strcmp(member->type->lctypename, "int64_t")) {
+            //                   int64_t value;
+            //                   int tlen = __int64_t_decode_array(event->data, pos, event->datalen, &value, 1);
+            //                   if(tlen < 0) break; else pos += tlen;
+            //                   itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //                 } else if (!strcmp(member->type->lctypename, "float")) {
+            //                   float value;
+            //                   int tlen = __float_decode_array(event->data, pos, event->datalen, &value, 1);
+            //                   if(tlen < 0) break; else pos += tlen;
+            //                   itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //                 } else if (!strcmp(member->type->lctypename, "double")) {
+            //                   double value;
+            //                   int tlen = __double_decode_array(event->data, pos, event->datalen, &value, 1);
+            //                   if(tlen < 0) break; else pos += tlen;
+            //                   itr->second.pushBack({ (double)event->timestamp * 1000, value });
+            //                 }
+
+            //               }
 
 
 
 
 
-                        
-                  //      std::cout << "Dimension " << d << ": mode = " << ld->mode << ", size = " << ld->size << std::endl;
-                    }
-                }
-            }
+                            
+            //           //      std::cout << "Dimension " << d << ": mode = " << ld->mode << ", size = " << ld->size << std::endl;
+            //             }
+            //         }
+            //     }
+            //   }
+            // }
+            break;
           }
         }
-      }else {
+
+        channel_match = true;
+      }
+
+      if (!channel_match) {
         std::cerr << "Warning: Hash mismatch for channel " << event->channel << ". Skipping event." << std::endl;
-        QMessageBox::warning(nullptr, tr("Error"), "Hash mismatch for channel " + QString::fromStdString(event->channel) + ". exit............");
+        QMessageBox::warning(nullptr, tr("Error"), "话题：" + QString::fromStdString(event->channel) + "类型不匹配，退出。。。。。。");
         return false;
       }
+  
     }
 
     // // 时间戳精准转换：LCM 标准微秒 (us) -> ROS2 标准纳秒 (ns)
@@ -285,200 +493,6 @@ bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& p
   }
   std::cout << "Finished reading LCM log file." << std::endl;
   return true;
-//   QString bagDir;
-//   {
-//     QFileInfo finfo(info->filename);
-//     bagDir = finfo.dir().path();
-//   }
-//   std::cout << "bagDir: " << bagDir.toStdString() << std::endl;
-//   rosbag2_storage::StorageOptions storageOptions;
-//   const auto bag_metadata = metadata_io->read_metadata(bagDir.toStdString());
-//   storageOptions.uri = bagDir.toStdString();
-//   storageOptions.storage_id = bag_metadata.storage_identifier;
-//   rosbag2_cpp::ConverterOptions converterOptions;
-//   converterOptions.input_serialization_format = "cdr";
-//   converterOptions.output_serialization_format = rmw_get_serialization_format();
-
-//   std::shared_ptr<rosbag2_cpp::Reader> temp_bag_reader =
-//       rosbag2_transport::ReaderWriterFactory::make_reader(storageOptions);
-
-//   QString oldPath = QDir::currentPath();
-//   QDir::setCurrent(QDir::cleanPath(bagDir + QDir::separator() + ".."));
-
-//   try
-//   {
-//     temp_bag_reader->open(storageOptions, converterOptions);
-//   }
-//   catch (std::runtime_error& ex)
-//   {
-//     QMessageBox::warning(nullptr, tr("Error"), QString("rosbag::open thrown an exception:\n") + QString(ex.what()));
-//     return false;
-//   }
-
-//   QDir::setCurrent(oldPath);
-
-//   // Temporarily change the current directory as a workaround for rosbag2 relative directories not
-//   // working properly
-//   std::vector<rosbag2_storage::TopicMetadata> topic_metadata = temp_bag_reader->get_all_topics_and_types();
-
-//   std::unordered_map<std::string, std::string> topicTypesByName;
-
-//   std::vector<std::pair<QString, QString>> all_topics_qt;
-
-   std::vector<TopicInfo> topics_info;
-
-//   std::set<std::string> blacklist_topic_name;
-//   std::set<std::string> failed_topic_type;
-
-//   for (const rosbag2_storage::TopicMetadata& topic : topic_metadata)
-//   {
-//     all_topics_qt.push_back({ QString::fromStdString(topic.name), QString::fromStdString(topic.type) });
-//     topicTypesByName.emplace(topic.name, topic.type);
-
-//     const auto& typesupport_identifier = rosidl_typesupport_cpp::typesupport_identifier;
-//     try
-//     {
-//       topics_info.emplace_back(CreateTopicInfo(topic.name, topic.type));
-//     }
-//     catch (...)
-//     {
-//       failed_topic_type.insert(topic.type);
-//       blacklist_topic_name.insert(topic.type);
-//     }
-//   }
-
-//   if (!failed_topic_type.empty())
-//   {
-//     QString msg("Can not recognize the following message types and those topics will be ignored:\n\n");
-//     for (const auto& type : failed_topic_type)
-//     {
-//       msg += "  " + QString::fromStdString(type) + "\n";
-//     }
-//     msg += "\nHave you forgotten to source your workspace?";
-//     QMessageBox::warning(nullptr, tr("Error"), msg);
-//   }
-
-//   // FIXME: we keep this for backward compatibility
-//   if (info->plugin_config.hasChildNodes())
-//   {
-//     xmlLoadState(info->plugin_config.firstChildElement());
-//   }
-
-//   if (!info->plugin_config.hasChildNodes() || _config.topics.empty())
-//   {
-//     loadDefaultSettings();
-//     DialogSelectRosTopics* dialog = new DialogSelectRosTopics(all_topics_qt, _config);
-
-//     if (dialog->exec() != static_cast<int>(QDialog::Accepted))
-//     {
-//       delete dialog;
-//       return false;
-//     }
-//     _config = dialog->getResult();
-//     delete dialog;
-//   }
-
-//   //--- Swith the previous bag with this one
-//   // clean up previous MessageInstances
-//   plot_map.user_defined.clear();
-
-//   if (_bag_reader)
-//   {
-//     _bag_reader->close();
-//   }
-//   _bag_reader = temp_bag_reader;
-//   //---------------------------------------
-
-//   saveDefaultSettings();
-
-//   PJ::CompositeParser parser;
-
-//   std::set<std::string> topic_selected;
-//   for (const auto& topic_qt : _config.topics)
-//   {
-//     std::string topic_name = topic_qt.toStdString();
-//     std::string topic_type = topicTypesByName.at(topic_name);
-//     topic_selected.insert(topic_name);
-
-//     auto ros2_parser = CreateParserROS2(*parserFactories(), topic_name, topic_type, plot_map);
-//     parser.addParser(topic_name, ros2_parser);
-//   }
-
-//   parser.setConfig(_config);
-
-//   QProgressDialog progress_dialog;
-//   progress_dialog.setWindowTitle("Loading the rosbag");
-//   progress_dialog.setLabelText("Loading... please wait");
-//   progress_dialog.setWindowModality(Qt::ApplicationModal);
-//   progress_dialog.setRange(0, bag_metadata.message_count);
-//   progress_dialog.show();
-//   int msg_count = 0;
-
-//   PJ::PlotDataAny& plot_consecutive = plot_map.addUserDefined("plotjuggler::rosbag2_cpp::consecutive_messages")->second;
-//   PJ::PlotDataAny& metadata_storage = plot_map.addUserDefined("plotjuggler::rosbag2_cpp::topics_metadata")->second;
-
-//   // dirty trick. Store it in a one point timeseries
-//   metadata_storage.pushBack({ 0, std::any(topics_info) });
-
-//   auto time_prev = std::chrono::high_resolution_clock::now();
-
-//   while (_bag_reader->has_next())
-//   {
-//     auto msg = _bag_reader->read_next();
-//     const std::string& topic_name = msg->topic_name;
-//     if (blacklist_topic_name.count(topic_name))
-//     {
-//       continue;
-//     }
-
-// #ifdef ROS_HUMBLE
-//     const double msg_timestamp = 1e-9 * double(msg->time_stamp);  // nanoseconds to seconds
-// #else
-//     // from jazzy and later
-//     const double msg_timestamp = 1e-9 * double(msg->send_timestamp);  // nanoseconds to seconds
-// #endif
-
-//     //------ progress dialog --------------
-//     if (msg_count++ % 100 == 0)
-//     {
-//       progress_dialog.setValue(msg_count);
-//       QApplication::processEvents();
-
-//       if (progress_dialog.wasCanceled())
-//       {
-//         return false;
-//       }
-//     }
-
-//     //----- skip not selected -----------
-//     if (topic_selected.find(topic_name) == topic_selected.end())
-//     {
-//       continue;
-//     }
-//     //----- parse! -----------
-//     double timestamp = msg_timestamp;
-//     PJ::MessageRef msg_ref(msg->serialized_data->buffer, msg->serialized_data->buffer_length);
-//     parser.parseMessage(topic_name, msg_ref, timestamp);
-
-//     //---- save msg reference in PlotAny ----
-//     auto data_point = PJ::PlotDataAny::Point(timestamp, std::any(msg));
-//     plot_consecutive.pushBack(data_point);
-
-//     auto plot_pair = plot_map.user_defined.find(topic_name);
-//     if (plot_pair == plot_map.user_defined.end())
-//     {
-//       plot_pair = plot_map.addUserDefined(topic_name);
-//     }
-//     PJ::PlotDataAny& plot_raw = plot_pair->second;
-//     plot_raw.pushBack(data_point);
-//   }
-
-//   auto now = std::chrono::high_resolution_clock::now();
-//   double diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - time_prev).count();
-
-//   qDebug() << "The rosbag loaded the data in " << diff << " milliseconds";
-
-//   return true;
 }
 
 bool DataLoadLCM::xmlSaveState(QDomDocument& doc, QDomElement& plugin_elem) const

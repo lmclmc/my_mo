@@ -43,8 +43,9 @@ void LcmTopicDialog::setupUI()
     m_table->setColumnCount(2);
     m_table->setHorizontalHeaderLabels({"Topic Name", "LCM Log File"});
     m_table->verticalHeader()->setVisible(false);
-    m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+    m_table->setColumnWidth(0, 220);  // Topic Name 列固定宽度220像素
+    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);  // LCM Log File 拉伸填充
 
     // 底部按钮栏
     QHBoxLayout* btnLayout = new QHBoxLayout();

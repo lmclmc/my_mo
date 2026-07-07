@@ -9,43 +9,52 @@
 #include <PlotJuggler/dataloader_base.h>
 #include "dialog_select_ros_topics.h"
 #include "parser_configuration.h"
+#include <lcm/lcm-cpp.hpp>
+#include <lcm/lcm_coretypes.h>
+#include "lcmgen.h"
+#include "tokenize.h"
 
 class DataLoadLCM : public PJ::DataLoader
 {
-  Q_OBJECT
-  Q_PLUGIN_METADATA(IID "facontidavide.PlotJuggler3.ROS2DataLoader")
-  Q_INTERFACES(PJ::DataLoader)
+    Q_OBJECT
+    Q_PLUGIN_METADATA(IID "facontidavide.PlotJuggler3.ROS2DataLoader")
+    Q_INTERFACES(PJ::DataLoader)
 
 public:
-  DataLoadLCM();
+    DataLoadLCM();
 
-  virtual const std::vector<const char*>& compatibleFileExtensions() const override;
+    virtual const std::vector<const char*>& compatibleFileExtensions() const override;
 
-  virtual bool readDataFromFile(PJ::FileLoadInfo* fileload_info, PJ::PlotDataMapRef& destination) override;
+    virtual bool readDataFromFile(PJ::FileLoadInfo* fileload_info, PJ::PlotDataMapRef& destination) override;
 
-  virtual const char* name() const override
-  {
-    return "DataLoad LCM";
-  }
+    virtual const char* name() const override
+    {
+      return "DataLoad LCM";
+    }
 
-  virtual ~DataLoadLCM() override = default;
+    virtual ~DataLoadLCM() override = default;
 
-  virtual bool xmlSaveState(QDomDocument& doc, QDomElement& parent_element) const override;
+    virtual bool xmlSaveState(QDomDocument& doc, QDomElement& parent_element) const override;
 
-  virtual bool xmlLoadState(const QDomElement& parent_element) override;
+    virtual bool xmlLoadState(const QDomElement& parent_element) override;
 
 private:
-  std::shared_ptr<rosbag2_cpp::Reader> _bag_reader;
+    std::shared_ptr<rosbag2_cpp::Reader> _bag_reader;
 
-  std::vector<const char*> _extensions;
+    std::map<std::string, lcm_struct_t*> lcm_type_table;
+    PJ::PlotDataMapRef* plot_data = nullptr;
 
-  PJ::RosParserConfig _config;
+    std::vector<const char*> _extensions;
 
-  std::vector<std::pair<QString, QString>> getAndRegisterAllTopics();
+    PJ::RosParserConfig _config;
 
-  void saveDefaultSettings();
+    std::vector<std::pair<QString, QString>> getAndRegisterAllTopics();
 
-  void loadDefaultSettings();
+    void saveDefaultSettings();
+
+    void loadDefaultSettings();
+
+    int decode_type(const lcm::LogEvent* event, int, const std::string&, const std::string&, int deep= 0);
 };
 
 #endif  // DATALOAD_ROS2_H

@@ -62,7 +62,6 @@ private:
     {
         (void)rbuf;
         RCLCPP_DEBUG(this->get_logger(), "Received message on channel \"%s\"", channel_name.c_str());
-        std::cout << msg->joints[0].pos << std::endl;
         // Use reinterpret_cast to convert LCM message to ROS2 message
         // Note: This assumes LCM and ROS2 message layouts are identical
         const lcm_to_ros2::msg::HalWaistCmdLcmt* ros2_msg = 
