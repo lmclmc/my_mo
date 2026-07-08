@@ -1,7 +1,0 @@
-lcm
-pyyaml
-empy
-catkin_pkg
-numpy
-lark
-PySide6

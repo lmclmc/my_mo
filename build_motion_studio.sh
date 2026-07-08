@@ -15,7 +15,12 @@ check_root() {
 
 check_root $1
 
-echo $password | sudo -S chown -R $(id -gn):$(id -un) /opt/ros/
+if [ -f "/.dockerenv" ]; then
+    echo "当前是 Docker 容器环境"
+else
+    echo "宿主机环境"
+    echo $password | sudo -S chown -R $(id -gn):$(id -un) /opt/ros/
+fi
 
 pushd lcm_turn_server
 echo $password | sudo -S ./build_lcm_turn_server.sh
