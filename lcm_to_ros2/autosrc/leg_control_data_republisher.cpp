@@ -108,11 +108,19 @@ private:
         
         // Use reinterpret_cast to convert LCM message to ROS2 message
         // Note: This assumes LCM and ROS2 message layouts are identical
-        const lcm_to_ros2::msg::LegControlDataLcmt* ros2_msg = 
-            reinterpret_cast<const lcm_to_ros2::msg::LegControlDataLcmt*>(msg);
+        // const lcm_to_ros2::msg::LegControlDataLcmt* ros2_msg = 
+        //     reinterpret_cast<const lcm_to_ros2::msg::LegControlDataLcmt*>(msg);
         
-        // Create a shared pointer copy for publishing
-        auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>(*ros2_msg);
+        // // C;reate a shared pointer copy for publishing
+        // auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>(*ros2_msg)
+
+        auto ros2_msg_shared = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>();
+        std::copy(std::begin(msg->q), std::end(msg->q), ros2_msg_shared->q.begin());
+        std::copy(std::begin(msg->qd), std::end(msg->qd), ros2_msg_shared->qd.begin());
+        std::copy(std::begin(msg->pos), std::end(msg->pos), ros2_msg_shared->pos.begin());
+        std::copy(std::begin(msg->vel), std::end(msg->vel), ros2_msg_shared->vel.begin());
+
+
         ros2_pub_->publish(*ros2_msg_shared);
     }
 
