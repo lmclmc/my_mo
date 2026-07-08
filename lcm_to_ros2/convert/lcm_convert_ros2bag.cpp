@@ -178,8 +178,12 @@ static std::shared_ptr<rclcpp::SerializedMessage> leg_convert_function(rclcpp::S
     } else if (msg_hash == (int64_t)exlcm::leg_control_data_lcmt_bigdog::getHash()) {
         exlcm::leg_control_data_lcmt_bigdog bigdog_msg;
         if (bigdog_msg.decode(lcm_data, 0, lcm_size) > 0) {
-            const ros2_type* ros2_msg = reinterpret_cast<const ros2_type*>(&bigdog_msg);
-            serializer.serialize_message(ros2_msg, serialized_msg.get());
+            ros2_type ros2_msg;
+            std::copy(std::begin(bigdog_msg.q), std::end(bigdog_msg.q), ros2_msg.q.begin());
+            std::copy(std::begin(bigdog_msg.qd), std::end(bigdog_msg.qd), ros2_msg.qd.begin());
+            std::copy(std::begin(bigdog_msg.pos), std::end(bigdog_msg.pos), ros2_msg.pos.begin());
+            std::copy(std::begin(bigdog_msg.vel), std::end(bigdog_msg.vel), ros2_msg.vel.begin());
+            serializer.serialize_message(&ros2_msg, serialized_msg.get());
         }
     } else if (msg_hash == (int64_t)exlcm::leg_control_data_lcmt_magicdog::getHash()) {
         exlcm::leg_control_data_lcmt_magicdog magicdog_msg;
@@ -429,7 +433,7 @@ int main(int argc, char** argv) {
             rclcpp::Serialization<ros2_type> serializer; \
             auto serialized_msg = convert_cb<lcm_type, ros2_type>(serializer, event->data, event->datalen);\
             /* 4.4 内存直接转储到文件磁盘 */ \
-            writer->write(serialized_msg, ros2_top, rosidl_generator_traits::name<ros2_type>(), rclcpp::Time(timestamp_ns)); \
+            writer->write(serialized_msg, ros2_top, rosidl_generator_traits::name<ros2_type>(), rclcpp::Time(event->timestamp * 1000)); \
             total_count++; \
             continue; \
         }
