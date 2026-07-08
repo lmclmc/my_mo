@@ -93,7 +93,6 @@ int DataLoadLCM::decode_type(const lcm::LogEvent* event, int offset,
             }
 
             if (g_ptr_array_size(member->dimensions) == 0) {
-               // std::cout << "1111111111 Received message on channel \"" << member->type->lctypename << "\"\n";
                 if (!strcmp(member->type->lctypename, "int8_t")) {
                   int8_t value;
                   int tlen = __int8_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
@@ -143,10 +142,33 @@ int DataLoadLCM::decode_type(const lcm::LogEvent* event, int offset,
                     decode_len += tlen;
                   }
                   itr->second.pushBack({ (double)event->timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "string")) {
+                  int32_t __d_len__;
+                  int tlen = __int32_t_decode_array(
+                      event->data, pos_offset, event->datalen, &__d_len__, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  if(__d_len__ > event->datalen - pos_offset || __d_len__ <= 0) break;
+                  std::string lcm_str(static_cast<const char*>(event->data) + pos_offset,  __d_len__ - 1);
+                  pos_offset += __d_len__;
+                  decode_len += __d_len__;
+                  auto str_itr = plot_data->strings.find(base + member->membername);
+                  if (str_itr == plot_data->strings.end()) {
+                    str_itr = plot_data->addStringSeries(base + member->membername);
+                  }
+                 str_itr->second.pushBack({ (double)event->timestamp, lcm_str });
+                } else if (!strcmp(member->type->lctypename, "boolean")) {
+                  int8_t value;
+                  int tlen = __boolean_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ (double)event->timestamp, value });
                 } else {
-                  std::cout << "pos_offset  : " << pos_offset << std::endl;
                   int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/", deep + 1);
-                  std::cout << "tlen decode_type : " << tlen << std::endl;
                   if(tlen < 0) break; else {
                     pos_offset += tlen;
                     decode_len += tlen;
@@ -212,6 +234,28 @@ int DataLoadLCM::decode_type(const lcm::LogEvent* event, int offset,
                                 decode_len += tlen;
                               }
                               itr->second.pushBack({ (double)event->timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "string")) { 
+                              int32_t __d_len__;
+                              int tlen = __int32_t_decode_array(
+                                  event->data, pos_offset, event->datalen, &__d_len__, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              if(__d_len__ > event->datalen - pos_offset || __d_len__ <= 0) break;
+                              std::string lcm_str(static_cast<const char*>(event->data) + pos_offset,  __d_len__ - 1);
+                              pos_offset += __d_len__;
+                              decode_len += tlen;
+                              auto str_itr = plot_data->strings.find(base + member->membername + "/" + std::to_string(i));
+                              if (str_itr == plot_data->strings.end()) {
+                                str_itr = plot_data->addStringSeries(base + member->membername + "/" + std::to_string(i));
+                              }
+                              str_itr->second.pushBack({ (double)event->timestamp, lcm_str });
+                            } else if (!strcmp(member->type->lctypename, "boolean")) {
+                              int8_t value;
+                              int tlen = __boolean_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+                              if(tlen < 0) return tlen; else pos_offset += tlen;
+                              itr->second.pushBack({ (double)event->timestamp, value });
                             } else {
                               int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
                               if(tlen < 0) break; else {
@@ -257,6 +301,8 @@ bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& p
   lcm_type_table["int64_t"] = nullptr;
   lcm_type_table["float"] = nullptr;
   lcm_type_table["double"] = nullptr;
+  lcm_type_table["string"] = nullptr;
+  lcm_type_table["boolean"] = nullptr;
   
   for (const auto& item : _config) {
     if (item.lcmFilePath.isEmpty()) continue;
