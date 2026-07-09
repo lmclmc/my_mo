@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
         """初始化用户界面"""
         # 设置窗口标题和大小
         self.setWindowTitle('主界面')
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(100, 100, 1200, 800)  # 增加窗口宽度和高度
         
         # 创建状态栏
         status_bar = QStatusBar()
@@ -609,13 +609,58 @@ class MainWindow(QMainWindow):
         ros2_layout.addStretch(1)
         
         button_layout.addWidget(ros2_group)
+        
+        # ========== 版本信息组 ==========
+        version_group = QGroupBox('版本信息')
+        version_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                color: #333;
+                border: 1px solid #d0d0d0;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 8px 0 8px;
+            }
+        """)
+        version_layout = QVBoxLayout(version_group)
+        version_layout.setSpacing(12)
+        
+        # 获取版本信息按钮
+        self.version_info_button = QPushButton('获取版本信息')
+        self.version_info_button.setFixedSize(200, 45)
+        self.version_info_button.setStyleSheet("""
+            QPushButton {
+                background-color: #00BCD4;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #00ACC1;
+            }
+            QPushButton:pressed {
+                background-color: #0097A7;
+            }
+        """)
+        self.version_info_button.clicked.connect(self.on_get_version_info)
+        version_layout.addWidget(self.version_info_button, 0, Qt.AlignCenter)
+        
+        button_layout.addWidget(version_group)
+        
         # 添加底部拉伸，防止各个 group 在窗口拉伸时自动变高
         button_layout.addStretch(1)
         
         # ========== 创建分割器 ==========
-        splitter = QSplitter(Qt.Vertical)
-        button_widget.setMinimumHeight(850)  # 增加按钮区域最小高度，避免分组重叠
-        button_widget.setMaximumHeight(850)  # 增加最大高度
+        splitter = QSplitter(Qt.Horizontal)
+        button_widget.setMinimumWidth(500)  # 设置按钮区域最小宽度
+        button_widget.setMaximumWidth(550)  # 设置按钮区域最大宽度
         splitter.addWidget(button_widget)
         
         # 日志区域样式
@@ -634,7 +679,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.log_text)
         
         # 设置分割器
-        splitter.setSizes([1, 200])  # 同步增加按钮区域初始大小
+        splitter.setSizes([520, 1000])  # 设置初始大小，进一步增加右侧日志区域宽度
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
         
@@ -1229,6 +1274,42 @@ class MainWindow(QMainWindow):
             
             loop_thread = threading.Thread(target=run_async, daemon=True)
             loop_thread.start()
+        
+    def on_get_version_info(self):
+        """获取版本信息槽函数"""
+        self.log_message('正在获取版本信息...')
+        
+        # 构建脚本路径（相对于motion_controller目录的上一级）
+        script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'version_info.sh')
+        
+        if not os.path.exists(script_path):
+            self.log_message(f'错误：版本信息脚本不存在: {script_path}')
+            QMessageBox.critical(self, '错误', f'版本信息脚本不存在: {script_path}')
+            return
+        
+        try:
+            # 执行版本信息脚本
+            result = subprocess.run(
+                ['bash', script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=True
+            )
+            
+            # 将输出显示到日志窗口
+            self.log_message('版本信息获取成功：')
+            for line in result.stdout.strip().split('\n'):
+                self.log_message(line)
+            
+            self.statusBar().showMessage('版本信息获取成功')
+            
+        except subprocess.CalledProcessError as e:
+            self.log_message(f'获取版本信息失败: {e.output}')
+            QMessageBox.critical(self, '错误', f'获取版本信息失败: {e.output}')
+        except Exception as e:
+            self.log_message(f'获取版本信息异常: {str(e)}')
+            QMessageBox.critical(self, '错误', f'获取版本信息异常: {str(e)}')
                 
 def main():
     """主函数"""
