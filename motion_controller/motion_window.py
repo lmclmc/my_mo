@@ -67,7 +67,20 @@ class MainWindow(QMainWindow):
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         self.log_text.setLineWrapMode(QTextEdit.NoWrap)
-        self.log_text.setStyleSheet("QTextEdit { background-color: #f5f5f5; font-family: monospace; font-size: 9pt; line-height: 1.1; padding: 5px; margin: 2px; }")
+        self.log_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #1e1e1e;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 11pt;
+                line-height: 1.4;
+                padding: 10px;
+                border: 1px solid #3c3c3c;
+                border-radius: 8px;
+                color: #d4d4d4;
+            }
+        """)
+        # 初始化HTML内容（设置行高）
+        self.log_text.setHtml("<html><head></head><body style='font-family: monospace; white-space: pre-wrap; line-height: 1.8;'></body></html>")
     
     def create_central_widget(self):
         """创建中央部件"""
@@ -670,7 +683,7 @@ class MainWindow(QMainWindow):
                 color: #d4d4d4;
                 font-family: 'Consolas', 'Monaco', monospace;
                 font-size: 11pt;
-                line-height: 1.4;
+                line-height: 1.3;
                 padding: 10px;
                 border: 1px solid #3c3c3c;
                 border-radius: 8px;
@@ -889,11 +902,76 @@ class MainWindow(QMainWindow):
         seconds = self.ros2_bag_time % 60
         self.ros2_bag_timer_label.setText(f'录制时间: {hours:02d}:{minutes:02d}:{seconds:02d}')
         
+    def ansi_to_html(self, text):
+        """将ANSI颜色代码转换为HTML"""
+        # ANSI颜色代码映射
+        color_map = {
+            '30': '#000000',  # 黑色
+            '31': '#ff0000',  # 红色
+            '32': '#00ff00',  # 绿色
+            '33': '#ffff00',  # 黄色
+            '34': '#0000ff',  # 蓝色
+            '35': '#ff00ff',  # 紫色
+            '36': '#00ffff',  # 青色
+            '37': '#ffffff',  # 白色
+            '1;30': '#808080',  # 亮黑色
+            '1;31': '#ff6666',  # 亮红色
+            '1;32': '#66ff66',  # 亮绿色
+            '1;30;47': '#ffff66',  # 亮黄色
+            '1;33': '#6666ff',  # 亮蓝色
+            '1;35': '#ff66ff',  # 亮紫色
+            '1;36': '#66ffff',  # 亮青色
+            '1;37': '#ffffff',  # 亮白色
+            '0': '',  # 重置
+        }
+        
+        import re
+        
+        # 处理ANSI转义序列
+        parts = re.split(r'(\033\[([0-9;]+)m)', text)
+        result = []
+        
+        for i in range(0, len(parts), 3):
+            print(parts[i])
+            # 普通文本
+            if parts[i]:
+                # 转义HTML特殊字符
+                escaped = parts[i].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                escaped = escaped.replace('\n', '<br/>').replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;')
+                result.append(escaped)
+            
+            if i + 2 < len(parts):
+                code = parts[i + 2]
+                print(code)
+                if code == '0':
+                    result.append('</span>')
+                elif code in color_map:
+                    if color_map[code]:
+                        result.append(f'<span style="color: {color_map[code]};">')
+        
+        return ''.join(result)
+    
     def log_message(self, message):
         """记录消息到日志窗口"""
         current_time = QTime.currentTime().toString('HH:mm:ss')
-        log_entry = f"[{current_time}] {message}"
-        self.log_text.append(log_entry)
+        
+        # 解析ANSI颜色代码
+        message = self.ansi_to_html(message)
+        
+        # 创建带时间戳的日志条目
+        log_entry = f"<div style='line-height: 0.95;'><span style='color: #888888;'>[{current_time}]</span> {message}</div>"
+        
+        # 获取当前HTML内容
+        current_html = self.log_text.toHtml()
+        
+        # 在</body>标签前插入新内容
+        if '</body>' in current_html:
+            new_html = current_html.replace('</body>', log_entry + '</body>')
+        else:
+            new_html = current_html + log_entry
+        
+        self.log_text.setHtml(new_html)
+        
         # 滚动到最新消息
         self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
     

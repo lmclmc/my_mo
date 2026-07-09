@@ -64,7 +64,7 @@ echo "检测到最新版本Tag：${LATEST_TAG}"
 if git remote -v &> /dev/null; then
     echo "仓库已存在，拉取远程标签并切换至最新Tag ${LATEST_TAG}"
     cd "${REPO_PATH}"
-    git fetch --prune --tags
+    git fetch --prune --tags -f
     git checkout "${LATEST_TAG}"
 else
     echo "初始化并拉取源码至当前目录"
