@@ -1,132 +1,126 @@
 # MotionStudio: 运控上位机调试工具
 
+```
+                   .───.        .───.
+
+                  /     \      /     \
+
+                 /       \────/       \
+
+ ███╗   ███╗ ██████╗ ████████╗ ██╗ ██████╗ ███╗   ██╗
+ ████╗ ████║██╔═══██╗╚══██╔══╝ ██║██╔═══██╗████╗  ██║
+ ██╔████╔██║██║   ██║   ██║    ██║██║   ██║██╔██╗ ██║
+ ██║╚██╔╝██║██║   ██║   ██║    ██║██║   ██║██║╚██╗██║
+ ██║ ╚═╝ ██║╚██████╔╝   ██║    ██║╚██████╔╝██║ ╚████║
+ ╚═╝     ╚═╝ ╚═════╝    ╚═╝    ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+                     S T U D I O
+    MotionStudio · Multi-Function debug toolchain
+```
+
+![MotionStudio](https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO)
+
 ## 项目概述
 
-MotionStudio 是一款针对运控工程化的调试工具
-https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO
+MotionStudio 是一款针对机器人运控工程化的专业调试工具，提供完整的机器人调试工作流解决方案。
+
+**作者**: 罗敏成
+
+**仓库地址**: `git@gitlab.magiclab.top:dreamebiped/controlsoftware/motionstudio.git`
+
+---
 
 ## 主要功能
 
-### 1. LCM 到 ROS2 消息转换 (`lcm_to_ros2`)
-- 将 [LCM](https://github.com/lcm-proj/lcm) 消息类型自动转换为 ROS2 消息类型
-- 自动生成消息转换节点，实现 LCM 消息到 ROS2 消息的实时转发
-- 支持多种机器人平台的消息格式，包括人形机器人、四足机器人等
+### 1. 运控上位机控制器 (`motion_controller`)
+- 🎮 **图形化操作界面**：基于 Qt/PySide6 的现代化 GUI
+- 📊 **实时日志显示**：支持 ANSI 颜色代码的日志输出
+- 🔧 **版本信息查询**：一键获取项目版本、作者、仓库信息
 
-### 2. 机器人可视化 (`magic_vis_ros2`)
-- 基于 RViz2 实现机器人模型的 3D 可视化
-- 实时显示机器人关节状态、传感器数据等关键信息
-- 支持多种机器人模型的可视化配置
+### 2. LCM 到 ROS2 消息转换 (`lcm_to_ros2`)
+- 🔄 **自动消息转换**：将 LCM 消息类型自动转换为 ROS2 消息类型
+- 📦 **多种机器人支持**：人形机器人、四足机器人（MagicDog）、机械臂（MagicBotZ1）等
+- ⚡ **实时消息转发**：自动生成消息转换节点
 
-### 3. 数据可视化插件 (`plotjuggler-ros-plugins`)
-- 为 PlotJuggler 提供 ROS2 支持
-- 方便查看和分析 ROS2 话题数据
-- 支持数据录制和回放
+### 3. 机器人可视化 (`magic_vis_ros2`)
+- 🕶️ **3D 可视化**：基于 RViz2 的机器人模型展示
+- 🔄 **实时状态显示**：关节状态、传感器数据可视化
+- 🤖 **多模型支持**：MagicHumanoid、MagicDog、A2601-M-MINI-BOT 等
 
-### 4. 运控上位机控制器 (`motion_controller`)
-- 目录motion_controller 支持lcm日志播放，支持ros2 bag日志录制，支持连接真机在线调试
+### 4. 数据可视化插件 (`plotjuggler-ros-plugins`)
+- 📈 **PlotJuggler 集成**：为 PlotJuggler 提供 ROS2 支持
+- 🎯 **数据录制回放**：支持数据录制和离线分析
+
+### 5. LCM 日志回放 (`log_playback_ros2`)
+- 🎬 **LCM 日志播放**：支持读取和回放 `.lcmlog` 文件
+- ⏯️ **播放控制**：支持播放、暂停、倍速调节
+- 📊 **进度显示**：实时显示播放进度
+
+### 6. LCM 转发服务器 (`lcm_turn_server`)
+- 🌐 **远程通信**：支持跨网络的 LCM 消息转发
+- 🔗 **在线调试**：连接真机进行实时调试
+
+---
 
 ## 目录结构
 
 ```
 motionstudio/
-├── motion_controller/                # 运控上位机控制器
-├── lcm_to_ros2/        # LCM 到 ROS2 消息转换工具
-├── lcm_turn_server/    # LCM 转发服务器
-├── log_playback_ros2/  # 日志回放工具
-├── magic_vis_ros2/     # 机器人可视化工具
-├── scripts/            # 用于上位机模式切换的脚本目录
-├── plotjuggler-ros-plugins/ # ROS2 的 PlotJuggler 插件
-├── env_install.sh      # 环境安装脚本
-├── env_init.sh         # 环境初始化脚本
-├── build_motion_studio.sh # 编译构建脚本
-├── run_motion_studio.sh # 运行上位机脚本
-├── stop_motion_studio.sh # 停止上位机脚本
-└── README.md           # 项目说明文件
+├── motion_controller/          # 运控上位机控制器
+│   ├── lcm/                   # LCM Python 库
+│   ├── lcm_player_thread.py   # LCM 日志播放线程
+│   ├── lcm_tcp_client.py      # LCM TCP 客户端
+│   └── motion_window.py       # 主窗口界面
+├── lcm_to_ros2/               # LCM 到 ROS2 消息转换工具
+│   ├── autosrc/               # 自动生成的转发器源代码
+│   ├── cmake/                 # CMake 配置
+│   ├── convert/               # 日志转换工具
+│   ├── exlcm/                 # LCM 消息头文件
+│   ├── launch/                # ROS2 Launch 文件
+│   ├── lcm/                   # LCM 消息定义
+│   ├── msg/                   # ROS2 消息定义
+│   └── repub_configs/         # 转发配置文件
+├── lcm_turn_server/           # LCM 转发服务器
+│   ├── lcm_turn_server.cpp    # 服务器核心代码
+│   └── build_lcm_turn_server.sh
+├── log_playback_ros2/         # 日志回放工具
+│   ├── lcm/                   # LCM Python 库
+│   ├── lcm_player.py          # LCM 日志播放器
+│   └── *.lcmlog               # 示例日志文件
+├── magic_vis_ros2/            # 机器人可视化工具
+│   ├── config/                # 机器人配置文件
+│   ├── launch/                # RViz2 Launch 文件
+│   └── meshes/                # 机器人模型网格
+├── plotjuggler-ros-plugins/   # PlotJuggler ROS2 插件
+├── log/                       # 日志目录
+├── version_info.sh            # 版本信息输出脚本
+├── build_motion_studio.sh     # 编译构建脚本
+├── run_motion_studio.sh       # 运行上位机脚本
+├── stop_motion_studio.sh      # 停止上位机脚本
+├── upgrade_and_build.sh       # 升级并构建脚本
+└── README.md                  # 项目说明文件
 ```
 
-## 目录详细说明
- 
-### 1. motion_controller
- 
-运控上位机控制器，提供图形界面和核心功能：
-- **lcm_tcp_client.py**：LCM TCP 客户端实现，包含断线重连功能，负责与机器人控制系统建立通信
-- **lcm_player_thread.py**：LCM 日志播放线程，用于回放录制的机器人状态日志
-- **motion_window.py**：运控上位机主窗口，提供用户交互界面
-- **lcm/**：LCM Python 库，用于处理 LCM 消息
- 
-### 2. lcm_to_ros2
- 
-LCM 到 ROS2 消息转换工具，实现不同消息系统间的桥接：
-- **autosrc/**：自动生成的源代码，包含各种消息类型的转发器，负责将 LCM 消息转换为 ROS2 消息
-- **lcm/**：LCM 消息定义文件（.lcm格式），定义了各种机器人控制和状态消息的结构
-- **msg/**：ROS2 消息定义文件（.msg格式），与 LCM 消息对应
-- **repub_configs/**：消息转换配置文件，定义了哪些 LCM 消息需要转发到 ROS2，以及如何映射
-- **launch/**：ROS2 launch 文件，用于启动消息转发节点
- 
-### 3. lcm_turn_server
- 
-LCM 转发服务器，用于在不同网络间转发 LCM 消息：
-- **lcm_turn_server.cpp**：服务器核心代码，实现 LCM 消息的接收和转发
-- **build_lcm_turn_server.sh**：构建脚本，用于编译服务器
- 
-### 4. log_playback_ros2
- 
-日志回放工具，用于回放和分析机器人状态日志：
-- **lcm_player.py**：LCM 日志播放器，支持读取和回放 .lcmlog 文件
-- **bigdog.lcmlog**：四足机器人示例日志
-- **humanoid.lcmlog**：人形机器人示例日志
- 
-### 5. magic_vis_ros2
- 
-机器人可视化工具，基于 RViz2 实现机器人模型的 3D 可视化：
-- **launch/**：ROS2 launch 文件，用于启动不同机器人模型的可视化
-- **meshes/**：机器人模型网格文件，包含各种机器人的 3D 模型
-- **include/**：头文件，包含机器人模型定义和可视化相关代码
-- **src/**：源代码，包含机器人模型定义和可视化相关代码
-
-### 6. plotjuggler-ros-plugins
- 
-ROS2 的 PlotJuggler 插件，用于数据可视化和分析：
-- 为 PlotJuggler 提供 ROS2 支持，方便查看和分析 ROS2 话题数据
-- 支持数据录制和回放，帮助开发者分析机器人性能和行为
-
-### 7. plotjuggler-ros-plugins
- 
-- **motion_studio_mode_switch.sh**: 用于切换运控上位机模式的脚本
+---
 
 ## 环境要求
 
-- Ubuntu 22.04 或更高版本
-- ROS2 Jazzy 或兼容版本
-- Conda (用于环境管理)
-- CMake 3.20 或更高版本
-- C++14 兼容编译器
-- Python 3.13 或更高版本
+| 依赖项 | 版本要求 |
+|--------|----------|
+| 操作系统 | Ubuntu 22.04 或更高版本 |
+| ROS2 | Jazzy 或兼容版本 |
+| Python | 3.13 或更高版本 |
+| Conda | 用于环境管理 |
+| CMake | 3.20 或更高版本 |
+| C++ 编译器 | C++14 兼容 |
+| Qt/PySide6 | 6.x 版本 |
 
 ## 安装与设置
 
-### 1. 环境安装
-
-```bash
-# 运行环境安装脚本
-./env_install.sh 1
-```
-该脚本会：
-- 创建名为 `ros2` 的 Conda 环境
-- 安装所需的 Python 依赖包
-
-### 2. 环境初始化
-
-```bash
-# 运行环境初始化脚本
-source env_init.sh
-```
-
-### 3. 编译构建
+### 1. 编译构建
 
 ```bash
 # 运行编译构建脚本
-./build_motion_studio.sh
+./build_motion_studio.sh <password>
 ```
 
 该脚本会：
@@ -137,28 +131,92 @@ source env_init.sh
 - 编译 `plotjuggler-ros-plugins` 包
 - 安装 PlotJuggler 插件到系统目录
 
+---
 
 ## 使用方法
 
-### 1. 运行上位机
+### 1. 启动上位机
 
 ```bash
-# 运行上位机脚本
+# 运行主程序
 ./run_motion_studio.sh
 ```
 
-该脚本会：
-- 启动 LCM 到 ROS2 的消息转换
-- 启动机器人可视化
-- 启动数据可视化工具
+### 2. 主界面功能
 
-### 2. 停止上位机
+| 功能模块 | 说明 |
+|----------|------|
+| **LCM 日志操作** | 播放 LCM 日志文件，支持播放/暂停控制、倍速调节、进度拖动 |
+| **在线监听** | 连接运控板进行实时调试，支持远程启动 `lcm_turn_server` |
+| **ROS2 Bag 操作** | CSV 融合 LCM 快速转换、ROS2 Bag 录制 |
+| **版本信息** | 获取项目版本号、作者信息、仓库地址 |
+
+### 3. 获取版本信息
+
+点击主界面的 **"获取版本信息"** 按钮，即可在右侧日志窗口查看：
+- 当前版本号
+- 历史版本列表
+- 作者信息
+- 仓库地址
+- 当前分支和提交信息
+
+### 4. 停止上位机
 
 ```bash
-# 停止上位机脚本
 ./stop_motion_studio.sh
 ```
 
-该脚本会：
-- 停止所有运行的 ROS2 节点
-- 清理相关进程
+### 5. 更新工具链
+
+```bash
+./upgrade_and_build.sh
+```
+
+---
+
+## 功能特性
+
+### LCM 日志播放
+- ✅ 支持播放/暂停/停止控制
+- ✅ 支持 0.25x ~ 3x 倍速调节
+- ✅ 支持进度条手动拖动
+- ✅ 支持 LCM 转 ROS2 Bag
+
+### 在线调试
+- ✅ 远程传输 `lcm_turn_server`
+- ✅ 自动启动远程服务
+- ✅ 实时心跳监测
+- ✅ 断线重连机制
+
+### 数据转换
+- ✅ LCM 日志转 ROS2 Bag
+- ✅ CSV (quat/pos/vel) 融合转换
+- ✅ 状态机编号支持
+
+### 日志显示
+- ✅ ANSI 颜色代码支持
+- ✅ 实时滚动显示
+- ✅ 时间戳标记
+
+---
+
+## 版本历史
+
+| 版本 | 说明 |
+|------|------|
+| V2.0.0 | 主要功能完善，支持多种机器人平台 |
+| V1.0.3 | 新增机械臂支持 |
+| V1.0.1 | 基础功能完成 |
+| V1.0.0 | 初始版本 |
+
+---
+
+## 技术支持
+
+如有问题或建议，请联系作者或查看项目文档：
+- 📖 项目文档：https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO
+- 👨‍💻 作者：罗敏成
+
+---
+
+**Copyright © 2024 MagicLab. All rights reserved.**
