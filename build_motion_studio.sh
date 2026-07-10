@@ -45,5 +45,6 @@ popd
 
 echo $password | sudo -S cp $(pwd)/src/install/plotjuggler-ros-plugins/lib/plotjuggler-ros-plugins/libTopicPublisherROS2.so /opt/ros/${ROS_DISTRO}/lib/plotjuggler_ros/libTopicPublisherROS2.so
 echo $password | sudo -S cp $(pwd)/src/install/plotjuggler-ros-plugins/lib/plotjuggler-ros-plugins/libDataLoadLCM.so /opt/ros/${ROS_DISTRO}/lib/plotjuggler_ros/libDataLoadLCM.so
+echo $password | sudo -S cp $(pwd)/src/install/plotjuggler-ros-plugins/lib/plotjuggler-ros-plugins/libDataStreamLCM.so /opt/ros/${ROS_DISTRO}/lib/plotjuggler_ros/libDataStreamLCM.so
 
 ./version_info.sh

@@ -21,6 +21,9 @@ add_library( commonROS STATIC
     parser_configuration.cpp
     parser_configuration.h
     ros_parsers/ros2_parser.cpp
+    tokenize.c
+    lcmgen.c
+    LcmTopicDialog.cpp
     ${COMMON_UI_SRC}
 )
 
@@ -36,13 +39,11 @@ target_link_libraries( commonROS
         ${tf2_msgs_TARGETS}
     )
 
-add_library( DataLoadLCM SHARED DataLoadLCM/dataload_lcm.cpp 
-                                DataLoadLCM/LcmTopicDialog.cpp
-                                DataLoadLCM/lcmgen.c
-                                DataLoadLCM/tokenize.c)
-                                
-target_include_directories(DataLoadLCM PRIVATE /usr/include/glib-2.0/ /usr/lib/x86_64-linux-gnu/glib-2.0/include/)
+add_library( DataLoadLCM SHARED DataLoadLCM/dataload_lcm.cpp)
+add_library( DataStreamLCM SHARED DataStreamLCM/datastream_lcm.cpp)
+
 target_link_libraries( DataLoadLCM commonROS lcm)
+target_link_libraries( DataStreamLCM commonROS lcm)
 
 add_library( TopicPublisherROS2 SHARED TopicPublisherROS2/publisher_ros2.cpp)
 target_link_libraries( TopicPublisherROS2 commonROS)
@@ -66,6 +67,7 @@ endif()
 
 install(TARGETS
         DataLoadLCM
+        DataStreamLCM
         TopicPublisherROS2
         DESTINATION  lib/${PROJECT_NAME}
     )

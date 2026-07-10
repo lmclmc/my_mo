@@ -62,6 +62,8 @@ IF (NOT WIN32)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fPIC")
 ENDIF()
 
+INCLUDE_DIRECTORIES(/usr/include/glib-2.0/)
+INCLUDE_DIRECTORIES(/usr/lib/x86_64-linux-gnu/glib-2.0/include/)
 
 add_definitions(-DFMT_HEADER_ONLY)
 
