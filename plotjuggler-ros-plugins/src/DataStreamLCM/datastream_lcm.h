@@ -59,13 +59,14 @@ private:
   std::map<std::string, lcm_struct_t*> lcm_type_table;
   std::shared_ptr<lcm::LCM> lcm_;
   std::unordered_map<std::string, TopicLcmItem_> topic_map;
+  lcm::Subscription* lcm_subscription;
 
   PJ::CompositeParser _parser;
 
   bool _running;
   bool _first_warning;
 
-  std::thread _spinner;
+  std::thread lcm_runner_;
 
   PJ::RosParserConfig _config;
 
@@ -78,9 +79,6 @@ private:
   void loadDefaultSettings();
 
   std::unordered_map<std::string, rclcpp::GenericSubscription::SharedPtr> _subscriptions;
-
-  void subscribeToTopic(const std::string& topic_name, const std::string& topic_type);
-  void waitOneSecond();
 };
 
 #endif

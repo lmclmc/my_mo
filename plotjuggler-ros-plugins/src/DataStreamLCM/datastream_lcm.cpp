@@ -72,37 +72,6 @@ DataStreamLCM::DataStreamLCM() : DataStreamer(), _node(nullptr), _running(false)
   _executor = std::make_unique<rclcpp::executors::MultiThreadedExecutor>(exec_args, 2);
 }
 
-void DataStreamLCM::waitOneSecond()
-{
-  using namespace std::chrono;
-  milliseconds wait_time_ms(1000);
-
-  QProgressDialog progress_dialog;
-  progress_dialog.setLabelText("Collecting ROS topic samples to understand data layout.");
-  progress_dialog.setRange(0, wait_time_ms.count());
-  progress_dialog.setAutoClose(true);
-  progress_dialog.setAutoReset(true);
-  progress_dialog.show();
-
-  auto start_time = system_clock::now();
-
-  while (system_clock::now() - start_time < (wait_time_ms))
-  {
-    int msec = duration_cast<milliseconds>(system_clock::now() - start_time).count();
-    progress_dialog.setValue(msec);
-    QApplication::processEvents();
-    if (progress_dialog.wasCanceled())
-    {
-      break;
-    }
-  }
-
-  if (progress_dialog.wasCanceled() == false)
-  {
-    progress_dialog.cancel();
-  }
-}
-
 int DataStreamLCM::decode_type(const lcm::ReceiveBuffer* recvbuf, int offset,
                                const std::string& type, const std::string& base, int deep) {
     int pos_offset = offset;
@@ -325,6 +294,12 @@ void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::
     if (!channel_match) {
       std::cerr << "Warning: Hash mismatch for channel " << topic_name << ". Skipping event." << std::endl;
       QMessageBox::warning(nullptr, tr("Error"), "话题：" + QString::fromStdString(topic_name) + "类型不匹配，退出。。。。。。");
+      _running = false;
+      if (lcm_runner_.joinable()) {
+        lcm_runner_.join();
+      }
+
+      lcm_->unsubscribe(lcm_subscription);
       return;
     }
   }
@@ -423,118 +398,20 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
     }
   }
 
-  lcm_->subscribe(".*", &DataStreamLCM::handleMessage, this);
-
-  std::thread([this] {
-    while (1) {
+  lcm_subscription = lcm_->subscribe(".*", &DataStreamLCM::handleMessage, this);
+  _running = true;
+  lcm_runner_ = std::thread([this] {
+    while (_running) {
       lcm_->handle();
     }
-  }).detach();
+  });
   
-  return true;
-  // std::thread([this] {
-  //   long long value = 0;
-  //   while (1)
-  //   {
-  //     usleep(50000);
-  //     std::cout << "DataStreamLCM::running" << std::endl;
-  //     auto itr = this->dataMap().numeric.find("123");
-  //     if (itr == this->dataMap().numeric.end()) {
-  //       itr = this->dataMap().addNumeric("123");
-  //     }
-
-  //     // auto now = std::chrono::high_resolution_clock::now();
-  //     // double diff = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
-  //     itr->second.pushBack({ _node->get_clock()->now().seconds(), value++ });
-  //   }
-  // }).detach();
-  // if (!_node)
-  // {
-  //   auto node_opts = rclcpp::NodeOptions();
-  //   node_opts.context(_context);
-  //   _node = std::make_shared<rclcpp::Node>("plotjuggler", node_opts);
-  //   _executor->add_node(_node);
-  // }
-
-  // {
-  //   std::lock_guard<std::mutex> lock(mutex());
-  //   dataMap().numeric.clear();
-  //   dataMap().user_defined.clear();
-  //   _parser.clear();
-  // }
-
-  // // Display the dialog which allows users to select ros topics to subscribe to,
-  // // and continuously update the list of available topicslcm
-  // // We start with an empty topic list
-  // std::vector<std::pair<QString, QString>> dialog_topics;
-  // DialogSelectRosTopics dialog(dialog_topics, _config);
-
-  // QTimer update_list_timer;
-  // update_list_timer.setSingleShot(false);
-  // update_list_timer.setInterval(1000);
-  // update_list_timer.start();
-
-  // auto getTopicsFromNode = [&]() {
-  //   dialog_topics.clear();
-  //   auto topic_list = _node->get_topic_names_and_types();
-  //   for (const auto& topic : topic_list)
-  //   {
-  //     // TODO: Handle topics with multiple types
-  //     auto topic_name = QString::fromStdString(topic.first);
-  //     auto type_name = QString::fromStdString(topic.second[0]);
-  //     dialog_topics.push_back({ topic_name, type_name });
-  //   }
-  //   dialog.updateTopicList(dialog_topics);
-  // };
-
-  // getTopicsFromNode();
-
-  // connect(&update_list_timer, &QTimer::timeout, getTopicsFromNode);
-
-  // int res = dialog.exec();
-  // _config = dialog.getResult();
-  // update_list_timer.stop();
-
-  // // If no topics were selected, or the OK button was not pressed, do nothing
-  // if (res != QDialog::Accepted || _config.topics.empty())
-  // {
-  //   return false;
-  // }
-
-  // saveDefaultSettings();
-  // _parser.setConfig(_config);
-
-  // //--------- subscribe ---------
-  // for (const auto& topic : dialog_topics)
-  // {
-  //   if (_config.topics.contains(topic.first))
-  //   {
-  //     subscribeToTopic(topic.first.toStdString(), topic.second.toStdString());
-  //   }
-  // }
-  // //-----------------------------
-  // _clock = rclcpp::Clock();
-  // _start_time = _clock.now().nanoseconds();
-  // _running = true;
-  // _first_warning = true;
-
-  // _spinner = std::thread([this]() {
-  //   while (_running)
-  //   {
-  //     if (_executor)
-  //     {
-  //       _executor->spin_once(std::chrono::milliseconds(5));
-  //     }
-  //   }
-  // });
-
-  // //-----------------------------
-  // waitOneSecond();
   return true;
 }
 
 bool DataStreamLCM::isRunning() const
 {
+  std::cout << "DataStreamLCM::isRunning" << std::endl;
   return _running;
 }
 
@@ -542,17 +419,12 @@ void DataStreamLCM::shutdown()
 {
   std::cout << "DataStreamLCM::shutdown" << std::endl;
   _running = false;
-  if (_spinner.joinable())
+  if (lcm_runner_.joinable())
   {
-    _spinner.join();
+    lcm_runner_.join();
   }
 
-  _subscriptions.clear();
-  if (_node)
-  {
-    _executor->remove_node(_node);
-    _node.reset();
-  }
+  lcm_->unsubscribe(lcm_subscription);
 }
 
 DataStreamLCM::~DataStreamLCM()
@@ -565,69 +437,6 @@ const std::vector<QAction*>& DataStreamLCM::availableActions()
   static std::vector<QAction*> empty;
   return empty;
 }
-
-// void DataStreamLCM::subscribeToTopic(const std::string& topic_name, const std::string& topic_type)
-// {
-//   if (_subscriptions.find(topic_name) != _subscriptions.end())
-//   {
-//     return;
-//   }
-
-//   if (!_parser.hasParser(topic_name))
-//   {
-//     _parser.addParser(topic_name, CreateParserROS2(*parserFactories(), topic_name, topic_type, dataMap()));
-//   }
-
-//   auto bound_callback = [=](std::shared_ptr<rclcpp::SerializedMessage> msg) { messageCallback(topic_name, msg); };
-
-//   auto publisher_info = _node->get_publishers_info_by_topic(topic_name);
-//   auto detected_qos = adapt_request_to_offers(topic_name, publisher_info);
-
-//   // double subscription, latching or not
-//   auto subscription = _node->create_generic_subscription(topic_name, topic_type, detected_qos, bound_callback);
-//   _subscriptions[topic_name] = subscription;
-//   _node->get_node_topics_interface()->add_subscription(subscription, nullptr);
-// }
-
-// void DataStreamLCM::messageCallback(const std::string& topic_name, std::shared_ptr<rclcpp::SerializedMessage> msg)
-// {
-//   std::cout << "messageCallback" << std::endl;
-//   static long value = 0;
-//   auto itr = this->dataMap().numeric.find("123");
-//   if (itr == this->dataMap().numeric.end()) {
-//   itr = this->dataMap().addNumeric("123");
-//   }
-
-//   // auto now = std::chrono::high_resolution_clock::now();
-//   // double diff = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
-//   itr->second.pushBack({ _node->get_clock()->now().seconds(), value++ });
-//   emit dataReceived();
-//   return;
-
-
-//   double timestamp = _node->get_clock()->now().seconds();
-//   try
-//   {
-//     std::unique_lock<std::mutex> lock(mutex());
-
-//     auto msg_ptr = msg.get()->get_rcl_serialized_message();
-//     PJ::MessageRef msg_ref(msg_ptr.buffer, msg_ptr.buffer_length);
-
-//     _parser.parseMessage(topic_name, msg_ref, timestamp);
-//   }
-//   catch (std::runtime_error& ex)
-//   {
-//     if (_first_warning)
-//     {
-//       _first_warning = false;
-//       QMessageBox::warning(nullptr, tr("Error"),
-//                            QString("rosbag::open thrown an exception:\n") + QString(ex.what()) +
-//                                "\nThis message will be shown only once.");
-//     }
-//   }
-
-//   emit dataReceived();
-// }
 
 void DataStreamLCM::saveDefaultSettings()
 {
