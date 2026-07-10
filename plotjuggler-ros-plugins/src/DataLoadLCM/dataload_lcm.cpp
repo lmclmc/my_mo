@@ -1,7 +1,5 @@
 #include "dataload_lcm.h"
-#include "dialog_select_ros_topics.h"
 #include "LcmTopicDialog.h"
-#include "ros_parsers/ros2_parser.h"
 
 #include <QTextStream>
 #include <QFile>
@@ -276,9 +274,8 @@ int DataLoadLCM::decode_type(const lcm::LogEvent* event, int offset,
 
 bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& plot_map) {
   plot_data = &plot_map;
-  auto metadata_io = std::make_unique<rosbag2_storage::MetadataIo>();
+  
   LcmTopicDialog* dialog = new LcmTopicDialog();
-
   if (dialog->exec() != static_cast<int>(QDialog::Accepted))
   {
     std::cout << "Dialog canceled or closed." << std::endl;

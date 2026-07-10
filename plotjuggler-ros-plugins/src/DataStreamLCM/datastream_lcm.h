@@ -3,18 +3,27 @@
 
 #include <QtPlugin>
 #include <QTimer>
-
 #include <PlotJuggler/datastreamer_base.h>
+#include <lcm/lcm-cpp.hpp>
+#include <lcm/lcm_coretypes.h>
 
 #include "dialog_select_ros_topics.h"
 #include "ros_parsers/ros2_parser.h"
 #include "rclcpp/generic_subscription.hpp"
+#include "lcmgen.h"
+#include "tokenize.h"
 
 class DataStreamLCM : public PJ::DataStreamer
 {
   Q_OBJECT
   Q_PLUGIN_METADATA(IID "facontidavide.PlotJuggler3.ROS2DataStreamer")
   Q_INTERFACES(PJ::DataStreamer)
+
+typedef struct TopicLcmItem_ {
+    int64_t hash;
+    std::vector<lcmgen_t*> lcmgen_table;
+    std::string lcmFilePath;
+} TopicLcmItem_;
 
 public:
   DataStreamLCM();
@@ -39,12 +48,17 @@ public:
   const std::vector<QAction*>& availableActions() override;
 
 private:
-  void messageCallback(const std::string& topic_name, std::shared_ptr<rclcpp::SerializedMessage> msg);
+  void handleMessage(const lcm::ReceiveBuffer*, const std::string&);
+  int decode_type(const lcm::ReceiveBuffer*, int, const std::string&, const std::string&, int deep= 0) ;
 
 private:
   std::shared_ptr<rclcpp::Context> _context;
   std::unique_ptr<rclcpp::executors::MultiThreadedExecutor> _executor;
   std::shared_ptr<rclcpp::Node> _node;
+
+  std::map<std::string, lcm_struct_t*> lcm_type_table;
+  std::shared_ptr<lcm::LCM> lcm_;
+  std::unordered_map<std::string, TopicLcmItem_> topic_map;
 
   PJ::CompositeParser _parser;
 

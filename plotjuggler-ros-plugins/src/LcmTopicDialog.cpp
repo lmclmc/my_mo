@@ -38,6 +38,23 @@ void LcmTopicDialog::setupUI()
     mainLayout->setContentsMargins(12,12,12,12);
     mainLayout->setSpacing(10);
 
+    // 端口输入区域 - 在界面上方
+    QHBoxLayout* portLayout = new QHBoxLayout();
+    portLayout->setSpacing(8);
+    
+    QLabel* portLabel = new QLabel("LCM 订阅 端口号:");
+    portLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+    
+    m_portEdit = new QLineEdit();
+    m_portEdit->setPlaceholderText("Enter LCM port");
+    m_portEdit->setFixedWidth(300);
+    
+    portLayout->addWidget(portLabel);
+    portLayout->addWidget(m_portEdit);
+    portLayout->addStretch();  // 右侧填充
+    
+    mainLayout->addLayout(portLayout);
+
     // 表格控件：2列
     m_table = new QTableWidget();
     m_table->setColumnCount(2);

@@ -30,6 +30,9 @@ public:
     QVector<TopicLcmItem> getConfig() const;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
+public:
+    QString getPort() const { return m_portEdit->text().trimmed(); }
+
 private:
     void setupUI();
     void addEmptyRow();
@@ -46,6 +49,7 @@ private:
     QPushButton* m_btnSaveCfg;
     QPushButton* m_btnLoadCfg;
     QPushButton* m_btnConfirm;
+    QLineEdit* m_portEdit;  // 端口输入框
 };
 
 #endif // LCMTOPICDIALOG_H

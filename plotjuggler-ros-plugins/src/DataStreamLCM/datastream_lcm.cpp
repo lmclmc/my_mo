@@ -1,4 +1,5 @@
 #include "datastream_lcm.h"
+#include "LcmTopicDialog.h"
 
 #include <QDebug>
 #include <QTimer>
@@ -102,90 +103,433 @@ void DataStreamLCM::waitOneSecond()
   }
 }
 
+int DataStreamLCM::decode_type(const lcm::ReceiveBuffer* recvbuf, int offset,
+                               const std::string& type, const std::string& base, int deep) {
+    int pos_offset = offset;
+    int decode_len = 0;
+   // std::cout << "deep: " << deep << std::endl;
+   // std::cout << dec << std::endl;   // 255 切回十进制
+   // std::cout << "offset: " << pos_offset << std::endl;
+    if (auto lcm_struct_type = lcm_type_table.find(type); lcm_struct_type != lcm_type_table.end()) {
+        lcm_struct_t* struct_item = lcm_struct_type->second;
+        for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
+            lcm_member_t* member = (lcm_member_t*) g_ptr_array_index(struct_item->members, mind);
+            auto itr = dataMap().numeric.find(base + member->membername);
+            if (itr == dataMap().numeric.end()) {
+              itr = dataMap().addNumeric(base + member->membername);
+            }
+
+            double local_timestamp = (double)recvbuf->recv_utime / 1000000;
+            if (g_ptr_array_size(member->dimensions) == 0) {
+                if (!strcmp(member->type->lctypename, "int8_t")) {
+                  int8_t value;
+                  int tlen = __int8_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ local_timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "int16_t")) {
+                  int16_t value;
+                  int tlen = __int16_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ local_timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "int32_t")) {
+                  int32_t value;
+                  int tlen = __int32_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ local_timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "int64_t")) {
+                  int64_t value;
+                  int tlen = __int64_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ local_timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "float")) {
+                  float value;
+                  int tlen = __float_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ local_timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "double")) {
+                  double value;
+                  int tlen = __double_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ local_timestamp, value });
+                } else if (!strcmp(member->type->lctypename, "string")) {
+                  int32_t __d_len__;
+                  int tlen = __int32_t_decode_array(
+                      recvbuf->data, pos_offset, recvbuf->data_size, &__d_len__, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  if(__d_len__ > recvbuf->data_size - pos_offset || __d_len__ <= 0) break;
+                  std::string lcm_str(static_cast<const char*>(recvbuf->data) + pos_offset,  __d_len__ - 1);
+                  pos_offset += __d_len__;
+                  decode_len += __d_len__;
+                  auto str_itr = dataMap().strings.find(base + member->membername);
+                  if (str_itr == dataMap().strings.end()) {
+                    str_itr = dataMap().addStringSeries(base + member->membername);
+                  }
+                 str_itr->second.pushBack({ local_timestamp, lcm_str });
+                } else if (!strcmp(member->type->lctypename, "boolean")) {
+                  int8_t value;
+                  int tlen = __boolean_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                  itr->second.pushBack({ local_timestamp, value });
+                } else {
+                  int tlen = decode_type(recvbuf, pos_offset, member->type->lctypename, base + member->membername + "/", deep + 1);
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                }
+            } else {
+                if (lcm_is_constant_size_array(member)) {
+                    for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
+                        lcm_dimension_t *ld =
+                            (lcm_dimension_t *) g_ptr_array_index(member->dimensions, d);
+                        
+                        for (size_t i = 0; i < atoi(ld->size); i++) {
+                            auto itr = dataMap().numeric.find(base + member->membername + "/" + std::to_string(i));
+                            if (itr == dataMap().numeric.end()) {
+                              itr = dataMap().addNumeric(base + member->membername + "/" + std::to_string(i));
+                            }
+
+                            if (!strcmp(member->type->lctypename, "int8_t")) {
+                              int8_t value;
+                              int tlen = __int8_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ local_timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "int16_t")) {
+                              int16_t value;
+                              int tlen = __int16_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ local_timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "int32_t")) {
+                              int32_t value;
+                              int tlen = __int32_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ local_timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "int64_t")) {
+                              int64_t value;
+                              int tlen = __int64_t_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ local_timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "float")) {
+                              float value;
+                              int tlen = __float_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ local_timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "double")) {
+                              double value;
+                              int tlen = __double_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              itr->second.pushBack({ local_timestamp, value });
+                            } else if (!strcmp(member->type->lctypename, "string")) { 
+                              int32_t __d_len__;
+                              int tlen = __int32_t_decode_array(
+                                  recvbuf->data, pos_offset, recvbuf->data_size, &__d_len__, 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                              if(__d_len__ > recvbuf->data_size - pos_offset || __d_len__ <= 0) break;
+                              std::string lcm_str(static_cast<const char*>(recvbuf->data) + pos_offset,  __d_len__ - 1);
+                              pos_offset += __d_len__;
+                              decode_len += tlen;
+                              auto str_itr = dataMap().strings.find(base + member->membername + "/" + std::to_string(i));
+                              if (str_itr == dataMap().strings.end()) {
+                                str_itr = dataMap().addStringSeries(base + member->membername + "/" + std::to_string(i));
+                              }
+                              str_itr->second.pushBack({ local_timestamp, lcm_str });
+                            } else if (!strcmp(member->type->lctypename, "boolean")) {
+                              int8_t value;
+                              int tlen = __boolean_decode_array(recvbuf->data, pos_offset, recvbuf->data_size, &value, 1);
+                              if(tlen < 0) return tlen; else pos_offset += tlen;
+                              itr->second.pushBack({ local_timestamp, value });
+                            } else {
+                              int tlen = decode_type(recvbuf, pos_offset, member->type->lctypename, base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
+                              if(tlen < 0) break; else {
+                                pos_offset += tlen;
+                                decode_len += tlen;
+                              }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return decode_len;
+}
+
+void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
+  if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
+  // int64_t msg_hash;
+  // memcpy(&msg_hash, recvbuf->data, sizeof(int64_t));
+  // msg_hash = be64toh(msg_hash);
+
+  if (auto it = topic_map.find(topic_name); it != topic_map.end()) {
+    bool channel_match = false;
+    for (auto topic_lcmgen : it->second.lcmgen_table) {
+      int64_t msg_hash;
+      int thislen = __int64_t_decode_array(recvbuf->data, 0, recvbuf->data_size, &msg_hash, 1);
+      for (int struct_idx = 0; struct_idx < topic_lcmgen->structs->len; struct_idx++) {
+        lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(topic_lcmgen->structs, struct_idx);
+        if (msg_hash == ((struct_item->hash<<1) + ((struct_item->hash>>63)&1))) {
+          decode_type(recvbuf, 8, struct_item->structname->lctypename, topic_name + "/");
+          channel_match = true;
+          break;
+        }
+      }
+    }
+
+    if (!channel_match) {
+      std::cerr << "Warning: Hash mismatch for channel " << topic_name << ". Skipping event." << std::endl;
+      QMessageBox::warning(nullptr, tr("Error"), "话题：" + QString::fromStdString(topic_name) + "类型不匹配，退出。。。。。。");
+      return;
+    }
+  }
+
+  emit dataReceived();
+}
+
 bool DataStreamLCM::start(QStringList* selected_datasources)
 {
-  if (!_node)
+  LcmTopicDialog* dialog = new LcmTopicDialog();
+  if (dialog->exec() != static_cast<int>(QDialog::Accepted))
   {
-    auto node_opts = rclcpp::NodeOptions();
-    node_opts.context(_context);
-    _node = std::make_shared<rclcpp::Node>("plotjuggler", node_opts);
-    _executor->add_node(_node);
-  }
-
-  {
-    std::lock_guard<std::mutex> lock(mutex());
-    dataMap().numeric.clear();
-    dataMap().user_defined.clear();
-    _parser.clear();
-  }
-
-  // Display the dialog which allows users to select ros topics to subscribe to,
-  // and continuously update the list of available topics
-  // We start with an empty topic list
-  std::vector<std::pair<QString, QString>> dialog_topics;
-  DialogSelectRosTopics dialog(dialog_topics, _config);
-
-  QTimer update_list_timer;
-  update_list_timer.setSingleShot(false);
-  update_list_timer.setInterval(1000);
-  update_list_timer.start();
-
-  auto getTopicsFromNode = [&]() {
-    dialog_topics.clear();
-    auto topic_list = _node->get_topic_names_and_types();
-    for (const auto& topic : topic_list)
-    {
-      // TODO: Handle topics with multiple types
-      auto topic_name = QString::fromStdString(topic.first);
-      auto type_name = QString::fromStdString(topic.second[0]);
-      dialog_topics.push_back({ topic_name, type_name });
-    }
-    dialog.updateTopicList(dialog_topics);
-  };
-
-  getTopicsFromNode();
-
-  connect(&update_list_timer, &QTimer::timeout, getTopicsFromNode);
-
-  int res = dialog.exec();
-  _config = dialog.getResult();
-  update_list_timer.stop();
-
-  // If no topics were selected, or the OK button was not pressed, do nothing
-  if (res != QDialog::Accepted || _config.topics.empty())
-  {
+    std::cout << "Dialog canceled or closed." << std::endl;
+    delete dialog;
     return false;
   }
 
-  saveDefaultSettings();
-  _parser.setConfig(_config);
+  typedef struct TopicLcmItem {
+    int64_t hash;
+    std::vector<lcmgen_t*> lcmgen_table;
+    std::string lcmFilePath;
+  } TopicLcmItem;
+  
+  topic_map.clear();
+  auto _config = dialog->getConfig();
 
-  //--------- subscribe ---------
-  for (const auto& topic : dialog_topics)
-  {
-    if (_config.topics.contains(topic.first))
-    {
-      subscribeToTopic(topic.first.toStdString(), topic.second.toStdString());
+  lcm_type_table.clear();
+  lcm_type_table["int8_t"] = nullptr;
+  lcm_type_table["int16_t"] = nullptr;
+  lcm_type_table["int32_t"] = nullptr;
+  lcm_type_table["int64_t"] = nullptr;
+  lcm_type_table["float"] = nullptr;
+  lcm_type_table["double"] = nullptr;
+  lcm_type_table["string"] = nullptr;
+  lcm_type_table["boolean"] = nullptr;
+  
+  for (const auto& item : _config) {
+    if (item.lcmFilePath.isEmpty()) continue;
+    lcmgen_t* lcmgen = lcmgen_create();
+    tokenize_t* t = tokenize_create(item.lcmFilePath.toStdString().c_str());
+    int res;
+    do {
+        res = parse_entity(lcmgen, item.lcmFilePath.toStdString().c_str(), t);
+        if (res == -10) {
+          QMessageBox::warning(nullptr, tr("Error"), "文件  " + item.lcmFilePath + "格式错误. 退出加载...........");
+          return false;
+        }
+    } while (res == 0);
+
+    for (int struct_idx = 0; struct_idx < lcmgen->structs->len; struct_idx++) {
+      lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, struct_idx);
+      lcm_type_table[struct_item->structname->lctypename] = struct_item;
     }
-  }
-  //-----------------------------
-  _clock = rclcpp::Clock();
-  _start_time = _clock.now().nanoseconds();
-  _running = true;
-  _first_warning = true;
 
-  _spinner = std::thread([this]() {
-    while (_running)
-    {
-      if (_executor)
-      {
-        _executor->spin_once(std::chrono::milliseconds(5));
+    int64_t hash = 0;
+    if (lcmgen->structs->len > 0) {
+        lcm_struct_t* last_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, lcmgen->structs->len - 1);
+        hash = last_item->hash;
+    }
+
+    tokenize_destroy(t);
+
+    if (auto it = topic_map.find(item.topic.toStdString()); it == topic_map.end()) {
+      topic_map[item.topic.toStdString()] = {hash, {lcmgen}, item.lcmFilePath.toStdString()};
+    } else {
+      it->second.lcmgen_table.push_back(lcmgen);
+    }
+
+    std::cout << "item.topic: " << item.topic.toStdString() << std::endl;
+    std::cout << "item.lcmFilePath: " << item.lcmFilePath.toStdString() << std::endl;
+  }
+  QString lcm_url = QString::fromStdString("udpm://239.255.76.67:") + dialog->getPort();
+  lcm_ = std::make_shared<lcm::LCM>(lcm_url.toStdString()); // 使用全局变量
+  delete dialog;
+
+  for (auto& pair : topic_map) {
+    for (auto lcmgen : pair.second.lcmgen_table) {
+      for (int struct_idx = 0; struct_idx < lcmgen->structs->len; struct_idx++) {
+        lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, struct_idx);
+        if (g_ptr_array_size(struct_item->members)) {
+          for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
+            lcm_member_t *member = (lcm_member_t *) g_ptr_array_index(struct_item->members, mind);
+            if (auto it = lcm_type_table.find(member->type->lctypename); it != lcm_type_table.end()) {
+              if (it->second) {
+                uint64_t hash = struct_item->hash + (it->second->hash<<1) + ((it->second->hash>>63)&1);
+                struct_item->hash = hash;
+                pair.second.hash = hash;
+              }
+            } else {
+              QMessageBox::warning(nullptr, tr("Error"), "类型  " + QString::fromStdString(member->type->lctypename) + " 未定义. 退出加载...........");
+              return false;
+            }
+          }
+        }
       }
     }
-  });
+  }
 
-  //-----------------------------
-  waitOneSecond();
+  lcm_->subscribe(".*", &DataStreamLCM::handleMessage, this);
+
+  std::thread([this] {
+    while (1) {
+      lcm_->handle();
+    }
+  }).detach();
+  
+  return true;
+  // std::thread([this] {
+  //   long long value = 0;
+  //   while (1)
+  //   {
+  //     usleep(50000);
+  //     std::cout << "DataStreamLCM::running" << std::endl;
+  //     auto itr = this->dataMap().numeric.find("123");
+  //     if (itr == this->dataMap().numeric.end()) {
+  //       itr = this->dataMap().addNumeric("123");
+  //     }
+
+  //     // auto now = std::chrono::high_resolution_clock::now();
+  //     // double diff = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+  //     itr->second.pushBack({ _node->get_clock()->now().seconds(), value++ });
+  //   }
+  // }).detach();
+  // if (!_node)
+  // {
+  //   auto node_opts = rclcpp::NodeOptions();
+  //   node_opts.context(_context);
+  //   _node = std::make_shared<rclcpp::Node>("plotjuggler", node_opts);
+  //   _executor->add_node(_node);
+  // }
+
+  // {
+  //   std::lock_guard<std::mutex> lock(mutex());
+  //   dataMap().numeric.clear();
+  //   dataMap().user_defined.clear();
+  //   _parser.clear();
+  // }
+
+  // // Display the dialog which allows users to select ros topics to subscribe to,
+  // // and continuously update the list of available topicslcm
+  // // We start with an empty topic list
+  // std::vector<std::pair<QString, QString>> dialog_topics;
+  // DialogSelectRosTopics dialog(dialog_topics, _config);
+
+  // QTimer update_list_timer;
+  // update_list_timer.setSingleShot(false);
+  // update_list_timer.setInterval(1000);
+  // update_list_timer.start();
+
+  // auto getTopicsFromNode = [&]() {
+  //   dialog_topics.clear();
+  //   auto topic_list = _node->get_topic_names_and_types();
+  //   for (const auto& topic : topic_list)
+  //   {
+  //     // TODO: Handle topics with multiple types
+  //     auto topic_name = QString::fromStdString(topic.first);
+  //     auto type_name = QString::fromStdString(topic.second[0]);
+  //     dialog_topics.push_back({ topic_name, type_name });
+  //   }
+  //   dialog.updateTopicList(dialog_topics);
+  // };
+
+  // getTopicsFromNode();
+
+  // connect(&update_list_timer, &QTimer::timeout, getTopicsFromNode);
+
+  // int res = dialog.exec();
+  // _config = dialog.getResult();
+  // update_list_timer.stop();
+
+  // // If no topics were selected, or the OK button was not pressed, do nothing
+  // if (res != QDialog::Accepted || _config.topics.empty())
+  // {
+  //   return false;
+  // }
+
+  // saveDefaultSettings();
+  // _parser.setConfig(_config);
+
+  // //--------- subscribe ---------
+  // for (const auto& topic : dialog_topics)
+  // {
+  //   if (_config.topics.contains(topic.first))
+  //   {
+  //     subscribeToTopic(topic.first.toStdString(), topic.second.toStdString());
+  //   }
+  // }
+  // //-----------------------------
+  // _clock = rclcpp::Clock();
+  // _start_time = _clock.now().nanoseconds();
+  // _running = true;
+  // _first_warning = true;
+
+  // _spinner = std::thread([this]() {
+  //   while (_running)
+  //   {
+  //     if (_executor)
+  //     {
+  //       _executor->spin_once(std::chrono::milliseconds(5));
+  //     }
+  //   }
+  // });
+
+  // //-----------------------------
+  // waitOneSecond();
   return true;
 }
 
@@ -196,6 +540,7 @@ bool DataStreamLCM::isRunning() const
 
 void DataStreamLCM::shutdown()
 {
+  std::cout << "DataStreamLCM::shutdown" << std::endl;
   _running = false;
   if (_spinner.joinable())
   {
@@ -221,54 +566,68 @@ const std::vector<QAction*>& DataStreamLCM::availableActions()
   return empty;
 }
 
-void DataStreamLCM::subscribeToTopic(const std::string& topic_name, const std::string& topic_type)
-{
-  if (_subscriptions.find(topic_name) != _subscriptions.end())
-  {
-    return;
-  }
+// void DataStreamLCM::subscribeToTopic(const std::string& topic_name, const std::string& topic_type)
+// {
+//   if (_subscriptions.find(topic_name) != _subscriptions.end())
+//   {
+//     return;
+//   }
 
-  if (!_parser.hasParser(topic_name))
-  {
-    _parser.addParser(topic_name, CreateParserROS2(*parserFactories(), topic_name, topic_type, dataMap()));
-  }
+//   if (!_parser.hasParser(topic_name))
+//   {
+//     _parser.addParser(topic_name, CreateParserROS2(*parserFactories(), topic_name, topic_type, dataMap()));
+//   }
 
-  auto bound_callback = [=](std::shared_ptr<rclcpp::SerializedMessage> msg) { messageCallback(topic_name, msg); };
+//   auto bound_callback = [=](std::shared_ptr<rclcpp::SerializedMessage> msg) { messageCallback(topic_name, msg); };
 
-  auto publisher_info = _node->get_publishers_info_by_topic(topic_name);
-  auto detected_qos = adapt_request_to_offers(topic_name, publisher_info);
+//   auto publisher_info = _node->get_publishers_info_by_topic(topic_name);
+//   auto detected_qos = adapt_request_to_offers(topic_name, publisher_info);
 
-  // double subscription, latching or not
-  auto subscription = _node->create_generic_subscription(topic_name, topic_type, detected_qos, bound_callback);
-  _subscriptions[topic_name] = subscription;
-  _node->get_node_topics_interface()->add_subscription(subscription, nullptr);
-}
+//   // double subscription, latching or not
+//   auto subscription = _node->create_generic_subscription(topic_name, topic_type, detected_qos, bound_callback);
+//   _subscriptions[topic_name] = subscription;
+//   _node->get_node_topics_interface()->add_subscription(subscription, nullptr);
+// }
 
-void DataStreamLCM::messageCallback(const std::string& topic_name, std::shared_ptr<rclcpp::SerializedMessage> msg)
-{
-  double timestamp = _node->get_clock()->now().seconds();
-  try
-  {
-    std::unique_lock<std::mutex> lock(mutex());
+// void DataStreamLCM::messageCallback(const std::string& topic_name, std::shared_ptr<rclcpp::SerializedMessage> msg)
+// {
+//   std::cout << "messageCallback" << std::endl;
+//   static long value = 0;
+//   auto itr = this->dataMap().numeric.find("123");
+//   if (itr == this->dataMap().numeric.end()) {
+//   itr = this->dataMap().addNumeric("123");
+//   }
 
-    auto msg_ptr = msg.get()->get_rcl_serialized_message();
-    PJ::MessageRef msg_ref(msg_ptr.buffer, msg_ptr.buffer_length);
+//   // auto now = std::chrono::high_resolution_clock::now();
+//   // double diff = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+//   itr->second.pushBack({ _node->get_clock()->now().seconds(), value++ });
+//   emit dataReceived();
+//   return;
 
-    _parser.parseMessage(topic_name, msg_ref, timestamp);
-  }
-  catch (std::runtime_error& ex)
-  {
-    if (_first_warning)
-    {
-      _first_warning = false;
-      QMessageBox::warning(nullptr, tr("Error"),
-                           QString("rosbag::open thrown an exception:\n") + QString(ex.what()) +
-                               "\nThis message will be shown only once.");
-    }
-  }
 
-  emit dataReceived();
-}
+//   double timestamp = _node->get_clock()->now().seconds();
+//   try
+//   {
+//     std::unique_lock<std::mutex> lock(mutex());
+
+//     auto msg_ptr = msg.get()->get_rcl_serialized_message();
+//     PJ::MessageRef msg_ref(msg_ptr.buffer, msg_ptr.buffer_length);
+
+//     _parser.parseMessage(topic_name, msg_ref, timestamp);
+//   }
+//   catch (std::runtime_error& ex)
+//   {
+//     if (_first_warning)
+//     {
+//       _first_warning = false;
+//       QMessageBox::warning(nullptr, tr("Error"),
+//                            QString("rosbag::open thrown an exception:\n") + QString(ex.what()) +
+//                                "\nThis message will be shown only once.");
+//     }
+//   }
+
+//   emit dataReceived();
+// }
 
 void DataStreamLCM::saveDefaultSettings()
 {
