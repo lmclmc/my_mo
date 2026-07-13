@@ -3,20 +3,19 @@
 
 #include <QtPlugin>
 #include <QTimer>
+#include <thread>
 #include <PlotJuggler/datastreamer_base.h>
 #include <lcm/lcm-cpp.hpp>
 #include <lcm/lcm_coretypes.h>
 
-#include "dialog_select_ros_topics.h"
-#include "ros_parsers/ros2_parser.h"
-#include "rclcpp/generic_subscription.hpp"
+#include "../parser_configuration.h"
 #include "lcmgen.h"
 #include "tokenize.h"
 
 class DataStreamLCM : public PJ::DataStreamer
 {
   Q_OBJECT
-  Q_PLUGIN_METADATA(IID "facontidavide.PlotJuggler3.ROS2DataStreamer")
+  Q_PLUGIN_METADATA(IID "facontidavide.PlotJuggler3.DataStreamer")
   Q_INTERFACES(PJ::DataStreamer)
 
 typedef struct TopicLcmItem_ {
@@ -52,16 +51,10 @@ private:
   int decode_type(const lcm::ReceiveBuffer*, int, const std::string&, const std::string&, int deep= 0) ;
 
 private:
-  std::shared_ptr<rclcpp::Context> _context;
-  std::unique_ptr<rclcpp::executors::MultiThreadedExecutor> _executor;
-  std::shared_ptr<rclcpp::Node> _node;
-
   std::map<std::string, lcm_struct_t*> lcm_type_table;
   std::shared_ptr<lcm::LCM> lcm_;
   std::unordered_map<std::string, TopicLcmItem_> topic_map;
   lcm::Subscription* lcm_subscription;
-
-  PJ::CompositeParser _parser;
 
   bool _running;
   bool _first_warning;
@@ -70,15 +63,9 @@ private:
 
   PJ::RosParserConfig _config;
 
-  rclcpp::Clock _clock;
-
-  rcl_time_point_value_t _start_time;
-
   void saveDefaultSettings();
 
   void loadDefaultSettings();
-
-  std::unordered_map<std::string, rclcpp::GenericSubscription::SharedPtr> _subscriptions;
 };
 
 #endif

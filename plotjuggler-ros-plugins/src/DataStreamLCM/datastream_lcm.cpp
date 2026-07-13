@@ -7,69 +7,12 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QProgressDialog>
-#include "rclcpp/generic_subscription.hpp"
 
 // function taken from rosbag2_transport
 
-rclcpp::QoS adapt_request_to_offers(const std::string& topic_name,
-                                    const std::vector<rclcpp::TopicEndpointInfo>& endpoints)
-{
-  rclcpp::QoS request_qos(rmw_qos_profile_default.depth);
-
-  if (endpoints.empty())
-  {
-    return request_qos;
-  }
-  size_t num_endpoints = endpoints.size();
-  size_t reliability_reliable_endpoints_count = 0;
-  size_t durability_transient_local_endpoints_count = 0;
-  for (const auto& endpoint : endpoints)
-  {
-    const auto& profile = endpoint.qos_profile().get_rmw_qos_profile();
-    if (profile.reliability == RMW_QOS_POLICY_RELIABILITY_RELIABLE)
-    {
-      reliability_reliable_endpoints_count++;
-    }
-    if (profile.durability == RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL)
-    {
-      durability_transient_local_endpoints_count++;
-    }
-  }
-
-  // Policy: reliability
-  if (reliability_reliable_endpoints_count == num_endpoints)
-  {
-    request_qos.reliable();
-  }
-  else
-  {
-    request_qos.best_effort();
-  }
-
-  // Policy: durability
-  // If all publishers offer transient_local, we can request it and receive latched messages
-  if (durability_transient_local_endpoints_count == num_endpoints)
-  {
-    request_qos.transient_local();
-  }
-  else
-  {
-    request_qos.durability_volatile();
-  }
-
-  return request_qos;
-}
-
-DataStreamLCM::DataStreamLCM() : DataStreamer(), _node(nullptr), _running(false), _first_warning(false)
+DataStreamLCM::DataStreamLCM() : DataStreamer(), _running(false), _first_warning(false)
 {
   loadDefaultSettings();
-
-  _context = std::make_shared<rclcpp::Context>();
-  _context->init(0, nullptr);
-
-  auto exec_args = rclcpp::ExecutorOptions();
-  exec_args.context = _context;
-  _executor = std::make_unique<rclcpp::executors::MultiThreadedExecutor>(exec_args, 2);
 }
 
 int DataStreamLCM::decode_type(const lcm::ReceiveBuffer* recvbuf, int offset,

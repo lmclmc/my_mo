@@ -5,9 +5,7 @@
 #include <QtPlugin>
 #include <QSettings>
 
-#include <rosbag2_cpp/reader.hpp>
 #include <PlotJuggler/dataloader_base.h>
-#include "dialog_select_ros_topics.h"
 #include "parser_configuration.h"
 #include <lcm/lcm-cpp.hpp>
 #include <lcm/lcm_coretypes.h>
@@ -39,8 +37,6 @@ public:
     virtual bool xmlLoadState(const QDomElement& parent_element) override;
 
 private:
-    std::shared_ptr<rosbag2_cpp::Reader> _bag_reader;
-
     std::map<std::string, lcm_struct_t*> lcm_type_table;
     PJ::PlotDataMapRef* plot_data = nullptr;
 

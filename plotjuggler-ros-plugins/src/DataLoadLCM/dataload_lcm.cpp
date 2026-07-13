@@ -15,17 +15,7 @@
 #include <QElapsedTimer>
 #include <set>
 #include <QDebug>
-#include <rosidl_typesupport_introspection_cpp/identifier.hpp>
-#include <rosidl_typesupport_introspection_cpp/message_introspection.hpp>
-#include <rosidl_typesupport_introspection_cpp/field_types.hpp>
-#include <rosidl_typesupport_cpp/identifier.hpp>
-#include <rosbag2_cpp/typesupport_helpers.hpp>
-#include <rosbag2_cpp/types/introspection_message.hpp>
 #include <unordered_map>
-#include <rclcpp/rclcpp.hpp>
-#include <rmw/rmw.h>
-#include <rosbag2_storage/storage_options.hpp>
-#include <rosbag2_transport/reader_writer_factory.hpp>
 
 DataLoadLCM::DataLoadLCM()
 {
