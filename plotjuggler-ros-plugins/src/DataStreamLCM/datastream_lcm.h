@@ -56,7 +56,6 @@ private:
   std::shared_ptr<lcm::LCM> lcm_;
   std::unordered_map<std::string, TopicLcmItem_> topic_map;
   std::shared_ptr<rotating_file_sink> lcm_log;
-  lcm::Subscription* lcm_subscription;
 
   bool _running;
   bool _first_warning;

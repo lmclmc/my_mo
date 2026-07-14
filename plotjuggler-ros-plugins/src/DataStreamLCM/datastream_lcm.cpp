@@ -255,7 +255,7 @@ void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::
         lcm_runner_.join();
       }
 
-      lcm_->unsubscribe(lcm_subscription);
+      lcm_.reset();
       return;
     }
   }
@@ -361,7 +361,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
     }
   }
 
-  lcm_subscription = lcm_->subscribe(".*", &DataStreamLCM::handleMessage, this);
+  lcm_->subscribe(".*", &DataStreamLCM::handleMessage, this);
   _running = true;
   lcm_runner_ = std::thread([this] {
     while (_running) {
@@ -382,12 +382,13 @@ void DataStreamLCM::shutdown()
 {
   std::cout << "DataStreamLCM::shutdown" << std::endl;
   _running = false;
-  if (lcm_runner_.joinable())
-  {
+  
+  if (lcm_runner_.joinable()) {
     lcm_runner_.join();
   }
 
-  lcm_->unsubscribe(lcm_subscription);
+  lcm_.reset();
+  lcm_log.reset();
 }
 
 DataStreamLCM::~DataStreamLCM()

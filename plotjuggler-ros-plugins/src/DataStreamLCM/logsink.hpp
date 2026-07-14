@@ -76,6 +76,7 @@ public:
         : base_filename_(std::move(base_filename)),
           max_size_(max_file_size),
           max_files_(max_files) {
+        is_thread_running = true;
         write_thread_ = std::thread(&rotating_file_sink::write_thread_func, this);
         open_file();
         // 启动时清理超出数量的老旧归档文件
@@ -83,16 +84,16 @@ public:
     }
 
     ~rotating_file_sink() {
-        if (file_.is_open())
-        {
-            file_.flush();
-            file_.close();
+        is_thread_running = false;
+        if (write_thread_.joinable()) {
+            write_thread_.join();
         }
+        lf_ptr_.reset();
     }
 
     void write_thread_func() {
         uint64_t eventnum = 0;
-        while (1) {
+        while (is_thread_running) {
             usleep(10000);
             if (g_message_queue.empty())
                 continue;
@@ -132,11 +133,12 @@ private:
 
     std::shared_ptr<lcm::LogFile> lf_ptr_;
 
+    bool is_thread_running = false;
+
     std::string base_filename_;
     size_t max_size_;
     size_t max_files_;
 
-    std::ofstream file_;
     size_t current_size_ = 0;
 
     // 拼接带序号文件名: name.1.txt / name.txt
