@@ -265,7 +265,7 @@ int DataLoadLCM::decode_type(const lcm::LogEvent* event, int offset,
 bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& plot_map) {
   plot_data = &plot_map;
   
-  LcmTopicDialog* dialog = new LcmTopicDialog();
+  LcmTopicDialog* dialog = new LcmTopicDialog(0);
   if (dialog->exec() != static_cast<int>(QDialog::Accepted))
   {
     std::cout << "Dialog canceled or closed." << std::endl;

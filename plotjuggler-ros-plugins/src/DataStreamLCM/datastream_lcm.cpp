@@ -215,9 +215,8 @@ int DataStreamLCM::decode_type(const lcm::ReceiveBuffer* recvbuf, int offset,
 
 void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
   if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
-  // int64_t msg_hash;
-  // memcpy(&msg_hash, recvbuf->data, sizeof(int64_t));
-  // msg_hash = be64toh(msg_hash);
+  
+  lcm_log->write(topic_name, recvbuf);
 
   if (auto it = topic_map.find(topic_name); it != topic_map.end()) {
     bool channel_match = false;
@@ -252,7 +251,7 @@ void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::
 
 bool DataStreamLCM::start(QStringList* selected_datasources)
 {
-  LcmTopicDialog* dialog = new LcmTopicDialog();
+  LcmTopicDialog* dialog = new LcmTopicDialog(1);
   if (dialog->exec() != static_cast<int>(QDialog::Accepted))
   {
     std::cout << "Dialog canceled or closed." << std::endl;
@@ -316,6 +315,13 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
   }
   QString lcm_url = QString::fromStdString("udpm://239.255.76.67:") + dialog->getPort();
   lcm_ = std::make_shared<lcm::LCM>(lcm_url.toStdString()); // 使用全局变量
+
+  log_save_path = dialog->getLogSavePath();
+  log_max_size = dialog->getLogMaxSize();
+  log_max_files_num = dialog->getLogMaxFiles();
+
+  lcm_log = std::make_shared<rotating_file_sink>(log_save_path.toStdString(), log_max_size, log_max_files_num);
+
   delete dialog;
 
   for (auto& pair : topic_map) {

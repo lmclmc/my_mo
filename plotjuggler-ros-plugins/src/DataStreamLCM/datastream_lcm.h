@@ -11,6 +11,7 @@
 #include "../parser_configuration.h"
 #include "lcmgen.h"
 #include "tokenize.h"
+#include "logsink.hpp"
 
 class DataStreamLCM : public PJ::DataStreamer
 {
@@ -54,6 +55,7 @@ private:
   std::map<std::string, lcm_struct_t*> lcm_type_table;
   std::shared_ptr<lcm::LCM> lcm_;
   std::unordered_map<std::string, TopicLcmItem_> topic_map;
+  std::shared_ptr<rotating_file_sink> lcm_log;
   lcm::Subscription* lcm_subscription;
 
   bool _running;
@@ -62,6 +64,10 @@ private:
   std::thread lcm_runner_;
 
   PJ::RosParserConfig _config;
+
+  QString log_save_path;
+  int log_max_size;
+  int log_max_files_num;
 
   void saveDefaultSettings();
 

@@ -22,8 +22,8 @@ static QString getDarkStyleSheet()
     )";
 }
 
-LcmTopicDialog::LcmTopicDialog(QWidget *parent)
-    : QDialog(parent)
+LcmTopicDialog::LcmTopicDialog(int mode, QWidget *parent)
+    : QDialog(parent), m_mode(mode)
 {
     setWindowTitle("LCM Topic & Log Mapper (PlotJuggler Style)");
     setMinimumSize(720, 480);
@@ -38,22 +38,74 @@ void LcmTopicDialog::setupUI()
     mainLayout->setContentsMargins(12,12,12,12);
     mainLayout->setSpacing(10);
 
-    // 端口输入区域 - 在界面上方
-    QHBoxLayout* portLayout = new QHBoxLayout();
-    portLayout->setSpacing(8);
-    
-    QLabel* portLabel = new QLabel("LCM 订阅 端口号:");
-    portLabel->setStyleSheet("color: #ccc; font-size: 13px;");
-    
-    m_portEdit = new QLineEdit();
-    m_portEdit->setPlaceholderText("Enter LCM port");
-    m_portEdit->setFixedWidth(300);
-    
-    portLayout->addWidget(portLabel);
-    portLayout->addWidget(m_portEdit);
-    portLayout->addStretch();  // 右侧填充
-    
-    mainLayout->addLayout(portLayout);
+    if (m_mode == 1) {
+        // 端口输入区域 - 在界面上方
+        QHBoxLayout* portLayout = new QHBoxLayout();
+        portLayout->setSpacing(8);
+        QLabel* portLabel = new QLabel("LCM 订阅 端口号:");
+        portLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        
+        m_portEdit = new QLineEdit();
+        m_portEdit->setPlaceholderText("Enter LCM port");
+        m_portEdit->setFixedWidth(300);
+        
+        portLayout->addWidget(portLabel);
+        portLayout->addWidget(m_portEdit);
+        portLayout->addStretch();  // 右侧填充
+        
+        mainLayout->addLayout(portLayout);
+
+        // 日志保存设置区域
+        QGroupBox* logGroup = new QGroupBox("LCM Log Save Settings");
+        logGroup->setStyleSheet("QGroupBox { color: #ccc; font-weight: bold; border: 1px solid #555; border-radius: 4px; padding: 8px; margin-top: 8px; } QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px 0 4px; }");
+        QGridLayout* logLayout = new QGridLayout(logGroup);
+        logLayout->setSpacing(8);
+
+        // 日志保存路径
+        QLabel* logPathLabel = new QLabel("Log Save Path:");
+        logPathLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        m_logPathEdit = new QLineEdit();
+        m_logPathEdit->setPlaceholderText("Click to select save directory");
+        m_logPathEdit->setReadOnly(true);
+        m_logPathEdit->installEventFilter(this);
+        QPushButton* logPathBtn = new QPushButton("Browse");
+        logPathBtn->setFixedWidth(60);
+        connect(logPathBtn, &QPushButton::clicked, this, [this]() {
+            QString dir = QFileDialog::getSaveFileName(
+                this, 
+                "Select Log Save Directory");
+            if (!dir.isEmpty()) {
+                m_logPathEdit->setText(dir);
+                qDebug() << "Log save directory selected:" << dir;
+            }
+        });
+
+        // 单文件最大大小
+        QLabel* logSizeLabel = new QLabel("Max File Size (MB):");
+        logSizeLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        m_logMaxSizeEdit = new QLineEdit();
+        m_logMaxSizeEdit->setPlaceholderText("e.g. 100");
+        m_logMaxSizeEdit->setFixedWidth(80);
+        m_logMaxSizeEdit->setText("100");  // 默认值
+
+        // 最大保存文件数
+        QLabel* logFilesLabel = new QLabel("Max Files:");
+        logFilesLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        m_logMaxFilesEdit = new QLineEdit();
+        m_logMaxFilesEdit->setPlaceholderText("e.g. 10");
+        m_logMaxFilesEdit->setFixedWidth(80);
+        m_logMaxFilesEdit->setText("10");  // 默认值
+
+        logLayout->addWidget(logPathLabel, 0, 0);
+        logLayout->addWidget(m_logPathEdit, 0, 1);
+        logLayout->addWidget(logPathBtn, 0, 2);
+        logLayout->addWidget(logSizeLabel, 1, 0);
+        logLayout->addWidget(m_logMaxSizeEdit, 1, 1);
+        logLayout->addWidget(logFilesLabel, 1, 2);
+        logLayout->addWidget(m_logMaxFilesEdit, 1, 3);
+
+        mainLayout->addWidget(logGroup);
+    }
 
     // 表格控件：2列
     m_table = new QTableWidget();

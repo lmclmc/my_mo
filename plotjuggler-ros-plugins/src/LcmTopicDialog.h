@@ -14,6 +14,8 @@
 #include <QFile>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QGroupBox>
+#include <QGridLayout>
 #include <map>
 
 struct TopicLcmItem
@@ -26,14 +28,19 @@ class LcmTopicDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit LcmTopicDialog(QWidget *parent = nullptr);
+    explicit LcmTopicDialog(int mode, QWidget *parent = nullptr);
     QVector<TopicLcmItem> getConfig() const;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 public:
     QString getPort() const { return m_portEdit->text().trimmed(); }
+    QString getLogSavePath() const { return m_logPathEdit->text().trimmed(); }
+    int getLogMaxSize() const { return m_logMaxSizeEdit->text().toInt() * 1024 * 1024; }
+    int getLogMaxFiles() const { return m_logMaxFilesEdit->text().toInt(); }
 
 private:
+    int m_mode;
+
     void setupUI();
     void addEmptyRow();
     void delSelectedRow();
@@ -50,6 +57,10 @@ private:
     QPushButton* m_btnLoadCfg;
     QPushButton* m_btnConfirm;
     QLineEdit* m_portEdit;  // 端口输入框
+    // 日志保存相关控件
+    QLineEdit* m_logPathEdit;      // 日志保存路径
+    QLineEdit* m_logMaxSizeEdit;   // 单文件最大大小(MB)
+    QLineEdit* m_logMaxFilesEdit;  // 最大保存文件数
 };
 
 #endif // LCMTOPICDIALOG_H
