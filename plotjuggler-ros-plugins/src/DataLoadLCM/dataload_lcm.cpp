@@ -13,6 +13,7 @@
 #include <QProcess>
 #include <QSettings>
 #include <QElapsedTimer>
+#include <fstream>
 #include <set>
 #include <QDebug>
 #include <unordered_map>
@@ -61,205 +62,219 @@ long long get_file_size(FILE* fp)
 #endif
 
 const std::vector<const char*>& DataLoadLCM::compatibleFileExtensions() const {
-    return _extensions;
+  return _extensions;
 }
 
 int DataLoadLCM::decode_type(const lcm::LogEvent* event, int offset,
                              const std::string& type, const std::string& base, int deep) {
-    int pos_offset = offset;
-    int decode_len = 0;
-   // std::cout << "deep: " << deep << std::endl;
-   // std::cout << dec << std::endl;   // 255 切回十进制
-   // std::cout << "offset: " << pos_offset << std::endl;
-    if (auto lcm_struct_type = lcm_type_table.find(type); lcm_struct_type != lcm_type_table.end()) {
-        lcm_struct_t* struct_item = lcm_struct_type->second;
-        for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
-            lcm_member_t* member = (lcm_member_t*) g_ptr_array_index(struct_item->members, mind);
-            auto itr = plot_data->numeric.find(base + member->membername);
-            if (itr == plot_data->numeric.end()) {
-              itr = plot_data->addNumeric(base + member->membername);
-            }
+  int pos_offset = offset;
+  int decode_len = 0;
+  std::unordered_map<std::string, int> member_map;
 
-            double local_timestamp = (double)event->timestamp / 1000000;
-            if (g_ptr_array_size(member->dimensions) == 0) {
-                if (!strcmp(member->type->lctypename, "int8_t")) {
-                  int8_t value;
-                  int tlen = __int8_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  itr->second.pushBack({ local_timestamp, value });
-                } else if (!strcmp(member->type->lctypename, "int16_t")) {
-                  int16_t value;
-                  int tlen = __int16_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  itr->second.pushBack({ local_timestamp, value });
-                } else if (!strcmp(member->type->lctypename, "int32_t")) {
-                  int32_t value;
-                  int tlen = __int32_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  itr->second.pushBack({ local_timestamp, value });
-                } else if (!strcmp(member->type->lctypename, "int64_t")) {
-                  int64_t value;
-                  int tlen = __int64_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  itr->second.pushBack({ local_timestamp, value });
-                } else if (!strcmp(member->type->lctypename, "float")) {
-                  float value;
-                  int tlen = __float_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+  if (auto lcm_struct_type = lcm_type_table.find(type); lcm_struct_type != lcm_type_table.end()) {
+    lcm_struct_t* struct_item = lcm_struct_type->second;
+    for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
+      lcm_member_t* member = (lcm_member_t*) g_ptr_array_index(struct_item->members, mind);
+      auto itr = plot_data->numeric.find(base + member->membername);
+      if (itr == plot_data->numeric.end()) {
+        itr = plot_data->addNumeric(base + member->membername);
+      }
 
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  itr->second.pushBack({ local_timestamp, value });
-                } else if (!strcmp(member->type->lctypename, "double")) {
-                  double value;
-                  int tlen = __double_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  itr->second.pushBack({ local_timestamp, value });
-                } else if (!strcmp(member->type->lctypename, "string")) {
-                  int32_t __d_len__;
-                  int tlen = __int32_t_decode_array(
-                      event->data, pos_offset, event->datalen, &__d_len__, 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  if(__d_len__ > event->datalen - pos_offset || __d_len__ <= 0) break;
-                  std::string lcm_str(static_cast<const char*>(event->data) + pos_offset,  __d_len__ - 1);
-                  pos_offset += __d_len__;
-                  decode_len += __d_len__;
-                  auto str_itr = plot_data->strings.find(base + member->membername);
-                  if (str_itr == plot_data->strings.end()) {
-                    str_itr = plot_data->addStringSeries(base + member->membername);
-                  }
-                 str_itr->second.pushBack({ local_timestamp, lcm_str });
-                } else if (!strcmp(member->type->lctypename, "boolean")) {
-                  int8_t value;
-                  int tlen = __boolean_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                  itr->second.pushBack({ local_timestamp, value });
-                } else {
-                  int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/", deep + 1);
-                  if(tlen < 0) break; else {
-                    pos_offset += tlen;
-                    decode_len += tlen;
-                  }
-                }
-            } else {
-                if (lcm_is_constant_size_array(member)) {
-                    for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
-                        lcm_dimension_t *ld =
-                            (lcm_dimension_t *) g_ptr_array_index(member->dimensions, d);
-                        
-                        for (size_t i = 0; i < atoi(ld->size); i++) {
-                            auto itr = plot_data->numeric.find(base + member->membername + "/" + std::to_string(i));
-                            if (itr == plot_data->numeric.end()) {
-                              itr = plot_data->addNumeric(base + member->membername + "/" + std::to_string(i));
-                            }
+      double local_timestamp = (double)event->timestamp / 1000000;
+      if (g_ptr_array_size(member->dimensions) == 0) {
+        if (!strcmp(member->type->lctypename, "int8_t")) {
+          int8_t value;
+          int tlen = __int8_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          itr->second.pushBack({ local_timestamp, value });
+          member_map[member->membername] = value;
+        } else if (!strcmp(member->type->lctypename, "int16_t")) {
+          int16_t value;
+          int tlen = __int16_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          itr->second.pushBack({ local_timestamp, value });
+          member_map[member->membername] = value;
+        } else if (!strcmp(member->type->lctypename, "int32_t")) {
+          int32_t value;
+          int tlen = __int32_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          itr->second.pushBack({ local_timestamp, value });
+          member_map[member->membername] = value;
+        } else if (!strcmp(member->type->lctypename, "int64_t")) {
+          int64_t value;
+          int tlen = __int64_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          itr->second.pushBack({ local_timestamp, value });
+          member_map[member->membername] = value;
+        } else if (!strcmp(member->type->lctypename, "float")) {
+          float value;
+          int tlen = __float_decode_array(event->data, pos_offset, event->datalen, &value, 1);
 
-                            if (!strcmp(member->type->lctypename, "int8_t")) {
-                              int8_t value;
-                              int tlen = __int8_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                              itr->second.pushBack({ local_timestamp, value });
-                            } else if (!strcmp(member->type->lctypename, "int16_t")) {
-                              int16_t value;
-                              int tlen = __int16_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                              itr->second.pushBack({ local_timestamp, value });
-                            } else if (!strcmp(member->type->lctypename, "int32_t")) {
-                              int32_t value;
-                              int tlen = __int32_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                              itr->second.pushBack({ local_timestamp, value });
-                            } else if (!strcmp(member->type->lctypename, "int64_t")) {
-                              int64_t value;
-                              int tlen = __int64_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                              itr->second.pushBack({ local_timestamp, value });
-                            } else if (!strcmp(member->type->lctypename, "float")) {
-                              float value;
-                              int tlen = __float_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                              itr->second.pushBack({ local_timestamp, value });
-                            } else if (!strcmp(member->type->lctypename, "double")) {
-                              double value;
-                              int tlen = __double_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                              itr->second.pushBack({ local_timestamp, value });
-                            } else if (!strcmp(member->type->lctypename, "string")) { 
-                              int32_t __d_len__;
-                              int tlen = __int32_t_decode_array(
-                                  event->data, pos_offset, event->datalen, &__d_len__, 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                              if(__d_len__ > event->datalen - pos_offset || __d_len__ <= 0) break;
-                              std::string lcm_str(static_cast<const char*>(event->data) + pos_offset,  __d_len__ - 1);
-                              pos_offset += __d_len__;
-                              decode_len += tlen;
-                              auto str_itr = plot_data->strings.find(base + member->membername + "/" + std::to_string(i));
-                              if (str_itr == plot_data->strings.end()) {
-                                str_itr = plot_data->addStringSeries(base + member->membername + "/" + std::to_string(i));
-                              }
-                              str_itr->second.pushBack({ local_timestamp, lcm_str });
-                            } else if (!strcmp(member->type->lctypename, "boolean")) {
-                              int8_t value;
-                              int tlen = __boolean_decode_array(event->data, pos_offset, event->datalen, &value, 1);
-                              if(tlen < 0) return tlen; else pos_offset += tlen;
-                              itr->second.pushBack({ local_timestamp, value });
-                            } else {
-                              int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
-                              if(tlen < 0) break; else {
-                                pos_offset += tlen;
-                                decode_len += tlen;
-                              }
-                            }
-                        }
-                    }
-                }
-            }
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          itr->second.pushBack({ local_timestamp, value });
+        } else if (!strcmp(member->type->lctypename, "double")) {
+          double value;
+          int tlen = __double_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          itr->second.pushBack({ local_timestamp, value });
+        } else if (!strcmp(member->type->lctypename, "string")) {
+          int32_t __d_len__;
+          int tlen = __int32_t_decode_array(
+              event->data, pos_offset, event->datalen, &__d_len__, 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          if(__d_len__ > event->datalen - pos_offset || __d_len__ <= 0) break;
+          std::string lcm_str(static_cast<const char*>(event->data) + pos_offset,  __d_len__ - 1);
+          pos_offset += __d_len__;
+          decode_len += __d_len__;
+          auto str_itr = plot_data->strings.find(base + member->membername);
+          if (str_itr == plot_data->strings.end()) {
+            str_itr = plot_data->addStringSeries(base + member->membername);
+          }
+          str_itr->second.pushBack({ local_timestamp, lcm_str });
+        } else if (!strcmp(member->type->lctypename, "boolean")) {
+          int8_t value;
+          int tlen = __boolean_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
+          itr->second.pushBack({ local_timestamp, value });
+        } else {
+          int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/", deep + 1);
+          if(tlen < 0) break; else {
+            pos_offset += tlen;
+            decode_len += tlen;
+          }
         }
-    }
+      } else {
+        for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
+          lcm_dimension_t *ld =
+              (lcm_dimension_t *) g_ptr_array_index(member->dimensions, d);
 
-    return decode_len;
+          if (!lcm_is_constant_size_array(member)) { //判断是否是变长大小数组
+            if (auto it = member_map.find(ld->size); it != member_map.end()) {
+              for (size_t i = 0; i < it->second; i++) {
+                int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
+                if(tlen < 0) break; else {
+                  pos_offset += tlen;
+                  decode_len += tlen;
+                }
+              }
+              break;
+            }
+          }
+          
+          for (size_t i = 0; i < atoi(ld->size); i++) {
+            auto itr = plot_data->numeric.find(base + member->membername + "/" + std::to_string(i));
+            if (itr == plot_data->numeric.end()) {
+              itr = plot_data->addNumeric(base + member->membername + "/" + std::to_string(i));
+            }
+
+            if (!strcmp(member->type->lctypename, "int8_t")) {
+              int8_t value;
+              int tlen = __int8_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+              itr->second.pushBack({ local_timestamp, value });
+            } else if (!strcmp(member->type->lctypename, "int16_t")) {
+              int16_t value;
+              int tlen = __int16_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+              itr->second.pushBack({ local_timestamp, value });
+            } else if (!strcmp(member->type->lctypename, "int32_t")) {
+              int32_t value;
+              int tlen = __int32_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+              itr->second.pushBack({ local_timestamp, value });
+            } else if (!strcmp(member->type->lctypename, "int64_t")) {
+              int64_t value;
+              int tlen = __int64_t_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+              itr->second.pushBack({ local_timestamp, value });
+            } else if (!strcmp(member->type->lctypename, "float")) {
+              float value;
+              int tlen = __float_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+              itr->second.pushBack({ local_timestamp, value });
+            } else if (!strcmp(member->type->lctypename, "double")) {
+              double value;
+              int tlen = __double_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+              itr->second.pushBack({ local_timestamp, value });
+            } else if (!strcmp(member->type->lctypename, "string")) { 
+              int32_t __d_len__;
+              int tlen = __int32_t_decode_array(
+                  event->data, pos_offset, event->datalen, &__d_len__, 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+              if(__d_len__ > event->datalen - pos_offset || __d_len__ <= 0) break;
+              std::string lcm_str(static_cast<const char*>(event->data) + pos_offset,  __d_len__ - 1);
+              pos_offset += __d_len__;
+              decode_len += tlen;
+              auto str_itr = plot_data->strings.find(base + member->membername + "/" + std::to_string(i));
+              if (str_itr == plot_data->strings.end()) {
+                str_itr = plot_data->addStringSeries(base + member->membername + "/" + std::to_string(i));
+              }
+              str_itr->second.pushBack({ local_timestamp, lcm_str });
+            } else if (!strcmp(member->type->lctypename, "boolean")) {
+              int8_t value;
+              int tlen = __boolean_decode_array(event->data, pos_offset, event->datalen, &value, 1);
+              if(tlen < 0) return tlen; else pos_offset += tlen;
+              itr->second.pushBack({ local_timestamp, value });
+            } else {
+              int tlen = decode_type(event, pos_offset, member->type->lctypename, base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
+              if(tlen < 0) break; else {
+                pos_offset += tlen;
+                decode_len += tlen;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return decode_len;
 }
 
 bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& plot_map) {
@@ -294,6 +309,16 @@ bool DataLoadLCM::readDataFromFile(PJ::FileLoadInfo* info, PJ::PlotDataMapRef& p
   
   for (const auto& item : _config) {
     if (item.lcmFilePath.isEmpty()) continue;
+
+    // 检查文件是否存在
+    std::string lcm_file_path = item.lcmFilePath.toStdString();
+    std::ifstream file_check(lcm_file_path);
+    if (!file_check.good()) {
+      QMessageBox::warning(nullptr, tr("Error"), "文件不存在: " + item.lcmFilePath + "，跳过加载。");
+      std::cerr << "Warning: File does not exist: " << lcm_file_path << std::endl;
+      return false;
+    }
+
     lcmgen_t* lcmgen = lcmgen_create();
     tokenize_t* t = tokenize_create(item.lcmFilePath.toStdString().c_str());
     int res;

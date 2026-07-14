@@ -233,6 +233,7 @@ void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::
   
   lcm_log->write(topic_name, recvbuf);
   if (auto it = topic_map.find(topic_name); it != topic_map.end()) {
+    std::lock_guard<std::mutex> lock(mutex());
     bool channel_match = false;
     for (auto topic_lcmgen : it->second.lcmgen_table) {
       int64_t msg_hash;
@@ -294,6 +295,16 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
   
   for (const auto& item : _config) {
     if (item.lcmFilePath.isEmpty()) continue;
+
+    // 检查文件是否存在
+    std::string lcm_file_path = item.lcmFilePath.toStdString();
+    std::ifstream file_check(lcm_file_path);
+    if (!file_check.good()) {
+      QMessageBox::warning(nullptr, tr("Error"), "文件不存在: " + item.lcmFilePath + "，跳过加载。");
+      std::cerr << "Warning: File does not exist: " << lcm_file_path << std::endl;
+      return false;
+    }
+
     lcmgen_t* lcmgen = lcmgen_create();
     tokenize_t* t = tokenize_create(item.lcmFilePath.toStdString().c_str());
     int res;
