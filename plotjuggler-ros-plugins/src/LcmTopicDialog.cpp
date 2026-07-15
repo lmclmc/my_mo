@@ -7,17 +7,23 @@
 // 仿PlotJuggler深色样式
 static QString getDarkStyleSheet()
 {
+    // return R"(
+    // QDialog { background-color: #27282c; color: #eeeeee; }
+    // QTableWidget { background-color: #323338; border: none; gridline-color: #444444; }
+    // QTableWidget::item { padding: 4px; }
+    // QHeaderView::section { background-color: #3c3d42; color: white; padding:6px; border:none; }
+    // QLineEdit { background:#1e1f22; border:1px solid #555; color:#fff; border-radius:3px; padding:4px; }
+    // QPushButton { background:#484a50; color:#fff; border:none; border-radius:4px; padding:6px 12px; }
+    // QPushButton:hover { background:#5c5e66; }
+    // QPushButton:pressed { background:#3a3c40; }
+    // QPushButton#btnConfirm { background:#2196F3; color:#fff; font-weight:bold; padding:8px 24px; font-size:14px; }
+    // QPushButton#btnConfirm:hover { background:#42A5F5; }
+    // QPushButton#btnConfirm:pressed { background:#1E88E5; }
+    // )";
+
     return R"(
-    QDialog { background-color: #27282c; color: #eeeeee; }
-    QTableWidget { background-color: #323338; border: none; gridline-color: #444444; }
     QTableWidget::item { padding: 4px; }
-    QHeaderView::section { background-color: #3c3d42; color: white; padding:6px; border:none; }
-    QLineEdit { background:#1e1f22; border:1px solid #555; color:#fff; border-radius:3px; padding:4px; }
-    QPushButton { background:#484a50; color:#fff; border:none; border-radius:4px; padding:6px 12px; }
-    QPushButton:hover { background:#5c5e66; }
     QPushButton:pressed { background:#3a3c40; }
-    QPushButton#btnConfirm { background:#2196F3; color:#fff; font-weight:bold; padding:8px 24px; font-size:14px; }
-    QPushButton#btnConfirm:hover { background:#42A5F5; }
     QPushButton#btnConfirm:pressed { background:#1E88E5; }
     )";
 }
@@ -43,7 +49,7 @@ void LcmTopicDialog::setupUI()
         QHBoxLayout* portLayout = new QHBoxLayout();
         portLayout->setSpacing(8);
         QLabel* portLabel = new QLabel("LCM 订阅 端口号:");
-        portLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        portLabel->setStyleSheet("font-size: 13px;");
         
         m_portEdit = new QLineEdit();
         m_portEdit->setPlaceholderText("Enter LCM port");
@@ -57,13 +63,13 @@ void LcmTopicDialog::setupUI()
 
         // 日志保存设置区域
         QGroupBox* logGroup = new QGroupBox("LCM Log Save Settings");
-        logGroup->setStyleSheet("QGroupBox { color: #ccc; font-weight: bold; border: 1px solid #555; border-radius: 4px; padding: 8px; margin-top: 8px; } QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px 0 4px; }");
+        logGroup->setStyleSheet("QGroupBox { font-weight: bold; border: 1px solid #555; border-radius: 4px; padding: 8px; margin-top: 8px; } QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px 0 4px; }");
         QGridLayout* logLayout = new QGridLayout(logGroup);
         logLayout->setSpacing(8);
 
         // 日志保存路径
         QLabel* logPathLabel = new QLabel("Log Save Path:");
-        logPathLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        logPathLabel->setStyleSheet("font-size: 13px;");
         m_logPathEdit = new QLineEdit();
         m_logPathEdit->setPlaceholderText("Click to select save directory");
         m_logPathEdit->setReadOnly(true);
@@ -82,7 +88,7 @@ void LcmTopicDialog::setupUI()
 
         // 单文件最大大小
         QLabel* logSizeLabel = new QLabel("Max File Size (MB):");
-        logSizeLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        logSizeLabel->setStyleSheet("font-size: 13px;");
         m_logMaxSizeEdit = new QLineEdit();
         m_logMaxSizeEdit->setPlaceholderText("e.g. 100");
         m_logMaxSizeEdit->setFixedWidth(80);
@@ -90,7 +96,7 @@ void LcmTopicDialog::setupUI()
 
         // 最大保存文件数
         QLabel* logFilesLabel = new QLabel("Max Files:");
-        logFilesLabel->setStyleSheet("color: #ccc; font-size: 13px;");
+        logFilesLabel->setStyleSheet("font-size: 13px;");
         m_logMaxFilesEdit = new QLineEdit();
         m_logMaxFilesEdit->setPlaceholderText("e.g. 10");
         m_logMaxFilesEdit->setFixedWidth(80);
