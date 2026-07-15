@@ -376,7 +376,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
   _running = true;
   lcm_runner_ = std::thread([this] {
     while (_running) {
-      lcm_->handle();
+      lcm_->handleTimeout(100);
     }
   });
   
