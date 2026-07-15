@@ -231,7 +231,9 @@ int DataStreamLCM::decode_type(const lcm::ReceiveBuffer* recvbuf, int offset,
 void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
   if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
   
-  lcm_log->write(topic_name, recvbuf);
+  if (lcm_log)
+    lcm_log->write(topic_name, recvbuf);
+    
   if (auto it = topic_map.find(topic_name); it != topic_map.end()) {
     std::lock_guard<std::mutex> lock(mutex());
     bool channel_match = false;
@@ -345,7 +347,9 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
   log_max_size = dialog->getLogMaxSize();
   log_max_files_num = dialog->getLogMaxFiles();
 
-  lcm_log = std::make_shared<rotating_file_sink>(log_save_path.toStdString(), log_max_size, log_max_files_num);
+  if (!log_save_path.isEmpty()) {
+    lcm_log = std::make_shared<rotating_file_sink>(log_save_path.toStdString(), log_max_size, log_max_files_num);
+  }
 
   delete dialog;
 
