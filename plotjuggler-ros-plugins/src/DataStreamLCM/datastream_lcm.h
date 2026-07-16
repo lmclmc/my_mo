@@ -49,18 +49,21 @@ public:
 
 private:
   void handleMessage(const lcm::ReceiveBuffer*, const std::string&);
-  int decode_type(const lcm::ReceiveBuffer*, int, const std::string&, const std::string&, int deep= 0) ;
+  int decode_type(void* recvbuf, int data_size, double timestamp, int offset,
+                  const std::string& type, const std::string& base, int deep = 0);
 
 private:
   std::map<std::string, lcm_struct_t*> lcm_type_table;
   std::shared_ptr<lcm::LCM> lcm_;
   std::unordered_map<std::string, TopicLcmItem_> topic_map;
   std::shared_ptr<rotating_file_sink> lcm_log;
+  SafeQueue<LcmMessage> message_queue;
 
   bool _running;
   bool _first_warning;
 
   std::thread lcm_runner_;
+  std::thread render_runner_;
 
   PJ::RosParserConfig _config;
 
