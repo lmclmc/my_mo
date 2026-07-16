@@ -143,6 +143,17 @@ void LcmTopicDialog::setupUI()
     btnLayout->addWidget(m_btnLoadCfg);
     btnLayout->addWidget(m_btnSaveCfg);
 
+    // 作者信息标签 - 高亮显示并支持链接跳转
+    QLabel* authorLabel = new QLabel();
+    authorLabel->setStyleSheet("font-size: 12px; color: #888888; padding: 4px;");
+    authorLabel->setAlignment(Qt::AlignLeft);
+    authorLabel->setOpenExternalLinks(true);  // 允许打开外部链接
+    authorLabel->setText(QString("作者：<font color='#42A5F5'><b>罗敏成</b></font> | \
+                                  邮箱：<a href='mailto:luomincheng@dreame.tech'><font color='#2935a1'><b>luomincheng@dreame.tech</b></font></a> | \
+                                  文档：<a href='https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO'><font color='#FFB74D'><b>Wiki</b></font></a> | \
+                                  仓库：<a href='https://gitlab.magiclab.top/dreamebiped/controlsoftware/motionstudio'><font color='#AED581'><b>GitLab</b></font></a>"));
+    mainLayout->addWidget(authorLabel);
+
     mainLayout->addWidget(m_table);
     mainLayout->addLayout(btnLayout);
 
