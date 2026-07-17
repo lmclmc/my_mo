@@ -119,10 +119,8 @@ public:
     // 写入lcmlog数据
     void write(const std::string& channel, const lcm::ReceiveBuffer* rbuf) {
         LcmMessage msg;
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
         msg.channel = channel;
-        msg.timestamp = tv.tv_sec * 1000000 + tv.tv_usec;
+        msg.timestamp = rbuf->recv_utime;
         msg.data.assign(reinterpret_cast<const uint8_t*>(rbuf->data), reinterpret_cast<const uint8_t*>(rbuf->data) + rbuf->data_size);
         g_message_queue.push(msg);
     }
