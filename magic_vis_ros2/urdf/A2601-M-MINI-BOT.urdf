@@ -1,1365 +1,1842 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com)
-     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
-     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
-  name="minibot">
+  name="Minibot">
 
   <mujoco>
     <compiler meshdir="package://meshes/A2601-M-MINI-BOT/" balanceinertia="true" discardvisual="false"/>
   </mujoco>
 
-  <link name="world"/>
-  <joint name="floating_base" type="floating">
+  <!--[CAUTION] uncomment when convert to mujoco-->
+  <link name="world"></link>
+  <joint name="floating_base_joint" type="floating">
     <parent link="world"/>
-    <child link="pelvis"/>  <!-- 替换为实际 base link 名 -->
-    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <child link="pelvis"/>
   </joint>
 
   <link
-    name="pelvis">
+    name="pelvis"
+  >
     <inertial>
       <origin
-        xyz="-0.064655 -1.888E-05 0.0088967"
-        rpy="0 0 0" />
+        xyz="-0.00013375 7.13e-06 0.00810498"
+        rpy="0 0 0"
+      />
       <mass
-        value="1.7029" />
+        value="0.552875"
+      />
       <inertia
-        ixx="0.0084888"
-        ixy="-6.21E-06"
-        ixz="-6.77E-05"
-        iyy="0.0018519"
-        iyz="-9.4E-07"
-        izz="0.0087165" />
+        ixx="0.00044856"
+        ixy="9.5e-07"
+        ixz="-9.2e-07"
+        iyy="0.00034153"
+        iyz="1.06e-06"
+        izz="0.00041589"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/pelvis.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/pelvis.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/pelvis.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/pelvis.STL"
+        />
       </geometry>
     </collision>
   </link>
   <link
-    name="left-hip-roll-link">
+    name="waist_yaw_link"
+  >
     <inertial>
       <origin
-        xyz="-0.00118063 0.00365274 6.578E-05"
-        rpy="0 0 0" />
+        xyz="0.00164668 -0.00047696 -0.00746764"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.45961129" />
+        value="0.14584452"
+      />
       <inertia
-        ixx="0.00032268"
-        ixy="2.33E-06"
-        ixz="3.8E-07"
-        iyy="0.00029452"
-        iyz="1.77E-06"
-        izz="0.00033126" />
+        ixx="0.00016008"
+        ixy="5.5e-07"
+        ixz="-1.57e-06"
+        iyy="0.00016706"
+        iyz="1.24e-06"
+        izz="0.00013685"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-hip-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/waist_yaw_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-hip-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/waist_yaw_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="left-hip-roll-joint"
-    type="revolute">
+    name="waist_yaw_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0.085 0"
-      rpy="0 0 0" />
+      xyz="0.0 0.0 0.0934"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="pelvis" />
+      link="pelvis"
+    />
     <child
-      link="left-hip-roll-link" />
+      link="waist_yaw_link"
+    />
     <axis
-      xyz="1 0 0" />
+      xyz="0.0 0.0 1.0"
+    />
     <limit
-      lower="-0.5236"
-      upper="2.9671"
-      effort="36.3"
-      velocity="16.76" />
+      lower="-2.0944"
+      upper="2.0944"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="left-hip-pitch-link">
+    name="waist_roll_link"
+  >
     <inertial>
       <origin
-        xyz="0 0.0075652 -0.07356396"
-        rpy="0 0 0" />
+        xyz="-0.00209682 0.00197276 0.10681895"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.457668" />
+        value="4.90953196"
+      />
       <inertia
-        ixx="0.00047722"
-        ixy="2E-08"
-        ixz="5.4E-07"
-        iyy="0.00044934"
-        iyz="-6.511E-05"
-        izz="0.00026776" />
+        ixx="0.02299194"
+        ixy="-0.00025658"
+        ixz="-0.00013857"
+        iyy="0.02309116"
+        iyz="0.00047663"
+        izz="0.01812479"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-hip-pitch-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/waist_roll_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-hip-pitch-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/waist_roll_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="left-hip-pitch-joint"
-    type="revolute">
+    name="waist_roll_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 0"
-      rpy="0 0 0" />
+      xyz="0.0 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="left-hip-roll-link" />
+      link="waist_yaw_link"
+    />
     <child
-      link="left-hip-pitch-link" />
+      link="waist_roll_link"
+    />
     <axis
-      xyz="0 1 0" />
-    <limit
-      lower="-2.8798"
-      upper="0.43633"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="left-hip-yaw-link">
-    <inertial>
-      <origin
-        xyz="0.0024088 0.0035236 -0.050678"
-        rpy="0 0 0" />
-      <mass
-        value="0.2186568" />
-      <inertia
-        ixx="0.00058013"
-        ixy="-1.746E-05"
-        ixz="1.62E-05"
-        iyy="0.00042154"
-        iyz="6.254E-05"
-        izz="0.00031781" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-hip-yaw-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-hip-yaw-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="left-hip-yaw-joint"
-    type="revolute">
-    <origin
-      xyz="0 0.00475 -0.052212"
-      rpy="0 0 0" />
-    <parent
-      link="left-hip-pitch-link" />
-    <child
-      link="left-hip-yaw-link" />
-    <axis
-      xyz="0 0 1" />
-    <limit
-      lower="-2.7576"
-      upper="2.7576"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="left-knee-pitch-link">
-    <inertial>
-      <origin
-        xyz="-0.0023326 0.00196412 -0.03946151"
-        rpy="0 0 0" />
-      <mass
-        value="0.98294531" />
-      <inertia
-        ixx="0.00227674"
-        ixy="1.701E-05"
-        ixz="-6.06E-05"
-        iyy="0.00212463"
-        iyz="8.456E-05"
-        izz="0.00086872" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-knee-pitch-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-knee-pitch-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="left-knee-pitch-joint"
-    type="revolute">
-    <origin
-      xyz="0 0 -0.13775"
-      rpy="0 0 0" />
-    <parent
-      link="left-hip-yaw-link" />
-    <child
-      link="left-knee-pitch-link" />
-    <axis
-      xyz="0 1 0" />
-    <limit
-      lower="-0.087267"
-      upper="2.2689"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="left-ankle-pitch-link">
-    <inertial>
-      <origin
-        xyz="0.00103913 0.0006109 0.0036148"
-        rpy="0 0 0" />
-      <mass
-        value="0.48735353" />
-      <inertia
-        ixx="0.00022961"
-        ixy="-1.495E-05"
-        ixz="-3.611E-05"
-        iyy="0.00028082"
-        iyz="-8.91E-06"
-        izz="0.00029577" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-ankle-pitch-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-ankle-pitch-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="left-ankle-pitch-joint"
-    type="revolute">
-    <origin
-      xyz="0 0.0020111 -0.155"
-      rpy="0 0 0" />
-    <parent
-      link="left-knee-pitch-link" />
-    <child
-      link="left-ankle-pitch-link" />
-    <axis
-      xyz="0 1 0" />
-    <limit
-      lower="-0.87267"
-      upper="0.5236"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="left-ankle-roll-link">
-    <inertial>
-      <origin
-        xyz="-0.014848 8.8612E-05 -0.037935"
-        rpy="0 0 0" />
-      <mass
-        value="0.20166" />
-      <inertia
-        ixx="7.714E-05"
-        ixy="-1E-08"
-        ixz="1.008E-05"
-        iyy="0.00022155"
-        iyz="2.6E-07"
-        izz="0.00021058" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-ankle-roll-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0.06 0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-    <collision>
-      <origin xyz="-0.06 -0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-    <collision>
-      <origin xyz="0.04 0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-    <collision>
-      <origin xyz="0.04 -0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="left-ankle-roll-joint"
-    type="revolute">
-    <origin
-      xyz="0.025451 0 0"
-      rpy="0 0 0" />
-    <parent
-      link="left-ankle-pitch-link" />
-    <child
-      link="left-ankle-roll-link" />
-    <axis
-      xyz="1 0 0" />
-    <limit
-      lower="-0.31416"
-      upper="0.31416"
-      effort="18"
-      velocity="14.66" />
-  </joint>
-  <link
-    name="right-hip-roll-link">
-    <inertial>
-      <origin
-        xyz="-0.00118093 -0.00365271 6.599E-05"
-        rpy="0 0 0" />
-      <mass
-        value="0.45961763" />
-      <inertia
-        ixx="0.00032275"
-        ixy="-1.63E-06"
-        ixz="6.1E-07"
-        iyy="0.00029452"
-        iyz="3.51E-06"
-        izz="0.00033118" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-hip-roll-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-hip-roll-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="right-hip-roll-joint"
-    type="revolute">
-    <origin
-      xyz="0 -0.085 0"
-      rpy="0 0 0" />
-    <parent
-      link="pelvis" />
-    <child
-      link="right-hip-roll-link" />
-    <axis
-      xyz="1 0 0" />
-    <limit
-      lower="-2.9671"
-      upper="0.5236"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="right-hip-pitch-link">
-    <inertial>
-      <origin
-        xyz="0 -0.0075652 -0.07356396"
-        rpy="0 0 0" />
-      <mass
-        value="0.457668" />
-      <inertia
-        ixx="0.00047715"
-        ixy="-1.1E-07"
-        ixz="-2.38E-06"
-        iyy="0.00044941"
-        iyz="6.606E-05"
-        izz="0.00026776" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-hip-pitch-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-hip-pitch-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="right-hip-pitch-joint"
-    type="revolute">
-    <origin
-      xyz="0 0 0"
-      rpy="0 0 0" />
-    <parent
-      link="right-hip-roll-link" />
-    <child
-      link="right-hip-pitch-link" />
-    <axis
-      xyz="0 1 0" />
-    <limit
-      lower="-2.8798"
-      upper="0.43633"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="right-hip-yaw-link">
-    <inertial>
-      <origin
-        xyz="0.0024088 -0.0035236 -0.050678"
-        rpy="0 0 0" />
-      <mass
-        value="0.2186568" />
-      <inertia
-        ixx="0.00058013"
-        ixy="1.749E-05"
-        ixz="1.62E-05"
-        iyy="0.00042154"
-        iyz="-6.254E-05"
-        izz="0.00031781" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-hip-yaw-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-hip-yaw-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="right-hip-yaw-joint"
-    type="revolute">
-    <origin
-      xyz="0 -0.00475 -0.052212"
-      rpy="0 0 0" />
-    <parent
-      link="right-hip-pitch-link" />
-    <child
-      link="right-hip-yaw-link" />
-    <axis
-      xyz="0 0 1" />
-    <limit
-      lower="-2.7576"
-      upper="2.7576"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="right-knee-pitch-link">
-    <inertial>
-      <origin
-        xyz="0.00231884 0.00198246 -0.03945064"
-        rpy="0 0 0" />
-      <mass
-        value="0.98234901" />
-      <inertia
-        ixx="0.00227395"
-        ixy="-1.675E-05"
-        ixz="6.042E-05"
-        iyy="0.00212205"
-        iyz="8.13E-05"
-        izz="0.00086784" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-knee-pitch-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-knee-pitch-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="right-knee-pitch-joint"
-    type="revolute">
-    <origin
-      xyz="0 0 -0.13775"
-      rpy="0 0 0" />
-    <parent
-      link="right-hip-yaw-link" />
-    <child
-      link="right-knee-pitch-link" />
-    <axis
-      xyz="0 1 0" />
-    <limit
-      lower="-0.087267"
-      upper="2.2689"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="right-ankle-pitch-link">
-    <inertial>
-      <origin
-        xyz="-0.00103591 -0.00075968 0.00366528"
-        rpy="0 0 0" />
-      <mass
-        value="0.48735353" />
-      <inertia
-        ixx="0.00022934"
-        ixy="-4.59E-06"
-        ixz="3.916E-05"
-        iyy="0.00027959"
-        iyz="1.1E-05"
-        izz="0.00029644" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-ankle-pitch-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-ankle-pitch-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="right-ankle-pitch-joint"
-    type="revolute">
-    <origin
-      xyz="0 -0.0020005 -0.155"
-      rpy="0 0 0" />
-    <parent
-      link="right-knee-pitch-link" />
-    <child
-      link="right-ankle-pitch-link" />
-    <axis
-      xyz="0 1 0" />
-    <limit
-      lower="-0.87267"
-      upper="0.5236"
-      effort="36.3"
-      velocity="16.76" />
-  </joint>
-  <link
-    name="right-ankle-roll-link">
-    <inertial>
-      <origin
-        xyz="-0.014848 8.6942E-05 -0.037935"
-        rpy="0 0 0" />
-      <mass
-        value="0.20166" />
-      <inertia
-        ixx="7.714E-05"
-        ixy="-1E-08"
-        ixz="1.008E-05"
-        iyy="0.00022155"
-        iyz="2.6E-07"
-        izz="0.00021058" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-ankle-roll-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="-0.06 0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-    <collision>
-      <origin xyz="-0.06 -0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-    <collision>
-      <origin xyz="0.04 0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-    <collision>
-      <origin xyz="0.04 -0.02 -0.049" rpy="0 0 0"/>
-      <geometry>
-        <sphere radius="0.005"/>
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="right-ankle-roll-joint"
-    type="revolute">
-    <origin
-      xyz="0.025451 0 0"
-      rpy="0 0 0" />
-    <parent
-      link="right-ankle-pitch-link" />
-    <child
-      link="right-ankle-roll-link" />
-    <axis
-      xyz="1 0 0" />
-    <limit
-      lower="-0.31416"
-      upper="0.31416"
-      effort="18"
-      velocity="14.66" />
-  </joint>
-  <link
-    name="waist-roll-link">
-    <inertial>
-      <origin
-        xyz="0.00016618 -8.289E-05 0.045433"
-        rpy="0 0 0" />
-      <mass
-        value="0.4295" />
-      <inertia
-        ixx="0.00027291"
-        ixy="2.39E-06"
-        ixz="-5.24E-06"
-        iyy="0.00038876"
-        iyz="4.84E-06"
-        izz="0.00023908" />
-    </inertial>
-    <visual>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/waist-roll-link.STL" />
-      </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.75294 0.75294 0.75294 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/waist-roll-link.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint
-    name="waist-roll-joint"
-    type="revolute">
-    <origin
-      xyz="0 0 0.025"
-      rpy="0 0 0" />
-    <parent
-      link="pelvis" />
-    <child
-      link="waist-roll-link" />
-    <axis
-      xyz="1 0 0" />
+      xyz="1.0 0.0 0.0"
+    />
     <limit
       lower="-0.5236"
       upper="0.5236"
-      effort="36.3"
-      velocity="16.76" />
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="waist-yaw-link">
+    name="head_yaw_link"
+  >
     <inertial>
       <origin
-        xyz="-0.010338 0.00010972 0.10401"
-        rpy="0 0 0" />
+        xyz="-4.676e-05 0.0 -0.0340346"
+        rpy="0 0 0"
+      />
       <mass
-        value="4.6954" />
+        value="0.04124844"
+      />
       <inertia
-        ixx="0.027262"
-        ixy="-4.642E-05"
-        ixz="-0.00014332"
-        iyy="0.02028"
-        iyz="-4.054E-05"
-        izz="0.017968" />
+        ixx="3.612e-05"
+        ixy="0.0"
+        ixz="1.7e-07"
+        iyy="3.193e-05"
+        iyz="0.0"
+        izz="2.014e-05"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/waist-yaw-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/head_yaw_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.49804 0.49804 0.49804 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/waist-yaw-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/head_yaw_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="waist-yaw-joint"
-    type="revolute">
+    name="head_yaw_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 0.07"
-      rpy="0 0 0" />
+      xyz="0.0025 0.0 0.2759"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="waist-roll-link" />
+      link="waist_roll_link"
+    />
     <child
-      link="waist-yaw-link" />
+      link="head_yaw_link"
+    />
     <axis
-      xyz="0 0 1" />
+      xyz="0.0 0.0 1.0"
+    />
+    <limit
+      lower="-1.7453"
+      upper="1.7453"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="head_pitch_link"
+  >
+    <inertial>
+      <origin
+        xyz="3.387e-05 6.622e-05 0.03365702"
+        rpy="0 0 0"
+      />
+      <mass
+        value="1.08589799"
+      />
+      <inertia
+        ixx="0.00186807"
+        ixy="-5e-08"
+        ixz="-1.005e-05"
+        iyy="0.00154107"
+        iyz="1.5e-06"
+        izz="0.00117917"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/head_pitch_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/head_pitch_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="head_pitch_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="head_yaw_link"
+    />
+    <child
+      link="head_pitch_link"
+    />
+    <axis
+      xyz="0.0 1.0 0.0"
+    />
+    <limit
+      lower="-0.5236"
+      upper="0.43633"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="left_shoulder_pitch_link"
+  >
+    <inertial>
+      <origin
+        xyz="-0.00028701 -0.00557977 -1.202e-05"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.40807723"
+      />
+      <inertia
+        ixx="0.00020502"
+        ixy="-8.7e-07"
+        ixz="0.0"
+        iyy="0.00015331"
+        iyz="-2e-07"
+        izz="0.00022453"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_shoulder_pitch_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_shoulder_pitch_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_shoulder_pitch_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0025 0.13055 0.18296"
+      rpy="0.17453 0.0 0.0"
+    />
+    <parent
+      link="waist_roll_link"
+    />
+    <child
+      link="left_shoulder_pitch_link"
+    />
+    <axis
+      xyz="0.0 1.0 0.0"
+    />
+    <limit
+      lower="-2.8798"
+      upper="2.8798"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="left_shoulder_roll_link"
+  >
+    <inertial>
+      <origin
+        xyz="-0.00776007 0.0 -0.05235755"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.4605974"
+      />
+      <inertia
+        ixx="0.0003965"
+        ixy="1.4e-07"
+        ixz="-8.79e-06"
+        iyy="0.00047123"
+        iyz="-1.3e-07"
+        izz="0.0002499"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_shoulder_roll_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_shoulder_roll_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_shoulder_roll_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="left_shoulder_pitch_link"
+    />
+    <child
+      link="left_shoulder_roll_link"
+    />
+    <axis
+      xyz="1.0 0.0 0.0"
+    />
+    <limit
+      lower="-0.069813"
+      upper="2.2689"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="left_shoulder_yaw_link"
+  >
+    <inertial>
+      <origin
+        xyz="0.00598409 -0.00046195 -0.16104677"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.43574869"
+      />
+      <inertia
+        ixx="0.00042227"
+        ixy="4.5e-07"
+        ixz="4.166e-05"
+        iyy="0.00041575"
+        iyz="-2.97e-06"
+        izz="0.0001555"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_shoulder_yaw_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_shoulder_yaw_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_shoulder_yaw_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="-0.0084881 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="left_shoulder_roll_link"
+    />
+    <child
+      link="left_shoulder_yaw_link"
+    />
+    <axis
+      xyz="0.0 0.0 1.0"
+    />
     <limit
       lower="-2.618"
       upper="2.618"
-      effort="18"
-      velocity="14.66" />
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="left-shoulder-pitch-link">
+    name="left_elbow_pitch_link"
+  >
     <inertial>
       <origin
-        xyz="0.00768322 -0.0013593 -0.00035863"
-        rpy="0 0 0" />
+        xyz="0.00041378 0.00158906 -0.09355598"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.28895" />
+        value="0.26560529"
+      />
       <inertia
-        ixx="8.802E-05"
-        ixy="-4.33E-06"
-        ixz="-1.13E-06"
-        iyy="7.269E-05"
-        iyz="-1.94E-06"
-        izz="7.926E-05" />
+        ixx="0.00107881"
+        ixy="1.64e-06"
+        ixz="6.27e-06"
+        iyy="0.00103692"
+        iyz="4.03e-05"
+        izz="0.00012597"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-shoulder-pitch-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_elbow_pitch_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-shoulder-pitch-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_elbow_pitch_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="left-shoulder-pitch-joint"
-    type="revolute">
+    name="left_elbow_pitch_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0.0015 0.16021 0.1929"
-      rpy="0 0 0" />
+      xyz="0.0085016 0.0 -0.17356"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="waist-yaw-link" />
+      link="left_shoulder_yaw_link"
+    />
     <child
-      link="left-shoulder-pitch-link" />
+      link="left_elbow_pitch_link"
+    />
     <axis
-      xyz="0 0.96593 0.25882" />
+      xyz="0.0 1.0 0.0"
+    />
+    <limit
+      lower="-2.3562"
+      upper="0.0"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="right_shoulder_pitch_link"
+  >
+    <inertial>
+      <origin
+        xyz="-0.00029275 0.00558086 -8.65e-06"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.4080113"
+      />
+      <inertia
+        ixx="0.00020502"
+        ixy="8.5e-07"
+        ixz="0.0"
+        iyy="0.00015324"
+        iyz="1.5e-07"
+        izz="0.00022446"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_shoulder_pitch_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_shoulder_pitch_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_shoulder_pitch_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0025 -0.13055 0.18296"
+      rpy="-0.17453 0.0 0.0"
+    />
+    <parent
+      link="waist_roll_link"
+    />
+    <child
+      link="right_shoulder_pitch_link"
+    />
+    <axis
+      xyz="0.0 1.0 0.0"
+    />
     <limit
       lower="-2.8798"
       upper="2.8798"
-      effort="18"
-      velocity="14.66" />
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="left-shoulder-roll-link">
+    name="right_shoulder_roll_link"
+  >
     <inertial>
       <origin
-        xyz="0.00282436 -1.625E-05 -0.07111712"
-        rpy="0 0 0" />
+        xyz="-0.00776055 -1.543e-05 -0.05235766"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.33168523" />
+        value="0.46060152"
+      />
       <inertia
-        ixx="0.00013535"
-        ixy="5.5E-07"
-        ixz="-1.417E-05"
-        iyy="0.00014294"
-        iyz="-5.7E-07"
-        izz="0.00011781" />
+        ixx="0.0003965"
+        ixy="2e-08"
+        ixz="-8.79e-06"
+        iyy="0.00047123"
+        iyz="1.6e-07"
+        izz="0.0002499"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-shoulder-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/right_shoulder_roll_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-shoulder-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/right_shoulder_roll_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="left-shoulder-roll-joint"
-    type="revolute">
+    name="right_shoulder_roll_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 0"
-      rpy="0 0 0" />
+      xyz="0.0 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="left-shoulder-pitch-link" />
+      link="right_shoulder_pitch_link"
+    />
     <child
-      link="left-shoulder-roll-link" />
+      link="right_shoulder_roll_link"
+    />
     <axis
-      xyz="1 0 0" />
+      xyz="1.0 0.0 0.0"
+    />
     <limit
-      lower="0"
-      upper="3.927"
-      effort="18"
-      velocity="14.66" />
+      lower="-2.2689"
+      upper="0.069813"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="left-shoulder-yaw-link">
+    name="right_shoulder_yaw_link"
+  >
     <inertial>
       <origin
-        xyz="-2.35E-06 0.00784344 -0.10538012"
-        rpy="0 0 0" />
+        xyz="0.0059492 -0.00056578 -0.16123559"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.29780035" />
+        value="0.4377346"
+      />
       <inertia
-        ixx="0.00021237"
-        ixy="-4E-08"
-        ixz="-8E-08"
-        iyy="0.00022105"
-        iyz="-1.42E-06"
-        izz="7.262E-05" />
+        ixx="0.00041725"
+        ixy="1.9e-07"
+        ixz="4.177e-05"
+        iyy="0.00041092"
+        iyz="-2.77e-06"
+        izz="0.00015761"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-shoulder-yaw-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/right_shoulder_yaw_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-shoulder-yaw-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/right_shoulder_yaw_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="left-shoulder-yaw-joint"
-    type="revolute">
+    name="right_shoulder_yaw_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 -0.0885"
-      rpy="0 0 0" />
+      xyz="-0.0084881 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="left-shoulder-roll-link" />
+      link="right_shoulder_roll_link"
+    />
     <child
-      link="left-shoulder-yaw-link" />
+      link="right_shoulder_yaw_link"
+    />
     <axis
-      xyz="0 0 1" />
+      xyz="0.0 0.0 1.0"
+    />
     <limit
-      lower="-1.9199"
-      upper="1.9199"
-      effort="18"
-      velocity="14.66" />
+      lower="-2.618"
+      upper="2.618"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="left-elbow-roll-link">
+    name="right_elbow_pitch_link"
+  >
     <inertial>
       <origin
-        xyz="-1.5932E-12 0.029695 -0.035339"
-        rpy="0 0 0" />
+        xyz="0.00041381 -0.00205194 -0.09355748"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.017387" />
+        value="0.26560018"
+      />
       <inertia
-        ixx="1.9009E-05"
-        ixy="4.2539E-17"
-        ixz="4.1311E-16"
-        iyy="2.1452E-05"
-        iyz="-7.2951E-07"
-        izz="2.7062E-06" />
+        ixx="0.00107835"
+        ixy="-1.7e-06"
+        ixz="6.27e-06"
+        iyy="0.00103691"
+        iyz="-3.038e-05"
+        izz="0.00012552"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-elbow-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/right_elbow_pitch_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.49804 0.49804 0.49804 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/left-elbow-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/right_elbow_pitch_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="left-elbow-roll-joint"
-    type="revolute">
+    name="right_elbow_pitch_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 -0.1115"
-      rpy="0 0 0" />
+      xyz="0.0085016 0.0 -0.17356"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="left-shoulder-yaw-link" />
+      link="right_shoulder_yaw_link"
+    />
     <child
-      link="left-elbow-roll-link" />
+      link="right_elbow_pitch_link"
+    />
     <axis
-      xyz="0 1 0" />
+      xyz="0.0 1.0 0.0"
+    />
     <limit
-      lower="-2.0944"
-      upper="2.0944"
-      effort="18"
-      velocity="14.66" />
+      lower="-2.3562"
+      upper="0.0"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="right-shoulder-pitch-link">
+    name="left_hip_pitch_link"
+  >
     <inertial>
       <origin
-        xyz="0.00768322 0.0013565 -0.00036906"
-        rpy="0 0 0" />
+        xyz="0.00120697 -0.00655025 -0.03219412"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.28895276" />
+        value="0.84947719"
+      />
       <inertia
-        ixx="8.802E-05"
-        ixy="4.31E-06"
-        ixz="-1.19E-06"
-        iyy="7.265E-05"
-        iyz="1.87E-06"
-        izz="7.93E-05" />
+        ixx="0.0013476"
+        ixy="-2.95e-06"
+        ixz="1.726e-05"
+        iyy="0.00131938"
+        iyz="0.0001827"
+        izz="0.00053753"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-shoulder-pitch-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_hip_pitch_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-shoulder-pitch-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_hip_pitch_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="right-shoulder-pitch-joint"
-    type="revolute">
+    name="left_hip_pitch_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0.0015 -0.16021 0.1929"
-      rpy="0 0 0" />
+      xyz="0.0 0.087564 0.0"
+      rpy="0.0 -0.0012892 0.0"
+    />
     <parent
-      link="waist-yaw-link" />
+      link="pelvis"
+    />
     <child
-      link="right-shoulder-pitch-link" />
+      link="left_hip_pitch_link"
+    />
     <axis
-      xyz="0 0.96593 -0.25882" />
+      xyz="0.0 1.0 0.0"
+    />
     <limit
-      lower="-2.8798"
-      upper="2.8798"
-      effort="18"
-      velocity="14.66" />
+      lower="-2.5307"
+      upper="2.5307"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="right-shoulder-roll-link">
+    name="left_hip_roll_link"
+  >
     <inertial>
       <origin
-        xyz="0.00282436 7.02E-06 -0.07111712"
-        rpy="0 0 0" />
+        xyz="0.00052946 -2.35e-05 -0.05295537"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.33168523" />
+        value="0.60878496"
+      />
       <inertia
-        ixx="0.00013534"
-        ixy="-4.8E-07"
-        ixz="-1.417E-05"
-        iyy="0.00014294"
-        iyz="6.4E-07"
-        izz="0.00011781" />
+        ixx="0.00157633"
+        ixy="-5.9e-07"
+        ixz="4.291e-05"
+        iyy="0.00177557"
+        iyz="1.09e-06"
+        izz="0.00116024"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-shoulder-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_hip_roll_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-shoulder-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_hip_roll_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="right-shoulder-roll-joint"
-    type="revolute">
+    name="left_hip_roll_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 0"
-      rpy="0 0 0" />
+      xyz="0.0052109 0.0 -0.064"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="right-shoulder-pitch-link" />
+      link="left_hip_pitch_link"
+    />
     <child
-      link="right-shoulder-roll-link" />
+      link="left_hip_roll_link"
+    />
     <axis
-      xyz="1 0 0" />
+      xyz="1.0 0.0 0.0"
+    />
     <limit
-      lower="-3.927"
-      upper="0"
-      effort="18"
-      velocity="14.66" />
+      lower="-0.61087"
+      upper="1.5708"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="right-shoulder-yaw-link">
+    name="left_hip_yaw_link"
+  >
     <inertial>
       <origin
-        xyz="2.35E-06 -0.00784344 -0.10538012"
-        rpy="0 0 0" />
+        xyz="0.00306591 0.00829333 -0.14360796"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.29780035" />
+        value="0.40461495"
+      />
       <inertia
-        ixx="0.00021237"
-        ixy="-4E-08"
-        ixz="8E-08"
-        iyy="0.00022105"
-        iyz="1.42E-06"
-        izz="7.262E-05" />
+        ixx="0.00061784"
+        ixy="2.547e-05"
+        ixz="-3.135e-05"
+        iyy="0.00059292"
+        iyz="8.215e-05"
+        izz="0.00040219"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-shoulder-yaw-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_hip_yaw_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.75294 0.75294 0.75294 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-shoulder-yaw-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_hip_yaw_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="right-shoulder-yaw-joint"
-    type="revolute">
+    name="left_hip_yaw_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 -0.0885"
-      rpy="0 0 0" />
+      xyz="0.0 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="right-shoulder-roll-link" />
+      link="left_hip_roll_link"
+    />
     <child
-      link="right-shoulder-yaw-link" />
+      link="left_hip_yaw_link"
+    />
     <axis
-      xyz="0 0 1" />
+      xyz="0.0 0.0 1.0"
+    />
     <limit
-      lower="-1.9199"
-      upper="1.9199"
-      effort="18"
-      velocity="14.66" />
+      lower="-2.618"
+      upper="2.618"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
   <link
-    name="right-elbow-roll-link">
+    name="left_knee_pitch_link"
+  >
     <inertial>
       <origin
-        xyz="5.0157E-12 -0.029695 -0.035339"
-        rpy="0 0 0" />
+        xyz="0.00823666 -0.0004019 -0.05558754"
+        rpy="0 0 0"
+      />
       <mass
-        value="0.017387" />
+        value="1.69365406"
+      />
       <inertia
-        ixx="1.9009E-05"
-        ixy="1.953E-16"
-        ixz="-1.046E-15"
-        iyy="2.1452E-05"
-        iyz="7.2951E-07"
-        izz="2.7062E-06" />
+        ixx="0.00586734"
+        ixy="-5.14e-06"
+        ixz="0.00040579"
+        iyy="0.00574961"
+        iyz="0.00024787"
+        izz="0.0015986"
+      />
     </inertial>
     <visual>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-elbow-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_knee_pitch_link.STL"
+        />
       </geometry>
       <material
-        name="">
+        name=""
+      >
         <color
-          rgba="0.49804 0.49804 0.49804 1" />
+          rgba="0.75294 0.75294 0.75294 1"
+        />
       </material>
     </visual>
     <collision>
       <origin
         xyz="0 0 0"
-        rpy="0 0 0" />
+        rpy="0 0 0"
+      />
       <geometry>
         <mesh
-          filename="package://meshes/A2601-M-MINI-BOT/right-elbow-roll-link.STL" />
+          filename="package://meshes/A2601-M-MINI-BOT/left_knee_pitch_link.STL"
+        />
       </geometry>
     </collision>
   </link>
   <joint
-    name="right-elbow-roll-joint"
-    type="revolute">
+    name="left_knee_pitch_joint"
+    type="revolute"
+  >
     <origin
-      xyz="0 0 -0.1115"
-      rpy="0 0 0" />
+      xyz="-0.0055223 1.008e-05 -0.1775"
+      rpy="0.0 0.0 0.0"
+    />
     <parent
-      link="right-shoulder-yaw-link" />
+      link="left_hip_yaw_link"
+    />
     <child
-      link="right-elbow-roll-link" />
+      link="left_knee_pitch_link"
+    />
     <axis
-      xyz="0 1 0" />
+      xyz="0.0 1.0 0.0"
+    />
     <limit
-      lower="-2.0944"
-      upper="2.0944"
-      effort="18"
-      velocity="14.66" />
+      lower="-0.087266"
+      upper="2.5307"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="left_ankle_pitch_link"
+  >
+    <inertial>
+      <origin
+        xyz="-0.01944265 -0.00058981 -0.07333538"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.40427331"
+      />
+      <inertia
+        ixx="0.00013275"
+        ixy="-4.59e-06"
+        ixz="1.6e-07"
+        iyy="0.00014647"
+        iyz="-2.2e-06"
+        izz="0.00015552"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_ankle_pitch_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_ankle_pitch_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_ankle_pitch_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.015859 -7.7335e-05 -0.084249"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="left_knee_pitch_link"
+    />
+    <child
+      link="left_ankle_pitch_link"
+    />
+    <axis
+      xyz="0.0 1.0 0.0"
+    />
+    <limit
+      lower="-0.95993"
+      upper="0.5236"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="left_ankle_roll_link"
+  >
+    <inertial>
+      <origin
+        xyz="-0.00012384 0.00060292 -0.04100488"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.40796272"
+      />
+      <inertia
+        ixx="0.00013521"
+        ixy="1.736e-05"
+        ixz="2.801e-05"
+        iyy="0.00065806"
+        iyz="1.42e-06"
+        izz="0.00068307"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_ankle_roll_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/left_ankle_roll_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_ankle_roll_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="-9.485e-05 0.0 -0.073572"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="left_ankle_pitch_link"
+    />
+    <child
+      link="left_ankle_roll_link"
+    />
+    <axis
+      xyz="1.0 0.0 0.0"
+    />
+    <limit
+      lower="-0.34907"
+      upper="0.34907"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="right_hip_pitch_link"
+  >
+    <inertial>
+      <origin
+        xyz="0.00073183 0.0064831 -0.03216718"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.82759397"
+      />
+      <inertia
+        ixx="0.00130822"
+        ixy="5.65e-06"
+        ixz="1.841e-05"
+        iyy="0.00128419"
+        iyz="-0.00017687"
+        izz="0.00051972"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_hip_pitch_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="1 1 1 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_hip_pitch_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_hip_pitch_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0 -0.087564 0.0"
+      rpy="0.0 -0.0012892 0.0"
+    />
+    <parent
+      link="pelvis"
+    />
+    <child
+      link="right_hip_pitch_link"
+    />
+    <axis
+      xyz="0.0 1.0 0.0"
+    />
+    <limit
+      lower="-2.5307"
+      upper="2.5307"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="right_hip_roll_link"
+  >
+    <inertial>
+      <origin
+        xyz="0.00052946 -2.351e-05 -0.05295537"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.60878496"
+      />
+      <inertia
+        ixx="0.00157633"
+        ixy="-5.9e-07"
+        ixz="4.291e-05"
+        iyy="0.00177557"
+        iyz="1.09e-06"
+        izz="0.00116024"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_hip_roll_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_hip_roll_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_hip_roll_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0052109 0.0 -0.064"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="right_hip_pitch_link"
+    />
+    <child
+      link="right_hip_roll_link"
+    />
+    <axis
+      xyz="1.0 0.0 0.0"
+    />
+    <limit
+      lower="-1.5708"
+      upper="0.61087"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="right_hip_yaw_link"
+  >
+    <inertial>
+      <origin
+        xyz="0.00306591 0.00829333 -0.14360796"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.40461495"
+      />
+      <inertia
+        ixx="0.00061784"
+        ixy="2.547e-05"
+        ixz="-3.135e-05"
+        iyy="0.00059292"
+        iyz="8.215e-05"
+        izz="0.00040219"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_hip_yaw_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_hip_yaw_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_hip_yaw_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0 0.0 0.0"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="right_hip_roll_link"
+    />
+    <child
+      link="right_hip_yaw_link"
+    />
+    <axis
+      xyz="0.0 0.0 1.0"
+    />
+    <limit
+      lower="-2.618"
+      upper="2.618"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="right_knee_pitch_link"
+  >
+    <inertial>
+      <origin
+        xyz="0.00823666 -0.0004019 -0.05558754"
+        rpy="0 0 0"
+      />
+      <mass
+        value="1.69365406"
+      />
+      <inertia
+        ixx="0.00586734"
+        ixy="-5.14e-06"
+        ixz="0.00040579"
+        iyy="0.00574961"
+        iyz="0.00024787"
+        izz="0.0015986"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_knee_pitch_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_knee_pitch_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_knee_pitch_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="-0.0055223 1.0073e-05 -0.1775"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="right_hip_yaw_link"
+    />
+    <child
+      link="right_knee_pitch_link"
+    />
+    <axis
+      xyz="0.0 1.0 0.0"
+    />
+    <limit
+      lower="-0.087266"
+      upper="2.5307"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="right_ankle_pitch_link"
+  >
+    <inertial>
+      <origin
+        xyz="-0.01934809 -0.00059872 -0.07336032"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.40427331"
+      />
+      <inertia
+        ixx="0.00013275"
+        ixy="-4.59e-06"
+        ixz="1.3e-07"
+        iyy="0.00014646"
+        iyz="-2.21e-06"
+        izz="0.00015552"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_ankle_pitch_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_ankle_pitch_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_ankle_pitch_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.015859 -7.7338e-05 -0.084249"
+      rpy="0.00012136 0.0012892 0.0"
+    />
+    <parent
+      link="right_knee_pitch_link"
+    />
+    <child
+      link="right_ankle_pitch_link"
+    />
+    <axis
+      xyz="0.0 1.0 0.0"
+    />
+    <limit
+      lower="-0.95993"
+      upper="0.5236"
+      effort="0.0"
+      velocity="0.0"
+    />
+  </joint>
+  <link
+    name="right_ankle_roll_link"
+  >
+    <inertial>
+      <origin
+        xyz="-9.792e-05 -0.0005995 -0.04098947"
+        rpy="0 0 0"
+      />
+      <mass
+        value="0.4052854"
+      />
+      <inertia
+        ixx="0.0001339"
+        ixy="-1.718e-05"
+        ixz="2.732e-05"
+        iyy="0.00065218"
+        iyz="-1.43e-06"
+        izz="0.00067659"
+      />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_ankle_roll_link.STL"
+        />
+      </geometry>
+      <material
+        name=""
+      >
+        <color
+          rgba="0.75294 0.75294 0.75294 1"
+        />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0"
+      />
+      <geometry>
+        <mesh
+          filename="package://meshes/A2601-M-MINI-BOT/right_ankle_roll_link.STL"
+        />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_ankle_roll_joint"
+    type="revolute"
+  >
+    <origin
+      xyz="0.0 0.0 -0.073572"
+      rpy="0.0 0.0 0.0"
+    />
+    <parent
+      link="right_ankle_pitch_link"
+    />
+    <child
+      link="right_ankle_roll_link"
+    />
+    <axis
+      xyz="1.0 0.0 0.0"
+    />
+    <limit
+      lower="-0.34907"
+      upper="0.34907"
+      effort="0.0"
+      velocity="0.0"
+    />
   </joint>
 </robot>

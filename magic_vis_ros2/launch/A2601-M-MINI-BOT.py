@@ -16,7 +16,7 @@ def generate_launch_description():
     urdf_file_path = os.path.join(pkg_share, '', 'A2601-M-MINI-BOT.urdf')
     
     # Get XML path as direct string
-    xml_file_path = os.path.join(pkg_share, '', 'magicbot_gen2_v2.xml')
+    xml_file_path = os.path.join(pkg_share, '', 'A2601-M-MINI-BOT.xml')
     
     # Get YAML path as direct string
     yaml_file_path = os.path.join(pkg_share, '', 'A2601-M-MINI-BOT.yaml')

@@ -6,12 +6,12 @@ waist:
   count: 2
 head:
   start_index: 14
-  count: 0
+  count: 2
 arms:
-  start_index: 14
+  start_index: 16
   count: 4
   free_count: 3
 arms1:
-  start_index: 18
+  start_index: 20
   count: 4
   free_count: 3
