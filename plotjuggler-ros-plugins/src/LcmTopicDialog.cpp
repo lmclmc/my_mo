@@ -247,11 +247,17 @@ QVector<TopicLcmItem> LcmTopicDialog::getConfig() const
     return res;
 }
 
-void LcmTopicDialog::saveConfig()
-{
+void LcmTopicDialog::saveConfig() {
     QString path = QFileDialog::getSaveFileName(this,
         "Save config", "topic_lcm_map.json", "JSON (*.json)");
     if(path.isEmpty()) return;
+
+    QJsonObject rootObj;
+
+    // 保存 LCM log 配置参数
+    rootObj["log_save_path"] = m_logPathEdit->text().trimmed();
+    rootObj["log_max_size_mb"] = m_logMaxSizeEdit->text().trimmed();
+    rootObj["log_max_files"] = m_logMaxFilesEdit->text().trimmed();
 
     // 保存 topic 配置
     QJsonArray arr;
@@ -264,7 +270,9 @@ void LcmTopicDialog::saveConfig()
         obj["lcm_file"] = item.lcmFilePath;
         arr.append(obj);
     }
-    QJsonDocument doc(arr);
+    rootObj["topics"] = arr;
+
+    QJsonDocument doc(rootObj);
     QFile f(path);
     if(f.open(QIODevice::WriteOnly))
     {
@@ -274,8 +282,7 @@ void LcmTopicDialog::saveConfig()
     }
 }
 
-void LcmTopicDialog::loadConfig()
-{
+void LcmTopicDialog::loadConfig() {
     QString path = QFileDialog::getOpenFileName(this,
         "Load config", "", "JSON (*.json)");
     if(path.isEmpty()) return;
@@ -284,10 +291,27 @@ void LcmTopicDialog::loadConfig()
     if(!f.open(QIODevice::ReadOnly)) return;
     auto doc = QJsonDocument::fromJson(f.readAll());
     f.close();
-    if(!doc.isArray()) return;
+    if(!doc.isObject()) return;
+
+    QJsonObject rootObj = doc.object();
+
+    // 加载 LCM log 配置参数
+    if(rootObj.contains("log_save_path")) {
+        m_logPathEdit->setText(rootObj["log_save_path"].toString());
+    }
+    if(rootObj.contains("log_max_size_mb")) {
+        m_logMaxSizeEdit->setText(rootObj["log_max_size_mb"].toString());
+    }
+    if(rootObj.contains("log_max_files")) {
+        m_logMaxFilesEdit->setText(rootObj["log_max_files"].toString());
+    }
+
+    // 加载 topic 配置
+    if(!rootObj.contains("topics")) return;
+    auto arr = rootObj["topics"].toArray();
+    if(arr.isEmpty()) return;
 
     clearAllRows();
-    auto arr = doc.array();
     for(auto val : arr)
     {
         if(!val.isObject()) continue;
