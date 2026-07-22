@@ -21,6 +21,7 @@
 struct TopicLcmItem
 {
     QString topic;
+    QString port;
     QString lcmFilePath;
 };
 
@@ -33,7 +34,6 @@ public:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 public:
-    QString getPort() const { return m_portEdit->text().trimmed(); }
     QString getLogSavePath() const { return m_logPathEdit->text().trimmed(); }
     int getLogMaxSize() const { return m_logMaxSizeEdit->text().toInt() * 1024 * 1024; }
     int getLogMaxFiles() const { return m_logMaxFilesEdit->text().toInt(); }
@@ -56,7 +56,6 @@ private:
     QPushButton* m_btnSaveCfg;
     QPushButton* m_btnLoadCfg;
     QPushButton* m_btnConfirm;
-    QLineEdit* m_portEdit;  // 端口输入框
     // 日志保存相关控件
     QLineEdit* m_logPathEdit;      // 日志保存路径
     QLineEdit* m_logMaxSizeEdit;   // 单文件最大大小(MB)

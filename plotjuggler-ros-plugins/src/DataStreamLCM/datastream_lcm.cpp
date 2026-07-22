@@ -234,7 +234,7 @@ int DataStreamLCM::decode_type(void* recvbuf, int data_size, double timestamp, i
 
 void DataStreamLCM::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
   if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
-  
+
   if (lcm_log)
     lcm_log->write(topic_name, recvbuf);
 
@@ -264,6 +264,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
   } TopicLcmItem;
   
   topic_map.clear();
+  lcm_table.clear();
   auto _config = dialog->getConfig();
 
   lcm_type_table.clear();
@@ -313,16 +314,22 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
     tokenize_destroy(t);
 
     if (auto it = topic_map.find(item.topic.toStdString()); it == topic_map.end()) {
-      topic_map[item.topic.toStdString()] = {hash, {lcmgen}, item.lcmFilePath.toStdString()};
+      topic_map[item.topic.toStdString()] = {item.port.toInt(), hash, {lcmgen}, item.lcmFilePath.toStdString()};
     } else {
       it->second.lcmgen_table.push_back(lcmgen);
     }
 
     std::cout << "item.topic: " << item.topic.toStdString() << std::endl;
     std::cout << "item.lcmFilePath: " << item.lcmFilePath.toStdString() << std::endl;
+    std::cout << "item.port: " << item.port.toStdString() << std::endl;
+
+    if (auto l = lcm_table.find(item.port.toInt()); l == lcm_table.end()) {
+      QString lcm_url = QString::fromStdString("udpm://239.255.76.67:") + item.port;
+      auto lcm_ptr = std::make_shared<lcm::LCM>(lcm_url.toStdString()); // 使用全局变量
+      lcm_ptr->subscribe(".*", &DataStreamLCM::handleMessage, this);
+      lcm_table[item.port.toInt()] = lcm_ptr;
+    }
   }
-  QString lcm_url = QString::fromStdString("udpm://239.255.76.67:") + dialog->getPort();
-  lcm_ = std::make_shared<lcm::LCM>(lcm_url.toStdString()); // 使用全局变量
 
   log_save_path = dialog->getLogSavePath();
   log_max_size = dialog->getLogMaxSize();
@@ -357,11 +364,34 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
     }
   }
 
-  lcm_->subscribe(".*", &DataStreamLCM::handleMessage, this);
   _running = true;
   lcm_runner_ = std::thread([this] {
     while (_running) {
-      lcm_->handleTimeout(100);
+      fd_set fds;
+      FD_ZERO(&fds);
+      int max_fd = 0;
+      for (auto [port, lcm_ptr] : lcm_table) {
+        int fd = lcm_ptr->getFileno();
+        FD_SET(fd, &fds);
+        if (fd > max_fd) {
+          max_fd = fd;
+        }
+      }
+
+      int status = select(max_fd + 1, &fds, 0, 0, NULL);
+      if (0 == status) {
+        // no messages
+        std::cout << "waitting for message." << std::endl;
+      } else {
+        for (auto [port, lcm_ptr] : lcm_table) {
+          int fd = lcm_ptr->getFileno();
+          if (FD_ISSET(fd, &fds)) {
+            if (lcm_ptr) {
+              lcm_ptr->handle();
+            }
+          }
+        }
+      }
     }
   });
 
@@ -399,7 +429,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
               lcm_runner_.join();
             }
 
-            lcm_.reset();
+            lcm_table.clear();
             return;
           }
         }
@@ -431,7 +461,7 @@ void DataStreamLCM::shutdown()
     render_runner_.join();
   }
 
-  lcm_.reset();
+  lcm_table.clear();
   lcm_log.reset();
 }
 

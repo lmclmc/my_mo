@@ -45,22 +45,6 @@ void LcmTopicDialog::setupUI()
     mainLayout->setSpacing(10);
 
     if (m_mode == 1) {
-        // 端口输入区域 - 在界面上方
-        QHBoxLayout* portLayout = new QHBoxLayout();
-        portLayout->setSpacing(8);
-        QLabel* portLabel = new QLabel("LCM 订阅 端口号:");
-        portLabel->setStyleSheet("font-size: 13px;");
-        
-        m_portEdit = new QLineEdit();
-        m_portEdit->setPlaceholderText("Enter LCM port");
-        m_portEdit->setFixedWidth(300);
-        
-        portLayout->addWidget(portLabel);
-        portLayout->addWidget(m_portEdit);
-        portLayout->addStretch();  // 右侧填充
-        
-        mainLayout->addLayout(portLayout);
-
         // 日志保存设置区域
         QGroupBox* logGroup = new QGroupBox("LCM Log Save Settings");
         logGroup->setStyleSheet("QGroupBox { font-weight: bold; border: 1px solid #555; border-radius: 4px; padding: 8px; margin-top: 8px; } QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px 0 4px; }");
@@ -113,14 +97,16 @@ void LcmTopicDialog::setupUI()
         mainLayout->addWidget(logGroup);
     }
 
-    // 表格控件：2列
+    // 表格控件：3列（Topic Name, Port, LCM Log File）
     m_table = new QTableWidget();
-    m_table->setColumnCount(2);
-    m_table->setHorizontalHeaderLabels({"Topic Name", "LCM Log File"});
+    m_table->setColumnCount(3);
+    m_table->setHorizontalHeaderLabels({"Topic Name", "Port", "LCM Log File"});
     m_table->verticalHeader()->setVisible(false);
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
     m_table->setColumnWidth(0, 220);  // Topic Name 列固定宽度220像素
-    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);  // LCM Log File 拉伸填充
+    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+    m_table->setColumnWidth(1, 120);  // Port 列固定宽度120像素
+    m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);  // LCM Log File 拉伸填充
 
     // 底部按钮栏
     QHBoxLayout* btnLayout = new QHBoxLayout();
@@ -174,17 +160,23 @@ void LcmTopicDialog::addEmptyRow()
     int row = m_table->rowCount();
     m_table->insertRow(row);
 
-    // 第一列：输入框
+    // 第一列：Topic输入框
     QLineEdit* topicEdit = new QLineEdit();
     topicEdit->setPlaceholderText("e.g. /joint_state");
     m_table->setCellWidget(row, 0, topicEdit);
 
-    // 第二列：显示文件路径，单击弹窗选择
+    // 第二列：端口输入框
+    QLineEdit* portEdit = new QLineEdit();
+    portEdit->setPlaceholderText("e.g. 7777");
+    portEdit->setFixedWidth(110);
+    m_table->setCellWidget(row, 1, portEdit);
+
+    // 第三列：显示文件路径，单击弹窗选择
     QLineEdit* fileEdit = new QLineEdit();
     fileEdit->setPlaceholderText("Click to select .lcm log");
     fileEdit->setReadOnly(true);
     fileEdit->installEventFilter(this);  // 安装事件过滤器
-    m_table->setCellWidget(row, 1, fileEdit);
+    m_table->setCellWidget(row, 2, fileEdit);
 }
 
 void LcmTopicDialog::delSelectedRow()
@@ -214,7 +206,7 @@ bool LcmTopicDialog::eventFilter(QObject *watched, QEvent *event)
         if (edit) {
             // 找到这个QLineEdit所在的行和列
             for (int row = 0; row < m_table->rowCount(); ++row) {
-                if (m_table->cellWidget(row, 1) == edit) {
+                if (m_table->cellWidget(row, 2) == edit) {
                     selectLcmFileForCell(row);
                     return true;
                 }
@@ -241,14 +233,16 @@ QVector<TopicLcmItem> LcmTopicDialog::getConfig() const
     for(int r=0; r<rows; r++)
     {
         QLineEdit* topicEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,0));
-        QLineEdit* fileEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,1));
-        if(!topicEd || !fileEd) continue;
+        QLineEdit* portEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,1));
+        QLineEdit* fileEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,2));
+        if(!topicEd || !portEd || !fileEd) continue;
 
         QString t = topicEd->text().trimmed();
+        QString p = portEd->text().trimmed();
         QString f = fileEd->text().trimmed();
-        if(t.isEmpty() && f.isEmpty()) continue;
+        if(t.isEmpty() && p.isEmpty() && f.isEmpty()) continue;
 
-        res.push_back({t, f});
+        res.push_back({t, p, f});
     }
     return res;
 }
@@ -259,12 +253,14 @@ void LcmTopicDialog::saveConfig()
         "Save config", "topic_lcm_map.json", "JSON (*.json)");
     if(path.isEmpty()) return;
 
+    // 保存 topic 配置
     QJsonArray arr;
     auto data = getConfig();
     for(auto& item : data)
     {
         QJsonObject obj;
         obj["topic"] = item.topic;
+        obj["port"] = item.port;
         obj["lcm_file"] = item.lcmFilePath;
         arr.append(obj);
     }
@@ -300,8 +296,10 @@ void LcmTopicDialog::loadConfig()
         int r = m_table->rowCount()-1;
 
         QLineEdit* tEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,0));
-        QLineEdit* fEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,1));
+        QLineEdit* pEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,1));
+        QLineEdit* fEd = qobject_cast<QLineEdit*>(m_table->cellWidget(r,2));
         if(tEd) tEd->setText(obj["topic"].toString());
+        if(pEd) pEd->setText(obj["port"].toString());
         if(fEd) fEd->setText(obj["lcm_file"].toString());
     }
 }

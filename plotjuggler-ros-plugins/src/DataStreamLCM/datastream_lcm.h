@@ -19,11 +19,12 @@ class DataStreamLCM : public PJ::DataStreamer
   Q_PLUGIN_METADATA(IID "facontidavide.PlotJuggler3.DataStreamer")
   Q_INTERFACES(PJ::DataStreamer)
 
-typedef struct TopicLcmItem_ {
+  typedef struct TopicLcmItem_ {
+    int port;
     int64_t hash;
     std::vector<lcmgen_t*> lcmgen_table;
     std::string lcmFilePath;
-} TopicLcmItem_;
+  } TopicLcmItem_;
 
 public:
   DataStreamLCM();
@@ -54,7 +55,7 @@ private:
 
 private:
   std::map<std::string, lcm_struct_t*> lcm_type_table;
-  std::shared_ptr<lcm::LCM> lcm_;
+  std::unordered_map<int, std::shared_ptr<lcm::LCM>> lcm_table;
   std::unordered_map<std::string, TopicLcmItem_> topic_map;
   std::shared_ptr<rotating_file_sink> lcm_log;
   SafeQueue<LcmMessage> message_queue;
