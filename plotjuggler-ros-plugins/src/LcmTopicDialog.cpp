@@ -306,15 +306,17 @@ bool LcmTopicDialog::loadConfigFromFile(const QString& filePath) {
 
     QJsonObject rootObj = doc.object();
 
-    // 加载 LCM log 配置参数
-    if(rootObj.contains("log_save_path")) {
-        m_logPathEdit->setText(rootObj["log_save_path"].toString());
-    }
-    if(rootObj.contains("log_max_size_mb")) {
-        m_logMaxSizeEdit->setText(rootObj["log_max_size_mb"].toString());
-    }
-    if(rootObj.contains("log_max_files")) {
-        m_logMaxFilesEdit->setText(rootObj["log_max_files"].toString());
+    if (m_mode == 1) {
+        // 加载 LCM log 配置参数
+        if(rootObj.contains("log_save_path")) {
+            m_logPathEdit->setText(rootObj["log_save_path"].toString());
+        }
+        if(rootObj.contains("log_max_size_mb")) {
+            m_logMaxSizeEdit->setText(rootObj["log_max_size_mb"].toString());
+        }
+        if(rootObj.contains("log_max_files")) {
+            m_logMaxFilesEdit->setText(rootObj["log_max_files"].toString());
+        }
     }
 
     // 加载 topic 配置
