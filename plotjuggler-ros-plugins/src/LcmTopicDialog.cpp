@@ -34,6 +34,8 @@ LcmTopicDialog::LcmTopicDialog(int mode, QWidget *parent)
     setWindowTitle("LCM Topic & Log Mapper (PlotJuggler Style)");
     setMinimumSize(720, 480);
     setStyleSheet(getDarkStyleSheet());
+    // 构造函数中添加
+    setAcceptDrops(true);  // 启用拖拽
     setupUI();
 }
 
@@ -286,12 +288,21 @@ void LcmTopicDialog::loadConfig() {
     QString path = QFileDialog::getOpenFileName(this,
         "Load config", "", "JSON (*.json)");
     if(path.isEmpty()) return;
+    loadConfigFromFile(path);  // 改为调用新方法
+}
 
-    QFile f(path);
-    if(!f.open(QIODevice::ReadOnly)) return;
+bool LcmTopicDialog::loadConfigFromFile(const QString& filePath) {
+    QFile f(filePath);
+    if(!f.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, "Error", "Cannot open file: " + filePath);
+        return false;
+    }
     auto doc = QJsonDocument::fromJson(f.readAll());
     f.close();
-    if(!doc.isObject()) return;
+    if(!doc.isObject()) {
+        QMessageBox::warning(this, "Error", "Invalid JSON format: " + filePath);
+        return false;
+    }
 
     QJsonObject rootObj = doc.object();
 
@@ -307,9 +318,9 @@ void LcmTopicDialog::loadConfig() {
     }
 
     // 加载 topic 配置
-    if(!rootObj.contains("topics")) return;
+    if(!rootObj.contains("topics")) return true;
     auto arr = rootObj["topics"].toArray();
-    if(arr.isEmpty()) return;
+    if(arr.isEmpty()) return true;
 
     clearAllRows();
     for(auto val : arr)
@@ -325,5 +336,31 @@ void LcmTopicDialog::loadConfig() {
         if(tEd) tEd->setText(obj["topic"].toString());
         if(pEd) pEd->setText(obj["port"].toString());
         if(fEd) fEd->setText(obj["lcm_file"].toString());
+    }
+    QMessageBox::information(this, "Success", "Config loaded from: " + filePath);
+    return true;
+}
+
+void LcmTopicDialog::dragEnterEvent(QDragEnterEvent *event) {
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void LcmTopicDialog::dropEvent(QDropEvent *event) {
+    const QMimeData *mimeData = event->mimeData();
+    if (!mimeData->hasUrls()) {
+        return;
+    }
+
+    QList<QUrl> urlList = mimeData->urls();
+    if (urlList.isEmpty()) {
+        return;
+    }
+
+    QString filePath = urlList.first().toLocalFile();
+    if (filePath.endsWith(".json", Qt::CaseInsensitive)) {
+        loadConfigFromFile(filePath);
+        event->acceptProposedAction();
     }
 }

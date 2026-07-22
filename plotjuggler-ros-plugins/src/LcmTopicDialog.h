@@ -16,6 +16,9 @@
 #include <QMessageBox>
 #include <QGroupBox>
 #include <QGridLayout>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <map>
 
 struct TopicLcmItem
@@ -38,9 +41,14 @@ public:
     int getLogMaxSize() const { return m_logMaxSizeEdit->text().toInt() * 1024 * 1024; }
     int getLogMaxFiles() const { return m_logMaxFilesEdit->text().toInt(); }
 
+protected:
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+
 private:
     int m_mode;
 
+    bool loadConfigFromFile(const QString& filePath);
     void setupUI();
     void addEmptyRow();
     void delSelectedRow();
