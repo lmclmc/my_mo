@@ -50,7 +50,12 @@ private:
 
     void loadDefaultSettings();
 
-    int decode_type(const lcm::LogEvent* event, int, const std::string&, const std::string&, int deep= 0);
+    //一级解析函数，解析LCM消息中，任意类型的结构体数据，解开结构体内部任意成员数据后，调用二级解析函数处理
+    int decode_type_1(const lcm::LogEvent*, int, const std::string&, const std::string&);
+    //二级解析函数，调用lcm解析函数进行解析，调用不了的则递归调用一级解析函数处理
+    int decode_type_2(const lcm::LogEvent*, int, const std::string&, 
+                      const std::string&, const std::string&,
+                      std::unordered_map<std::string, int>&);
 };
 
 #endif  // DATALOAD_ROS2_H

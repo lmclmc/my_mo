@@ -15,109 +15,126 @@ DataStreamLCM::DataStreamLCM() : DataStreamer(), _running(false), _first_warning
   loadDefaultSettings();
 }
 
-int DataStreamLCM::decode_type(void* recvbuf, int data_size, double timestamp, int offset,
-                               const std::string& type, const std::string& base, int deep) {
+int DataStreamLCM::decode_type_2(void* recvbuf, int data_size, double timestamp, int offset, 
+                                 const std::string& type, 
+                                 const std::string& base, const std::string& member_name,
+                                 std::unordered_map<std::string, int>& member_map) {
+  int pos_offset = offset;
+  int decode_len = 0;
+  auto itr = dataMap().numeric.find(base);
+  if (itr == dataMap().numeric.end()) {
+    itr = dataMap().addNumeric(base);
+  }
+
+  if (type == "int8_t") {
+    int8_t value;
+    int tlen = __int8_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    itr->second.pushBack({ timestamp, value });
+    member_map[member_name] = value;
+  } else if (type == "int16_t") {
+    int16_t value;
+    int tlen = __int16_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    itr->second.pushBack({ timestamp, value });
+    member_map[member_name] = value;
+  } else if (type == "int32_t") {
+    int32_t value;
+    int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    itr->second.pushBack({ timestamp, value });
+    member_map[member_name] = value;
+  } else if (type == "int64_t") {
+    int64_t value;
+    int tlen = __int64_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    itr->second.pushBack({ timestamp, value });
+    member_map[member_name] = value;
+  } else if (type == "float") {
+    float value;
+    int tlen = __float_decode_array(recvbuf, pos_offset, data_size, &value, 1);
+
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    itr->second.pushBack({ timestamp, value });
+  } else if (type == "double") {
+    double value;
+    int tlen = __double_decode_array(recvbuf, pos_offset, data_size, &value, 1);
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    itr->second.pushBack({ timestamp, value });
+  } else if (type == "string") {
+    int32_t __d_len__;
+    int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &__d_len__, 1);
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    if(__d_len__ > data_size - pos_offset || __d_len__ <= 0) return 0;
+    std::string lcm_str(static_cast<const char*>(recvbuf) + pos_offset,  __d_len__ - 1);
+    pos_offset += __d_len__;
+    decode_len += __d_len__;
+    auto str_itr = dataMap().strings.find(base + member_name);
+    if (str_itr == dataMap().strings.end()) {
+      str_itr = dataMap().addStringSeries(base + member_name);
+    }
+    str_itr->second.pushBack({ timestamp, lcm_str });
+  } else if (type == "boolean") {
+    int8_t value;
+    int tlen = __boolean_decode_array(recvbuf, pos_offset, data_size, &value, 1);
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+    itr->second.pushBack({ timestamp, value });
+  } else {
+    int tlen = decode_type_1(recvbuf, data_size, timestamp, pos_offset, type,
+                            base + member_name + "/");
+    if(tlen > 0) {
+      pos_offset += tlen;
+      decode_len += tlen;
+    }
+  }
+  return decode_len;
+}
+
+int DataStreamLCM::decode_type_1(void* recvbuf, int data_size, double timestamp, int offset,
+                               const std::string& type, const std::string& base) {
   //偏移量，递归调用时，给下一级函数使用
   int pos_offset = offset;
   //已解码长度，递归调用时，返回给上一级函数
   int decode_len = 0;
+  //成员变量表，每个成员变量对应的值存储其中，目的是为了解析可变长数组数据。
   std::unordered_map<std::string, int> member_map;
   if (auto lcm_struct_type = lcm_type_table.find(type); lcm_struct_type != lcm_type_table.end()) {
     lcm_struct_t* struct_item = lcm_struct_type->second;
 
     for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
       lcm_member_t* member = (lcm_member_t*) g_ptr_array_index(struct_item->members, mind);
-      auto itr = dataMap().numeric.find(base + member->membername);
-      if (itr == dataMap().numeric.end()) {
-        itr = dataMap().addNumeric(base + member->membername);
-      }
-
-      double local_timestamp = timestamp / 1000000;
+      
+      double local_timestamp = timestamp;
       if (g_ptr_array_size(member->dimensions) == 0) {
-        if (!strcmp(member->type->lctypename, "int8_t")) {
-          int8_t value;
-          int tlen = __int8_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          itr->second.pushBack({ local_timestamp, value });
-          member_map[member->membername] = value;
-        } else if (!strcmp(member->type->lctypename, "int16_t")) {
-          int16_t value;
-          int tlen = __int16_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          itr->second.pushBack({ local_timestamp, value });
-          member_map[member->membername] = value;
-        } else if (!strcmp(member->type->lctypename, "int32_t")) {
-          int32_t value;
-          int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          itr->second.pushBack({ local_timestamp, value });
-          member_map[member->membername] = value;
-        } else if (!strcmp(member->type->lctypename, "int64_t")) {
-          int64_t value;
-          int tlen = __int64_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          itr->second.pushBack({ local_timestamp, value });
-          member_map[member->membername] = value;
-        } else if (!strcmp(member->type->lctypename, "float")) {
-          float value;
-          int tlen = __float_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          itr->second.pushBack({ local_timestamp, value });
-        } else if (!strcmp(member->type->lctypename, "double")) {
-          double value;
-          int tlen = __double_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          itr->second.pushBack({ local_timestamp, value });
-        } else if (!strcmp(member->type->lctypename, "string")) {
-          int32_t __d_len__;
-          int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &__d_len__, 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          if(__d_len__ > data_size - pos_offset || __d_len__ <= 0) break;
-          std::string lcm_str(static_cast<const char*>(recvbuf) + pos_offset,  __d_len__ - 1);
-          pos_offset += __d_len__;
-          decode_len += __d_len__;
-          auto str_itr = dataMap().strings.find(base + member->membername);
-          if (str_itr == dataMap().strings.end()) {
-            str_itr = dataMap().addStringSeries(base + member->membername);
-          }
-          str_itr->second.pushBack({ local_timestamp, lcm_str });
-        } else if (!strcmp(member->type->lctypename, "boolean")) {
-          int8_t value;
-          int tlen = __boolean_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
-          itr->second.pushBack({ local_timestamp, value });
-        } else {
-          int tlen = decode_type(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename,
-                                 base + member->membername + "/", deep + 1);
-          if(tlen < 0) break; else {
-            pos_offset += tlen;
-            decode_len += tlen;
-          }
+        int tLen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename,
+                                base + member->membername + "/", member->membername, member_map);
+        if(tLen > 0) {
+          pos_offset += tLen;
+          decode_len += tLen;
         }
       } else {
         for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
@@ -126,102 +143,28 @@ int DataStreamLCM::decode_type(void* recvbuf, int data_size, double timestamp, i
           if (!lcm_is_constant_size_array(member)) { //判断是否是变长大小数组
             if (auto it = member_map.find(ld->size); it != member_map.end()) {
               for (size_t i = 0; i < it->second; i++) {
-                int tlen = decode_type(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename,
-                                       base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
-                if(tlen < 0) break; else {
-                  pos_offset += tlen;
-                  decode_len += tlen;
+                int tLen = decode_type_2(recvbuf, data_size, timestamp, pos_offset,
+                                         member->type->lctypename,
+                                         base + member->membername + "/" + std::to_string(i) + "/",
+                                         member->membername, member_map);
+                if(tLen > 0) {
+                  pos_offset += tLen;
+                  decode_len += tLen;
                 }
               }
               break;
             }
+            continue;
           }
           
           for (size_t i = 0; i < atoi(ld->size); i++) {
-            auto itr = dataMap().numeric.find(base + member->membername + "/" + std::to_string(i));
-            if (itr == dataMap().numeric.end()) {
-              itr = dataMap().addNumeric(base + member->membername + "/" + std::to_string(i));
-            }
-
-            if (!strcmp(member->type->lctypename, "int8_t")) {
-              int8_t value;
-              int tlen = __int8_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              itr->second.pushBack({ local_timestamp, value });
-            } else if (!strcmp(member->type->lctypename, "int16_t")) {
-              int16_t value;
-              int tlen = __int16_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              itr->second.pushBack({ local_timestamp, value });
-            } else if (!strcmp(member->type->lctypename, "int32_t")) {
-              int32_t value;
-              int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              itr->second.pushBack({ local_timestamp, value });
-            } else if (!strcmp(member->type->lctypename, "int64_t")) {
-              int64_t value;
-              int tlen = __int64_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              itr->second.pushBack({ local_timestamp, value });
-            } else if (!strcmp(member->type->lctypename, "float")) {
-              float value;
-              int tlen = __float_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              itr->second.pushBack({ local_timestamp, value });
-            } else if (!strcmp(member->type->lctypename, "double")) {
-              double value;
-              int tlen = __double_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              itr->second.pushBack({ local_timestamp, value });
-            } else if (!strcmp(member->type->lctypename, "string")) { 
-              int32_t __d_len__;
-              int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &__d_len__, 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              if(__d_len__ > data_size - pos_offset || __d_len__ <= 0) break;
-              std::string lcm_str(static_cast<const char*>(recvbuf) + pos_offset,  __d_len__ - 1);
-              pos_offset += __d_len__;
-              decode_len += tlen;
-              auto str_itr = dataMap().strings.find(base + member->membername + "/" + std::to_string(i));
-              if (str_itr == dataMap().strings.end()) {
-                str_itr = dataMap().addStringSeries(base + member->membername + "/" + std::to_string(i));
-              }
-              str_itr->second.pushBack({ local_timestamp, lcm_str });
-            } else if (!strcmp(member->type->lctypename, "boolean")) {
-              int8_t value;
-              int tlen = __boolean_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-              if(tlen < 0) return tlen; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
-              itr->second.pushBack({ local_timestamp, value });
-            } else {
-              int tlen = decode_type(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename,
-                                     base + member->membername + "/" + std::to_string(i) + "/", deep + 1);
-              if(tlen < 0) break; else {
-                pos_offset += tlen;
-                decode_len += tlen;
-              }
+            int tLen = decode_type_2(recvbuf, data_size, timestamp, pos_offset,
+                                     member->type->lctypename,
+                                     base + member->membername + "/" + std::to_string(i) + "/",
+                                     member->membername, member_map);
+            if(tLen > 0) {
+              pos_offset += tLen;
+              decode_len += tLen;
             }
           }
         }
@@ -387,7 +330,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
           int fd = lcm_ptr->getFileno();
           if (FD_ISSET(fd, &fds)) {
             if (lcm_ptr) {
-              lcm_ptr->handle();
+              lcm_ptr->handleTimeout(100);
             }
           }
         }
@@ -414,7 +357,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
             for (int struct_idx = 0; struct_idx < topic_lcmgen->structs->len; struct_idx++) {
               lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(topic_lcmgen->structs, struct_idx);
               if (msg_hash == ((struct_item->hash<<1) + ((struct_item->hash>>63)&1))) {
-                decode_type(msg.data.data(), msg.data.size(), msg.timestamp, 8, struct_item->structname->lctypename, msg.channel + "/");
+                decode_type_1(msg.data.data(), msg.data.size(), msg.timestamp / 1000000, 8, struct_item->structname->lctypename, msg.channel + "/");
                 channel_match = true;
                 break;
               }
@@ -463,6 +406,7 @@ void DataStreamLCM::shutdown()
 
   lcm_table.clear();
   lcm_log.reset();
+  message_queue.clear();
 }
 
 DataStreamLCM::~DataStreamLCM()

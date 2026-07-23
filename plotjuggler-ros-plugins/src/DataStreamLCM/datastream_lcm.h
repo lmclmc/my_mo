@@ -50,8 +50,13 @@ public:
 
 private:
   void handleMessage(const lcm::ReceiveBuffer*, const std::string&);
-  int decode_type(void* recvbuf, int data_size, double timestamp, int offset,
-                  const std::string& type, const std::string& base, int deep = 0);
+  //一级解析函数，解析LCM消息中，任意类型的结构体数据，解开结构体内部任意成员数据后，调用二级解析函数处理
+  int decode_type_1(void* recvbuf, int data_size, double timestamp, int offset,
+                  const std::string& type, const std::string& base);
+  //二级解析函数，调用lcm解析函数进行解析，调用不了的则递归调用一级解析函数处理
+  int decode_type_2(void* recvbuf, int data_size, double timestamp, int offset,
+                    const std::string&, const std::string&, const std::string&,
+                    std::unordered_map<std::string, int>&);
 
 private:
   std::map<std::string, lcm_struct_t*> lcm_type_table;

@@ -27,7 +27,7 @@
 // LCM消息结构体
 struct LcmMessage {
     std::string channel;
-    int64_t timestamp;
+    double timestamp;
     std::vector<uint8_t> data;
 };
 
