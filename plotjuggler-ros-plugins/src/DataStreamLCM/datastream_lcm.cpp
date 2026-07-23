@@ -334,7 +334,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
           int fd = lcm_ptr->getFileno();
           if (FD_ISSET(fd, &fds)) {
             if (lcm_ptr) {
-              lcm_ptr->handleTimeout(100);
+              lcm_ptr->handle();
             }
           }
         }
