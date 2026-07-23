@@ -7,7 +7,7 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QProgressDialog>
-
+#include <sys/time.h>
 // function taken from rosbag2_transport
 
 DataStreamLCM::DataStreamLCM() : DataStreamer(), _running(false), _first_warning(false)
@@ -309,6 +309,10 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
 
   _running = true;
   lcm_runner_ = std::thread([this] {
+    struct timeval timeout;
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 10 * 1000;  // 10ms = 10000us
+
     while (_running) {
       fd_set fds;
       FD_ZERO(&fds);
@@ -321,7 +325,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
         }
       }
 
-      int status = select(max_fd + 1, &fds, 0, 0, NULL);
+      int status = select(max_fd + 1, &fds, 0, 0, &timeout);
       if (0 == status) {
         // no messages
         std::cout << "waitting for message." << std::endl;
@@ -399,11 +403,11 @@ void DataStreamLCM::shutdown()
   if (lcm_runner_.joinable()) {
     lcm_runner_.join();
   }
-
+  std::cout << "DataStreamLCM::shutdown lcm_runner_ joined" << std::endl;
   if (render_runner_.joinable()) {
     render_runner_.join();
   }
-
+  std::cout << "DataStreamLCM::shutdown render_runner_ joined" << std::endl;
   lcm_table.clear();
   lcm_log.reset();
   message_queue.clear();

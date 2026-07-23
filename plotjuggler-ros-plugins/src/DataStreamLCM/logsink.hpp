@@ -57,6 +57,11 @@ public:
         return queue_.size();
     }
 
+    void clear() {
+        std::lock_guard<lmc::SpinMutex> lock(mutex_);
+        queue_ = std::queue<T>();
+    }
+
 private:
     std::queue<T> queue_;
     lmc::SpinMutex mutex_;
