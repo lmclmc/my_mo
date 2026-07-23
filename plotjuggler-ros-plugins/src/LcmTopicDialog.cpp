@@ -224,7 +224,7 @@ void LcmTopicDialog::selectLcmFileForCell(int row)
         "Select LCM Log File", "", "LCM Log (*.lcm)");
     if(path.isEmpty()) return;
 
-    QLineEdit* edit = qobject_cast<QLineEdit*>(m_table->cellWidget(row, 1));
+    QLineEdit* edit = qobject_cast<QLineEdit*>(m_table->cellWidget(row, 2));
     if(edit) edit->setText(path);
 }
 
