@@ -326,10 +326,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
       }
 
       int status = select(max_fd + 1, &fds, 0, 0, &timeout);
-      if (0 == status) {
-        // no messages
-        std::cout << "waitting for message." << std::endl;
-      } else {
+      if (status) {
         for (auto [port, lcm_ptr] : lcm_table) {
           int fd = lcm_ptr->getFileno();
           if (FD_ISSET(fd, &fds)) {
