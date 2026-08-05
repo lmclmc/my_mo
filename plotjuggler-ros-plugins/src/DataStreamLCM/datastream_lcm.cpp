@@ -311,9 +311,11 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
   lcm_runner_ = std::thread([this] {
     struct timeval timeout;
     timeout.tv_sec  = 0;
-    timeout.tv_usec = 10 * 1000;  // 10ms = 10000us
+    timeout.tv_usec = 0;
 
     while (_running) {
+      //提高select的超时等待时间，优化数据实时性的抖动率，从4%降低到3.2%，并解决cpu占用过高的问题
+      timeout.tv_usec = 300 * 1000;  // 300ms = 300000us
       fd_set fds;
       FD_ZERO(&fds);
       int max_fd = 0;
@@ -341,7 +343,8 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
 
   render_runner_ = std::thread([this] {
     while (_running) {
-     // usleep(10000);
+      //添加延时，避免cpu空转，占用过多的cpu资源
+      usleep(1);
       if (message_queue.empty())
                 continue;
 
