@@ -256,10 +256,12 @@ void LcmTopicDialog::saveConfig() {
 
     QJsonObject rootObj;
 
-    // 保存 LCM log 配置参数
-    rootObj["log_save_path"] = m_logPathEdit->text().trimmed();
-    rootObj["log_max_size_mb"] = m_logMaxSizeEdit->text().trimmed();
-    rootObj["log_max_files"] = m_logMaxFilesEdit->text().trimmed();
+    if (m_mode == 1) {
+        // 保存 LCM log 配置参数
+        rootObj["log_save_path"] = m_logPathEdit->text().trimmed();
+        rootObj["log_max_size_mb"] = m_logMaxSizeEdit->text().trimmed();
+        rootObj["log_max_files"] = m_logMaxFilesEdit->text().trimmed();
+    }
 
     // 保存 topic 配置
     QJsonArray arr;
