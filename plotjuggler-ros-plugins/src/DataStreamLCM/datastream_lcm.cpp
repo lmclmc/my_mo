@@ -13,6 +13,12 @@
 DataStreamLCM::DataStreamLCM() : DataStreamer(), _running(false), _first_warning(false)
 {
   loadDefaultSettings();
+  connect(this, &DataStreamLCM::sig_channel_mismatch, this, [this](const QString& channel) {
+    shutdown();
+
+    std::cerr << "Warning: Hash mismatch for channel " << channel.toStdString() << ". Skipping event." << std::endl;
+    QMessageBox::warning(nullptr, tr("Error"), "话题：" + channel + "类型不匹配，退出。。。。。。"); 
+  });
 }
 
 int DataStreamLCM::decode_type_2(void* recvbuf, int data_size, double timestamp, int offset, 
@@ -369,14 +375,7 @@ bool DataStreamLCM::start(QStringList* selected_datasources)
           }
 
           if (!channel_match) {
-            std::cerr << "Warning: Hash mismatch for channel " << msg.channel << ". Skipping event." << std::endl;
-            QMessageBox::warning(nullptr, tr("Error"), "话题：" + QString::fromStdString(msg.channel) + "类型不匹配，退出。。。。。。");
-            _running = false;
-            if (lcm_runner_.joinable()) {
-              lcm_runner_.join();
-            }
-
-            lcm_table.clear();
+            emit sig_channel_mismatch(QString::fromStdString(msg.channel));
             return;
           }
         }

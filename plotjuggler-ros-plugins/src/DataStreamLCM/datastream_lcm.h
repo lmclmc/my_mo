@@ -48,6 +48,9 @@ public:
 
   const std::vector<QAction*>& availableActions() override;
 
+Q_SIGNALS:
+  void sig_channel_mismatch(const QString& channel);
+
 private:
   void handleMessage(const lcm::ReceiveBuffer*, const std::string&);
   //一级解析函数，解析LCM消息中，任意类型的结构体数据，解开结构体内部任意成员数据后，调用二级解析函数处理
