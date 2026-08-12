@@ -55,6 +55,8 @@ echo "  作者: "
 echo -e "\e[1;36m                    罗敏成\e[0m"
 echo "  邮箱: "
 echo -e "\e[1;36m                    luomincheng@dreame.tech\e[0m"
+echo "  文档: "
+echo -e "\e[1;36mhttps://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO\e[0m"
 
 # 仓库信息
 echo ""
