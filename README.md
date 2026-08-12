@@ -32,7 +32,7 @@
     MotionStudio · Multi-Function debug toolchain
 ```
 
-![MotionStudio](https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO)
+[MotionStudio 项目文档](https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO)
 
 ## 项目概述
 
@@ -215,16 +215,6 @@ motionstudio/
 
 ---
 
-## 版本历史
-
-| 版本 | 说明 |
-|------|------|
-| V2.0.0 | 主要功能完善，支持多种机器人平台 |
-| V1.0.3 | 新增机械臂支持 |
-| V1.0.1 | 基础功能完成 |
-| V1.0.0 | 初始版本 |
-
----
 
 ## 技术支持
 
