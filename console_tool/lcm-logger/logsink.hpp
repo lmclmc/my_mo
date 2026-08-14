@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <condition_variable>
 #include <cstdint>
 #include <thread>
 #include <queue>
@@ -90,6 +91,7 @@ public:
 
     ~rotating_file_sink() {
         is_thread_running = false;
+        cond.notify_one();
         if (write_thread_.joinable()) {
             write_thread_.join();
         }
@@ -98,8 +100,11 @@ public:
 
     void write_thread_func() {
         uint64_t eventnum = 0;
+        std::mutex localMutex;
+        std::unique_lock<std::mutex> localLock(localMutex);
         while (is_thread_running) {
-            usleep(10000);
+            cond.wait(localLock, [this] { return !g_message_queue.empty() || !is_thread_running; });
+            
             if (g_message_queue.empty())
                 continue;
 
@@ -128,11 +133,13 @@ public:
         msg.timestamp = rbuf->recv_utime;
         msg.data.assign(reinterpret_cast<const uint8_t*>(rbuf->data), reinterpret_cast<const uint8_t*>(rbuf->data) + rbuf->data_size);
         g_message_queue.push(msg);
+        cond.notify_one();
     }
 
 private:
     std::thread write_thread_;
     SafeQueue<LcmMessage> g_message_queue;
+    std::condition_variable cond;
 
     std::shared_ptr<lcm::LogFile> lf_ptr_;
 
