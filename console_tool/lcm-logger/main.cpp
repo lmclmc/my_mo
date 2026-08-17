@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     std::string file_path = "";
     int max_file_size = 0;
     int max_files_num = 0;
-    cmd->add("-p", "--port", "set port", [&lcm_list, &handle_message] (std::list<int> port_list) {
+    cmd->add("-p", "--port", "set listen port(s), support single or multiple ports", [&lcm_list, &handle_message] (std::list<int> port_list) {
         for (auto port : port_list) {
             std::string lcm_url = std::string("udpm://239.255.76.67:") + std::to_string(port);
             auto lcm_ptr = std::make_shared<lcm::LCM>(lcm_url);
@@ -39,6 +39,11 @@ int main(int argc, char* argv[]) {
     }, {"-m", "-n", "-f"}, {100, 65536});
     
     cmd->add("-m", "--set_max_file_size", "set max file size(unit: byte)", [&max_file_size] (int max_file_size_) {
+        if (max_file_size_ < 1024 * 1024) {
+            std::cout << "max file size must be greater than 1MB" << std::endl;
+            exit(0);
+        }
+        
         max_file_size = max_file_size_;
     });
 
