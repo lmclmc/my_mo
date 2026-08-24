@@ -111,6 +111,12 @@ private:
   void publish_head_data(double current_time);
   void publish_csv_quaternion(double current_time);
   void publish_sensor_joint(double current_time);
+
+  void publish_lcm_leg_data(double current_time);
+  void publish_lcm_waist_data(double current_time);
+  void publish_lcm_head_data(double current_time);
+  void publish_lcm_arm_data(double current_time);
+  void publish_lcm_state_estimator(double current_time);
 };
 
 #endif  // STATE_PUBLISHER_ROS2TOPIC_H

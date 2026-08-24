@@ -388,10 +388,8 @@ void TopicPublisherROS2::broadcastTF(double current_time)
   }
 }
 
-void TopicPublisherROS2::updateState(double current_time)
-{
-  if (!_enabled || !_node)
-  {
+void TopicPublisherROS2::updateState(double current_time) {
+  if (!_enabled || !_node) {
     return;
   }
   publish_data(current_time);
@@ -428,6 +426,7 @@ void TopicPublisherROS2::publish_leg_data(double current_time) {
       return;
     }
   }
+
   leg_data_publisher_->publish(*leg_data_ros2_msg);
 }
 
@@ -480,6 +479,87 @@ void TopicPublisherROS2::publish_head_data(double current_time) {
     }
   }
   head_data_publisher_->publish(*head_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_lcm_leg_data(double current_time) {
+  auto leg_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::LegControlDataLcmt>();
+  for (int i = 0; i < 12; i++) {
+    std::string str_q = std::string("leg_control_data/q/") + std::to_string(i);
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      leg_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      leg_data_ros2_msg->q[i] = 0;
+      return;
+    }
+  }
+
+  leg_data_publisher_->publish(*leg_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_lcm_waist_data(double current_time) {
+  auto waist_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::WaistControlDataLcmt>();
+  for (int i = 0; i < 3; i++) {
+    std::string str_q = std::string("waist_control_data/q/") +  std::to_string(i);
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      waist_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      waist_data_ros2_msg->q[i] = 0;
+      return;
+    }
+  }
+  waist_data_publisher_->publish(*waist_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_lcm_head_data(double current_time) {
+  auto head_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::HeadControlDataLcmt>();
+  for (int i = 0; i < 2; i++) {
+    std::string str_q = std::string("head_control_data/q/") + std::to_string(i);
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      head_data_ros2_msg->q[i] = data_it->second.at(index).y;
+    } else {
+      head_data_ros2_msg->q[i] = 0;
+      return;
+    }
+  }
+  head_data_publisher_->publish(*head_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_lcm_arm_data(double current_time) {
+  auto arm_data_ros2_msg = std::make_shared<lcm_to_ros2::msg::ArmControlDataLcmt>();
+  for (int i = 0; i < 14; i++) {
+    std::string str_q = std::string("arm_control_data/joint_curPos/") + std::to_string(i);
+    auto data_it = _datamap->numeric.find(str_q);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      arm_data_ros2_msg->joint_cur_pos[i] = data_it->second.at(index).y;
+    } else {
+      arm_data_ros2_msg->joint_cur_pos[i] = 0;
+      return;
+    }
+  }
+  arm_data_publisher_->publish(*arm_data_ros2_msg);
+}
+
+void TopicPublisherROS2::publish_lcm_state_estimator(double current_time) {
+  auto state_estimator_msg = std::make_shared<lcm_to_ros2::msg::StateEstimatorLcmt>();
+  for (int i = 0; i < 4; i++) {
+    std::string str_quat = std::string("state_estimator/quat/") + std::to_string(i);
+    auto data_it = _datamap->numeric.find(str_quat);
+    if (data_it != _datamap->numeric.end()) {
+      int index = data_it->second.getIndexFromX(current_time);
+      state_estimator_msg->quat[i] = data_it->second.at(index).y;
+    } else {
+      state_estimator_msg->quat[i] = 0;
+      return;
+    }
+  }
+  state_estimator_publisher_->publish(*state_estimator_msg);
 }
 
 void TopicPublisherROS2::publish_sensor_joint(double current_time) {
@@ -555,6 +635,12 @@ void TopicPublisherROS2::publish_data(double current_time) {
   publish_waist_data(current_time);
   publish_head_data(current_time);
   publish_arm_data(current_time);
+
+  publish_lcm_leg_data(current_time);
+  publish_lcm_waist_data(current_time);
+  publish_lcm_head_data(current_time);
+  publish_lcm_arm_data(current_time);
+  publish_lcm_state_estimator(current_time);
 }
 
 void TopicPublisherROS2::play(double current_time)
