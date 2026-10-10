@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LcmTopicDialog</class>
+ <widget class="QDialog" name="LcmTopicDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>720</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>720</width>
+    <height>480</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>LCM Topic &amp; Log Mapper</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="leftMargin">
+    <number>12</number>
+   </property>
+   <property name="topMargin">
+    <number>12</number>
+   </property>
+   <property name="rightMargin">
+    <number>12</number>
+   </property>
+   <property name="bottomMargin">
+    <number>12</number>
+   </property>
+   <property name="spacing">
+    <number>10</number>
+   </property>
+
+   <!-- ===== Author Info (top) ===== -->
+   <item>
+    <widget class="QLabel" name="authorLabel">
+     <property name="text">
+      <string>作者：&lt;font color='#42A5F5'&gt;&lt;b&gt;罗敏成&lt;/b&gt;&lt;/font&gt; | 邮箱：&lt;a href='mailto:luomincheng@dreame.tech'&gt;&lt;font color='#2935a1'&gt;&lt;b&gt;luomincheng@dreame.tech&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 手机：&lt;a href='tel:19168720030'&gt;&lt;font color='#a02fa0'&gt;&lt;b&gt;19168720030&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 文档：&lt;a href='https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO'&gt;&lt;font color='#FFB74D'&gt;&lt;b&gt;Wiki&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 仓库：&lt;a href='https://gitlab.magiclab.top/dreamebiped/controlsoftware/motionstudio'&gt;&lt;font color='#AED581'&gt;&lt;b&gt;GitLab&lt;/b&gt;&lt;/font&gt;&lt;/a&gt;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 12px; color: #888888; padding: 4px;</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeft</set>
+     </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+
+   <!-- ===== URDF File Import ===== -->
+   <item>
+    <layout class="QHBoxLayout" name="urdfLayout">
+     <item>
+      <widget class="QLabel" name="urdfLabel">
+       <property name="text">
+        <string>URDF File:</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 13px;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="urdfPathEdit">
+       <property name="placeholderText">
+        <string>Select URDF file</string>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="urdfBrowseBtn">
+       <property name="text">
+        <string>Browse</string>
+       </property>
+       <property name="fixedWidth">
+        <number>70</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+   <!-- ===== XML File Import ===== -->
+   <item>
+    <layout class="QHBoxLayout" name="xmlLayout">
+     <item>
+      <widget class="QLabel" name="xmlLabel">
+       <property name="text">
+        <string>XML File:</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 13px;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="xmlPathEdit">
+       <property name="placeholderText">
+        <string>Select XML file</string>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="xmlBrowseBtn">
+       <property name="text">
+        <string>Browse</string>
+       </property>
+       <property name="fixedWidth">
+        <number>70</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+   <!-- ===== Online mode: Log Save Settings Group ===== -->
+   <item>
+    <widget class="QGroupBox" name="logSettingsGroup">
+     <property name="title">
+      <string>LCM Log Save Settings</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QGroupBox { font-weight: bold; border: 1px solid #555; border-radius: 4px; padding: 8px; margin-top: 8px; } QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px 0 4px; }</string>
+     </property>
+     <layout class="QGridLayout" name="logGridLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+
+      <!-- Row 0: Log Save Path -->
+      <item row="0" column="0">
+       <widget class="QLabel" name="logPathLabel">
+        <property name="text">
+         <string>Log Save Path:</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="logPathEdit">
+        <property name="placeholderText">
+         <string>Click to select save directory</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="logPathBrowseBtn">
+        <property name="text">
+         <string>Browse</string>
+        </property>
+        <property name="fixedWidth">
+         <number>60</number>
+        </property>
+       </widget>
+      </item>
+
+      <!-- Row 1: Max File Size + Max Files -->
+      <item row="1" column="0">
+       <widget class="QLabel" name="logSizeLabel">
+        <property name="text">
+         <string>Max File Size (MB):</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="logMaxSizeEdit">
+        <property name="placeholderText">
+         <string>e.g. 100</string>
+        </property>
+        <property name="text">
+         <string>100</string>
+        </property>
+        <property name="fixedWidth">
+         <number>80</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="logFilesLabel">
+        <property name="text">
+         <string>Max Files:</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLineEdit" name="logMaxFilesEdit">
+        <property name="placeholderText">
+         <string>e.g. 10</string>
+        </property>
+        <property name="text">
+         <string>10</string>
+        </property>
+        <property name="fixedWidth">
+         <number>80</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- ===== Offline mode: Start Timestamp Row ===== -->
+   <item>
+    <layout class="QHBoxLayout" name="timestampLayout">
+     <item>
+      <widget class="QLabel" name="tsLabel">
+       <property name="text">
+        <string>起始时间戳:</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 13px;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="startTimestampEdit">
+       <property name="decimals">
+        <number>3</number>
+       </property>
+       <property name="fixedWidth">
+        <number>120</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="tsHint">
+       <property name="text">
+        <string>Unix timestamp (s)； 如果设置为0，则使用lcmlog文件内部起始时间戳；如果设置不为0，则使用用户设置的时间戳作为起始时间戳</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 11px; color: #888888;</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="tsSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+
+   <!-- ===== Topic Table ===== -->
+   <item>
+    <widget class="QTableWidget" name="topicTableWidget">
+     <property name="columnCount">
+      <number>3</number>
+     </property>
+     <attribute name="horizontalHeaderVisible">
+      <bool>true</bool>
+     </attribute>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string>Topic Name</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Port</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>LCM Log File</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+
+   <item>
+    <layout class="QHBoxLayout" name="editBarLayout">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <item>
+      <widget class="QLineEdit" name="topicNameEdit">
+       <property name="placeholderText">
+        <string>Topic Name</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="portSpinBox">
+       <property name="minimum"><number>1</number></property>
+       <property name="maximum"><number>65535</number></property>
+       <property name="value"><number>7667</number></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lcmFileEdit">
+       <property name="placeholderText">
+        <string>LCM 骨架文件路径</string>
+       </property>
+       <property name="readOnly"><bool>true</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="lcmFileBrowseBtn">
+       <property name="text"><string>Browse</string></property>
+       <property name="fixedWidth"><number>70</number></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+   <!-- ===== Button Bar ===== -->
+   <item>
+    <layout class="QHBoxLayout" name="buttonLayout">
+     <item>
+      <widget class="QPushButton" name="btnAdd">
+       <property name="text">
+        <string>+ Add Row</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnDel">
+       <property name="text">
+        <string>- Delete Selected</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClear">
+       <property name="text">
+        <string>Clear All</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnConfirm">
+       <property name="text">
+        <string>Confirm</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton#btnConfirm { background:#2196F3; color:#fff; font-weight:bold; padding:8px 24px; font-size:14px; } QPushButton#btnConfirm:hover { background:#42A5F5; } QPushButton#btnConfirm:pressed { background:#1E88E5; }</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="btnSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnLoadCfg">
+       <property name="text">
+        <string>Load Config JSON</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnSaveCfg">
+       <property name="text">
+        <string>Save Config JSON</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+  </layout>
+ </widget>
+</ui>

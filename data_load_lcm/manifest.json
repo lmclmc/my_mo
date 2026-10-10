@@ -1,0 +1,28 @@
+{
+  "id": "lcm-loader",
+  "name": "LCM Loader",
+  "version": "1.3.0",
+  "description": "Data loader for MCAP files and split ROS 2 bags (metadata.yaml). Supports ROS1, ROS2, Protobuf, and JSON message encodings.",
+  "author": "PlotJuggler Team",
+  "publisher": "PlotJuggler",
+  "website": "https://github.com/PlotJuggler/pj-official-plugins",
+  "repository": "https://github.com/PlotJuggler/pj-official-plugins",
+  "license": "MIT",
+  "icon_url": "",
+  "category": "data_loader",
+  "tags": [
+    "mcap",
+    "file",
+    "loader",
+    "ros",
+    "ros2",
+    "protobuf"
+  ],
+  "file_extensions": [
+    ".lcmlog"
+  ],
+  "min_sdk_required": "0.28.0",
+  "suggested_sdk_version": "0.32.0",
+  "floor_test": "McapDatasetMetadata.MetadataPublishDegradesCleanlyOnFloorLevelHost",
+  "min_plotjuggler_version": "4.0.0"
+}
