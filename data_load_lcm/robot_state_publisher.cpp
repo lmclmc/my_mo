@@ -193,7 +193,7 @@ void RobotStatePublisher::init(const std::string& urdf_file_path, const std::str
 
 void RobotStatePublisher::publishTransforms(std::function<void(const std::vector<geometry_msgs::msg::TransformStamped>&)> callback2,
 std::function<void(const sensor_msgs::msg::JointState&)> callback3) {
-  
+  tf_transforms.clear();
   // Publish Joint States
   auto msg = std::make_shared<sensor_msgs::msg::JointState>();
   msg->header.stamp.sec = 0;

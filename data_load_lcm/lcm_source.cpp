@@ -577,7 +577,7 @@ void LcmSource::savePoint(const lcm::LogEvent* event, const std::string& topic_n
       PJ::Span<const PJ::sdk::NamedFieldValue>(fields, 1)       // Span
   );
 
-  if (publishTfCount < 33) {
+  if (publishTfCount < 34) {
     for (int leg_idx = 0; leg_idx < 12; leg_idx++) {
       std::string str_q = std::string("leg_control_data/q/") + std::to_string(leg_idx);
       if (str_q == topic_name) {

@@ -410,10 +410,15 @@ uint32 nanosec
 
 
 void LcmStreamSource::publishTF(void* recvbuf, int data_size, int64_t timestamp, const std::vector<geometry_msgs::msg::TransformStamped>& tf_transforms) {
+  if (tf_transforms.empty()) return;
+
   static PJ::ParserBindingHandle tf_handle = PJ::ParserBindingHandle();
   if (tf_handle.id == 0) {
     // 处理 tf_transforms
-    static constexpr char TRANSFORM_STAMPED_SCHEMA[] = R"SCHEMA(
+    static constexpr char TF_MESSAGE_SCHEMA[] = R"SCHEMA(
+geometry_msgs/TransformStamped[] transforms
+================================================================================
+MSG: geometry_msgs/TransformStamped
 std_msgs/Header header
 string child_frame_id
 geometry_msgs/Transform transform
@@ -442,84 +447,39 @@ float64 z
 float64 w
 )SCHEMA";
 
-// static constexpr char TF_MESSAGE_SCHEMA[] = R"SCHEMA(
-// geometry_msgs/TransformStamped[] transforms
-// ================================================================================
-// MSG: geometry_msgs/TransformStamped
-// std_msgs/Header header
-// string child_frame_id
-// geometry_msgs/Transform transform
-// ================================================================================
-// MSG: std_msgs/Header
-// builtin_interfaces/Time stamp
-// string frame_id
-// ================================================================================
-// MSG: builtin_interfaces/Time
-// int32 sec
-// uint32 nanosec
-// ================================================================================
-// MSG: geometry_msgs/Transform
-// geometry_msgs/Vector3 translation
-// geometry_msgs/Quaternion rotation
-// ================================================================================
-// MSG: geometry_msgs/Vector3
-// float64 x
-// float64 y
-// float64 z
-// ================================================================================
-// MSG: geometry_msgs/Quaternion
-// float64 x
-// float64 y
-// float64 z
-// float64 w
-// )SCHEMA";
+    const auto* schema_data = reinterpret_cast<const uint8_t*>(TF_MESSAGE_SCHEMA);
+    const size_t schema_size = sizeof(TF_MESSAGE_SCHEMA) - 1;
 
-    const auto* schema_data = reinterpret_cast<const uint8_t*>(TRANSFORM_STAMPED_SCHEMA);
-    const size_t schema_size = sizeof(TRANSFORM_STAMPED_SCHEMA) - 1;
+    nlohmann::json parser_config;
+    parser_config["serialization"] = "cdr";
+    parser_config["schema_encoding"] = "ros2msg";
+    parser_config["topic_name"] = "/tf";
 
-    // 配置 ROS 2 消息解析器
-    nlohmann::json robot_description_parser_config;
-    robot_description_parser_config["serialization"] = "cdr";
-    robot_description_parser_config["schema_encoding"] = "ros2msg";
-    robot_description_parser_config["topic_name"] = "/tf";
-    
     PJ::ParserBindingRequest tf_request{
         .topic_name = "/tf",
         .parser_encoding = "ros2msg",
-        .type_name = "geometry_msgs/msg/TransformStamped",
+        .type_name = "tf2_msgs/msg/TFMessage",
         .schema = PJ::Span<const uint8_t>(schema_data, schema_size),
-        .parser_config_json = robot_description_parser_config.dump(),
+        .parser_config_json = parser_config.dump(),
     };
 
-    // 注册或获取对应的解析器绑定
     auto tf_result = runtimeHost().ensureParserBinding(tf_request);
     tf_handle = *tf_result;
   }
-  
-  std::cout << "tf_transforms size: " << tf_transforms.size() << std::endl;
-  // auto tf_bytes = std::make_shared<std::vector<uint8_t>>(serializeTFMessage(tf_transforms));
-  // // 5. 将消息载荷交给 PlotJuggler
-  //   (void)runtimeHost().pushMessage(
-  //       tf_handle,
-  //       timestamp * 1000,
-  //       [tf_bytes]() mutable
-  //       {
-  //         return PJ::sdk::PayloadView{tf_bytes};
-  //       });
 
-  for (auto transform : tf_transforms) {
+  std::vector<geometry_msgs::msg::TransformStamped> stamped_transforms = tf_transforms;
+  for (auto& transform : stamped_transforms) {
     transform.header.stamp.sec = timestamp / 1000000;
     transform.header.stamp.nanosec = timestamp * 1000;
-    auto tf_bytes = std::make_shared<std::vector<uint8_t>>(serializeTransform(transform));
-    // 5. 将消息载荷交给 PlotJuggler
-    (void)runtimeHost().pushMessage(
-        tf_handle,
-        timestamp * 1000,
-        [tf_bytes]() mutable
-        {
-          return PJ::sdk::PayloadView{tf_bytes};
-        });
   }
+
+  auto tf_bytes = std::make_shared<std::vector<uint8_t>>(serializeTFMessage(stamped_transforms));
+  (void)runtimeHost().pushMessage(
+      tf_handle,
+      timestamp * 1000,
+      [tf_bytes]() mutable {
+        return PJ::sdk::PayloadView{tf_bytes};
+      });
 }
 
 void LcmStreamSource::publishJointState(void* recvbuf, int data_size, int64_t timestamp,
@@ -765,7 +725,7 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
       PJ::Span<const PJ::sdk::NamedFieldValue>(fields, 1)       // Span
   );
 
-  if (publishTfCount < 33) {
+  if (publishTfCount < 34) {
     for (int leg_idx = 0; leg_idx < 12; leg_idx++) {
       std::string str_q = std::string("leg_control_data/q/") + std::to_string(leg_idx);
       if (str_q == topic_name) {
