@@ -79,6 +79,8 @@ static std::vector<uint8_t> serializeJointState(
 
 PJ::Status LcmStreamSource::loadConfig(std::string_view config_json) {
   if (!dialog_.loadConfig(config_json)) {
+    runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: Invalid config JSON"));
+    runtimeHost().showError("LCM import failed", std::string("Warning: Invalid config JSON"));
     return PJ::unexpected(std::string("invalid config JSON"));
   }
   auto cfg = nlohmann::json::parse(config_json, nullptr, false);
@@ -162,7 +164,9 @@ PJ::Status LcmStreamSource::onStart() {
     if (!file_check.good()) {
       // QMessageBox::warning(nullptr, tr("Error"), "文件不存在: " + item.lcmFilePath + "，跳过加载。");
       // std::cerr << "Warning: File does not exist: " << item.lcm_file_path << std::endl;
-      return PJ::unexpected("");
+      runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: File does not exist: ") + item.lcm_file_path);
+      runtimeHost().showError("LCM import failed", std::string("Warning: File does not exist: ") + item.lcm_file_path);
+      return PJ::unexpected(std::string("Warning: File does not exist: ") + item.lcm_file_path);
     }
 
     lcmgen_t* lcmgen = lcmgen_create();
@@ -172,7 +176,9 @@ PJ::Status LcmStreamSource::onStart() {
         res = parse_entity(lcmgen, item.lcm_file_path.c_str(), t);
         if (res == -10) {
 //          QMessageBox::warning(nullptr, tr("Error"), "文件  " + item.lcm_file_path + "格式错误. 退出加载...........");
-          return PJ::unexpected("");
+          runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: File format error: ") + item.lcm_file_path);
+          runtimeHost().showError("LCM import failed", std::string("Warning: File format error: ") + item.lcm_file_path);
+          return PJ::unexpected(std::string("Warning: File format error: ") + item.lcm_file_path);
         }
     } while (res == 0);
 
@@ -230,7 +236,9 @@ PJ::Status LcmStreamSource::onStart() {
               }
             } else {
         //      QMessageBox::warning(nullptr, tr("Error"), "类型  " + QString::fromStdString(member->type->lctypename) + " 未定义. 退出加载...........");
-          //    return PJ::unexpected("类型  " + member->type->lctypename + " 未定义. 退出加载...........");
+               runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: Type not defined: ") + member->type->lctypename);
+               runtimeHost().showError("LCM import failed", std::string("Warning: Type not defined: ") + member->type->lctypename);
+               return PJ::unexpected(std::string("Warning: Type not defined: ") + member->type->lctypename);
             }
           }
         }
@@ -820,7 +828,9 @@ PJ::Status LcmStreamSource::onPoll() {
 
       if (!channel_match) {
         std::cout << "channel_match: " << msg.channel << std::endl;
-        return PJ::unexpected("channel_match: " + msg.channel);
+        runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: Hash mismatch for channel ") + msg.channel);
+        runtimeHost().showError("LCM import failed", std::string("Warning: Hash mismatch for channel ") + msg.channel);
+        return PJ::unexpected(std::string("channel_match: ") + msg.channel);
       }
     }
   }
