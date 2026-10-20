@@ -1,4 +1,0 @@
-source;share/lidar_subscriber/local_setup.bash
-source;share/lidar_subscriber/local_setup.dsv
-source;share/lidar_subscriber/local_setup.sh
-source;share/lidar_subscriber/local_setup.zsh

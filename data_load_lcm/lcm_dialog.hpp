@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <fstream>
 #include <mcap/reader.hpp>
 #include <nlohmann/json.hpp>
 #include <pj_plugins/sdk/dialog_plugin_typed.hpp>
@@ -196,6 +197,12 @@ class LcmDialog : public PJ::DialogPluginTyped {
     wd.setFilePicker("lcmFileBrowseBtn", "Browse",
                      "LCM 骨架文件 (*.lcm);;所有文件 (*)", "选择 LCM 骨架文件");
 
+    // 配置文件的保存和加载按钮
+    wd.setSaveFilePicker("btnSaveCfg", "Save Config JSON",
+                         "JSON 文件 (*.json)", "保存配置文件", ".json");
+    wd.setFilePicker("btnLoadCfg", "Load Config JSON",
+                     "JSON 文件 (*.json)", "加载配置文件");
+
     // Confirm 按钮：请求关闭对话框
     if (request_accept_) {
       wd.requestAccept();
@@ -377,6 +384,23 @@ class LcmDialog : public PJ::DialogPluginTyped {
     if (widget_name == "lcmFileBrowseBtn") {
       editing_lcm_file_ = std::string(path);
       return true;
+    }
+    if (widget_name == "btnSaveCfg") {
+      std::string json = saveConfig();
+      std::ofstream file{std::string(path)};
+      if (file) {
+        file << json;
+      }
+      return true;
+    }
+    if (widget_name == "btnLoadCfg") {
+      std::ifstream file{std::string(path)};
+      if (file) {
+        std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        loadConfig(json);
+        return true;  // rebuild entire widget data
+      }
+      return false;
     }
     return false;
   }
