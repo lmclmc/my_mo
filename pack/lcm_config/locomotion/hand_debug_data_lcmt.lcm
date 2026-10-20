@@ -1,0 +1,19 @@
+/**
+ * @brief 手部调试数据
+ */
+struct hand_debug_data_lcmt {
+    //  关节错误代码
+    int8_t joint_error_code[12];
+    //  关节状态
+    int8_t joint_status[12];
+    //  关节当前位置
+    float joint_curPos[12];
+    //  关节当前受力
+    float joint_force[12];
+    //  关节当前电流
+    float joint_current[12];
+    //  关节当前touch和tof
+    int32_t joint_touch_tof[6];
+    //  关节当前类型: touch or tof
+    int16_t joint_touch_tof_type;
+}

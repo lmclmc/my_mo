@@ -1,0 +1,85 @@
+package hal.bms;
+
+/**
+ * @brief 单个电池包状态结构体
+ */
+struct single_bms_t
+{
+    // 电池电压（单位：mV）
+    int32_t     voltage;
+
+    // 电池电流（单位：mA）
+    int32_t     current;
+
+    // 电池温度（单位：摄氏度）
+    int8_t    temperature;
+
+    // 电池荷电状态SoC（State of Charge）（单位：百分比）
+    // 计算公式：剩余电量/额定电量 * 100%
+    int8_t    soc;
+
+    // 电池健康状态SoH（State of Health）（单位：百分比）
+    // 计算公式：当前实际容量/额定容量 * 100%
+    int8_t    soh;
+
+    // 电池循环次数
+    int16_t   cycle;
+
+    // 充电标志位
+    int8_t    charging;
+
+    // 通信错误标志位
+    int8_t    com_error;
+
+    // 在线标志位
+    int8_t    online;
+
+    // 开机标志位
+    int8_t    power_on;
+}
+
+/**
+ * @brief 整个BMS电池仓状态信息
+ */
+struct x1_bms_t
+{
+    // 时间戳（纳秒）
+    int64_t timestamp;
+
+    // 所有电池包状态          
+    single_bms_t state[2];    
+
+    // 无线紧急停止标志位
+    int8_t    wireless_emy_stop;
+
+    // 本体紧急停止标志位
+    int8_t    body_emy_stop;
+
+    // 充电器插上标志位
+    int8_t    charger_plugged;
+
+    // 长按关机按键标志位
+    int8_t    press_poweroff_button;
+
+    // 离线标志位：无错误为0，当检测到连续crc报错则为1
+    int8_t offline;
+}
+
+/**
+ * @brief 单个电池包控制指令
+ */
+
+/**
+ * @brief BMS控制指令
+ */
+struct x1_bms_cmd_t
+{
+    // 时间戳（纳秒）
+    int64_t timestamp;
+
+    // 控制类型：0-关机, 1-关闭电池1输出, 2-关闭电池2输出, 3-关闭所有电机输出, 4-关闭上半身电机输出, 5-关闭下半身电机输出 6-打开电池1输出 7-打开电池2输出
+    int8_t cmdType;
+
+    // 控制指令：0-不执行, 1-执行
+    int8_t cmdValue;
+}

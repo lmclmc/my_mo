@@ -1,0 +1,25 @@
+struct robot_power_io_lcmt
+{
+    // BMS HAL timestamp, ns since Unix epoch.
+    int64_t timestamp;
+
+    int32_t voltage1;
+    int32_t current1;
+    int8_t temperature1;
+    int8_t charge1;
+    int8_t health1;
+    int16_t cycle1;
+
+    int32_t voltage2;
+    int32_t current2;
+    int8_t temperature2;
+    int8_t charge2;
+    int8_t health2;
+    int16_t cycle2;
+
+    int8_t emy_stop;       // 急停
+    int8_t com_error;      // 通信故障
+    int8_t in_charing;     // 电池充电中
+    int8_t detected;       // 识别到适配器
+    int8_t need_poweroff;  // 需要关机（按关机键会触发1）
+}

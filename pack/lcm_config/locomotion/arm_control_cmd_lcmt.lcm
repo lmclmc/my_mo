@@ -1,0 +1,22 @@
+/**
+ * @brief 手臂控制指令数据结构
+ */
+struct arm_control_cmd_lcmt
+{
+    // 关节是否启用控制
+    int32_t isUsed[14];
+    // 关节目标位置
+    float joint_tarPos[14];
+    // 关节目标速度
+    float joint_tarVel[14];
+    // 关节目标转矩
+    float joint_tarTor[14];
+    // 关节位置刚度
+    float kp_motor[14];
+    // 关节速度阻尼
+    float kd_motor[14];
+    // 关节最终力矩命令：tarTor + kp * (tarPos - curPos) + kd * (tarVel - curVel)
+    float cmd_tau_est[14];
+    // 关节控制时间（纳秒）
+    float duration[14];
+}

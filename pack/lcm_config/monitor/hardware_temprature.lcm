@@ -1,0 +1,29 @@
+/**
+ * @brief 关节温度信息统计
+ */
+struct joint_temp_t
+{
+    // 关节数量
+    int32_t num_joints;  
+    // mos温度，单位℃
+    float mos_temp[num_joints];
+    // 电机温度，单位℃
+    float motor_temp[num_joints];      
+}
+
+/**
+ * @brief 所有硬件温度信息统计
+ */
+struct hw_temp_t
+{
+    // 时间戳（纳秒）
+    int64_t timestamp;
+    // 头部关节温度信息
+    joint_temp_t head;
+    // 上臂关节温度信息
+    joint_temp_t arm;
+    // 腰部关节温度信息
+    joint_temp_t waist;
+    // 腿部关节温度信息
+    joint_temp_t leg;
+}

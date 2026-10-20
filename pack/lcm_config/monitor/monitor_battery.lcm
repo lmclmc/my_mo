@@ -1,0 +1,23 @@
+struct battery_info_t
+{
+    // 电压（伏特，V）
+    float voltage;
+    // 放电时为负的电流（安培）
+    float current;
+    // 温度（摄氏度，℃）
+    float temperature;
+    // 当前电量（安时，Ah）
+    float charge;
+    // 容量（上次满充容量，Ah）
+    float capacity;
+    // 容量（设计容量，Ah）
+    float design_capacity;
+    // 电量百分比（范围 0 到 1）
+    float percentage;
+    // 电池健康指标
+    int8_t power_supply_health;
+    // 充电状态
+    int8_t power_supply_status;
+    // 急停（非0为触发急停）
+    int8_t emy_stop;
+}

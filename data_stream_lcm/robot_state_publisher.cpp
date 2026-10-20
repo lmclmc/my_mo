@@ -612,7 +612,6 @@ void RobotStatePublisher::reRank(std::vector<std::string> &joint_list, const std
 void RobotStatePublisher::update(double delta)
 {
   for (auto & [name, joint] : free_joints_) {
-    std::cout << "Updating joint " << name << ": position " << joint.position << ", forward " << joint.forward << ", delta " << delta << std::endl;
     if (joint.forward) {
       joint.position += delta;
       if (joint.position > joint.max) {

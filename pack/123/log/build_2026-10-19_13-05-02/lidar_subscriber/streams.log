@@ -1,0 +1,61 @@
+[0.008s] Invoking command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber': CMAKE_PREFIX_PATH=/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake /work/lmc/Desktop/mnt/PlotJuggler/pack/123/lidar_subscriber -DCMAKE_INSTALL_PREFIX=/work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber
+[0.058s] -- The C compiler identification is GNU 11.4.0
+[0.104s] -- The CXX compiler identification is GNU 11.4.0
+[0.111s] -- Detecting C compiler ABI info
+[0.174s] -- Detecting C compiler ABI info - done
+[0.179s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.179s] -- Detecting C compile features
+[0.179s] -- Detecting C compile features - done
+[0.182s] -- Detecting CXX compiler ABI info
+[0.249s] -- Detecting CXX compiler ABI info - done
+[0.254s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.254s] -- Detecting CXX compile features
+[0.255s] -- Detecting CXX compile features - done
+[0.256s] -- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)
+[0.591s] -- Found Python3: /root/miniconda3/bin/python3 (found version "3.14.7") found components: Interpreter 
+[0.685s] -- Found rclcpp: 16.0.19 (/opt/ros/humble/share/rclcpp/cmake)
+[0.717s] -- Found rosidl_generator_c: 3.1.9 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[0.720s] -- Found rosidl_adapter: 3.1.9 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[0.727s] -- Found rosidl_generator_cpp: 3.1.9 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[0.737s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.750s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.785s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[0.787s] -- Found rmw_fastrtps_cpp: 6.2.10 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[0.873s] -- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  
+[0.904s] -- Found FastRTPS: /opt/ros/humble/include  
+[0.944s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[0.957s] -- Looking for pthread.h
+[1.025s] -- Looking for pthread.h - found
+[1.025s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[1.098s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+[1.099s] -- Found Threads: TRUE  
+[1.152s] -- Found sensor_msgs: 4.9.1 (/opt/ros/humble/share/sensor_msgs/cmake)
+[1.294s] -- Configuring done
+[1.301s] -- Generating done
+[1.304s] -- Build files have been written to: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber
+[1.311s] Invoked command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake /work/lmc/Desktop/mnt/PlotJuggler/pack/123/lidar_subscriber -DCMAKE_INSTALL_PREFIX=/work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber
+[1.312s] Invoking command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber': CMAKE_PREFIX_PATH=/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --build /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber -- -j24 -l24
+[1.365s] [ 50%] [32mBuilding CXX object CMakeFiles/lidar_subscriber_node.dir/src/lidar_subscriber.cpp.o[0m
+[6.812s] [100%] [32m[1mLinking CXX executable lidar_subscriber_node[0m
+[7.096s] [100%] Built target lidar_subscriber_node
+[7.106s] Invoked command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --build /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber -- -j24 -l24
+[7.115s] Invoking command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber': CMAKE_PREFIX_PATH=/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --install /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber
+[7.120s] -- Install configuration: ""
+[7.121s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/lib/lidar_subscriber/lidar_subscriber_node
+[7.122s] -- Set runtime path of "/work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/lib/lidar_subscriber/lidar_subscriber_node" to ""
+[7.123s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/ament_index/resource_index/package_run_dependencies/lidar_subscriber
+[7.124s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/ament_index/resource_index/parent_prefix_path/lidar_subscriber
+[7.124s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/ament_prefix_path.sh
+[7.124s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/ament_prefix_path.dsv
+[7.124s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/path.sh
+[7.124s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/path.dsv
+[7.125s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.bash
+[7.125s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.sh
+[7.125s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.zsh
+[7.125s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.dsv
+[7.125s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/package.dsv
+[7.126s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/ament_index/resource_index/packages/lidar_subscriber
+[7.126s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/cmake/lidar_subscriberConfig.cmake
+[7.126s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/cmake/lidar_subscriberConfig-version.cmake
+[7.126s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/package.xml
+[7.129s] Invoked command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --install /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber

@@ -1,0 +1,12 @@
+struct ecat_debug_canfd_data_lcmt {
+    int32_t     dim;            
+    int16_t     stateWord[dim];     // 状态字
+    int8_t      stateData[dim];      // (可选)参数数据
+    int8_t      paraIndex[dim];     // 参数序列
+    float       curPos[dim];
+    float       curVel[dim];
+    float       curTor[dim];
+    float       paraData[dim];
+    int16_t     errCode[dim];
+    int16_t     reserved[dim];
+}

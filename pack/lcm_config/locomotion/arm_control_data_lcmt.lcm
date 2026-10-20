@@ -1,0 +1,23 @@
+/**
+ * @brief 手臂控制数据
+ */
+struct arm_control_data_lcmt
+{
+    // 关节当前位置
+    float joint_curPos[14];
+    // 关节当前速度
+    float joint_curVel[14];
+    // 关节当前电流
+    float joint_curCurrent[14];
+    // 关节当前转矩
+    float joint_curTor[14];
+    // 肩部位置
+    float shoulder_pos[12];
+    // 肘部位置
+    float elbow_pos[12];
+    // 手部位置
+    float hand_pos[12];
+
+    // 碰撞等级
+    int8_t collision_level;
+}

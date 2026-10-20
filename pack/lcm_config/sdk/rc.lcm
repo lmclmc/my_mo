@@ -1,0 +1,23 @@
+package magic.rc;
+
+/**
+ * @brief 遥控器状态结构体，用于 LCM 通信
+ * 包含两个摇杆的x轴和y轴坐标值
+ */
+struct stick_joy_t
+{
+    // 时间戳，单位为纳秒（可选，若有采集时间）
+    int64_t  timestamp;
+
+    // 左摇杆X轴[-1.0,1.0]
+    float  stick_left_x;
+
+    // 左摇杆Y轴[-1.0,1.0]
+    float  stick_left_y;
+
+    // 右摇杆X轴[-1.0,1.0]
+    float  stick_right_x;
+
+    // 右摇杆Y轴[-1.0,1.0] 
+    float  stick_right_y;
+}

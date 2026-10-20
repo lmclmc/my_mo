@@ -1,0 +1,24 @@
+/**
+ * @brief 上半身控制指令数据包
+ */
+struct upper_body_cmd_package
+{
+    // 控制指令是否启用标志
+    int32_t  isUsed;
+    // 控制模式
+    int32_t  control_mode[31];       //control mode for fsm control
+    // 关节目标位置
+    float    jointPosVec[31];        // -- joint pos     (14 left right actuators + 12  left right finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节目标速度
+    float    jointSpeedVec[31];      // -- joint speed   (14 left right actuators + 12  left right finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节目标电流
+    float    jointCurrentVec[31];    // -- joint current/force max value (14 left right actuators + 12  left right finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节目标转矩
+    float    jointTorqueVec[31];     // -- joint Torque value (14 left right actuators + 12  left right finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节位置环增益
+    float    jointKp[31];
+    // 关节速度环增益
+    float    jointKd[31];
+    // 身体偏航角
+    float    body_yaw;               // -- Rotation by leg 
+}

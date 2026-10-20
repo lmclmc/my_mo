@@ -1,0 +1,7 @@
+/**
+ * @brief 手部调试指令数据结构
+ */
+struct hand_debug_cmd_lcmt {
+    // 关节目标位置
+    float joint_tarPos[12];
+}

@@ -567,7 +567,7 @@ void LcmSource::savePoint(const lcm::LogEvent* event, const std::string& topic_n
   auto topic_handle = writeHost().ensureTopic(topic_name);
                             
   const PJ::sdk::NamedFieldValue fields[] = {
-      {.name = "value", .value = value}
+      {.name = "", .value = value}
   };
 
   // 2. 按正确顺序调用

@@ -1,0 +1,65 @@
+package magic.monitor;
+
+/**
+ * @brief 异常信息
+ */
+struct fault_t
+{ 
+    // 故障码
+    int32_t code;
+    // 故障说明
+    string message; 
+}
+ 
+/**
+ * @brief bms信息
+ */
+struct bms_t
+{
+    // 电量(百分比)
+    float battery_percentage;   
+    // 电池寿命、健康度(百分比)           
+    float battery_health;                  
+    // 电池状态
+    int32_t battery_state;
+    // 充电状态
+    int32_t power_supply_status;
+}
+ 
+/**
+ * @brief 姿态信息
+ */
+struct pose_t
+{
+  // 位置坐标x
+  float x;
+  // 位置坐标y
+  float y;
+  // 位置坐标z
+  float z;
+  // 姿态 roll
+  float roll;
+  // 姿态 pitch
+  float pitch;
+  // 姿态 yaw
+  float yaw;
+}
+
+/**
+ * 机器人本体状态信息
+ */
+struct robot_state_t
+{
+  // 时间戳，单位：纳秒
+  int64_t stamp;   
+  // 故障数量
+  int32_t faults_num;
+  // 故障信息
+  fault_t faults[faults_num];
+  // bms信息
+  bms_t bms;
+  // 当前地图定位姿态信息
+  pose_t pose;
+  // 是否定位成功
+  boolean is_localization;
+}

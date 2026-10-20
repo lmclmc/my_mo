@@ -1,0 +1,33 @@
+/**
+ * @brief EtherCAT 调试数据结构
+ */
+struct ecat_debug_data_lcmt {
+    // 关节数量
+    int32_t    dim;
+    // 状态字
+    int16_t  stat[dim];
+    // 保留字段1
+    int16_t  res1[dim];
+    // 保留字段2
+    int16_t  res2[dim];
+    // 保留字段3
+    int16_t  res3[dim];
+    // 保留字段4
+    int16_t  res4[dim];
+    // 当前位置
+    float  mc_curPos[dim];
+    // 当前速度
+    float  mc_curVel[dim];
+    // 当前电流
+    float  mc_curCur[dim];
+    // 当前转矩
+    float  mc_curTor[dim];
+    // 原始当前位置，高字节部分
+    float  original_curPosH[dim];
+    // 原始当前位置，低字节部分
+    float  original_curPosL[dim];
+    // 原始当前速度
+    float  original_curVel[dim];
+    // 原始当前转矩
+    float  original_curTor[dim];
+}

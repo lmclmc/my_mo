@@ -1,0 +1,31 @@
+/**
+ * @brief 控制参数请求数据结构
+ */
+struct control_parameter_request_lcmt {
+   // 参数名称
+   int8_t name[112];
+   // 请求编号
+   int64_t requestNumber;
+   // 参数值
+   int8_t value[112]; // note: maximum size currently 64 bytes
+   // 参数类型
+   int8_t parameterKind;
+   // 请求类型
+   int8_t requestKind;
+}
+
+/**
+ * @brief 控制参数响应数据结构
+ */
+struct control_parameter_respones_lcmt {
+   // 参数名称
+   int8_t name[112];
+   // 请求编号
+   int64_t requestNumber;
+   // 参数值
+   int8_t value[112]; // note: maximum size currently 64 bytes
+   // 参数类型
+   int8_t parameterKind;
+   // 请求类型
+   int8_t requestKind;
+}

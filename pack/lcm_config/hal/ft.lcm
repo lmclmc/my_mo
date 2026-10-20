@@ -1,0 +1,25 @@
+package hal.ft;
+
+/**
+ * @brief 单个力传感器状态
+ */
+struct single_ft_t
+{
+    float Fx;
+    float Fy;
+    float Fz;
+    float Mx;
+    float My;
+    float Mz;
+}
+
+/**
+ * @brief 整个上肢或下肢力传感器状态, 排列顺序:ARM_L,ARM_R,LEG_L,LEG_R
+ */
+struct ft_t
+{
+  // 时间戳（纳秒）
+  int64_t timestamp;      
+  // 多个FT的状态集合      
+  single_ft_t data[4];           
+}

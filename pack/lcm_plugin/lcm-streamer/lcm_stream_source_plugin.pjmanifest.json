@@ -1,0 +1,18 @@
+{
+  "abi_major" : 5,
+  "author" : "PlotJuggler Team",
+  "category" : "data_stream",
+  "description" : "Real-time data streaming via LCM. Supports unicast and multicast IPv4/IPv6.",
+  "family" : "data_source",
+  "icon_url" : "",
+  "id" : "lcm-server",
+  "license" : "MIT",
+  "min_plotjuggler_version" : "4.0.0",
+  "min_sdk_required" : "0.28.0",
+  "name" : "LCM Server",
+  "publisher" : "PlotJuggler",
+  "repository" : "https://github.com/PlotJuggler/pj-official-plugins",
+  "tags" : [ "lcm", "stream", "realtime", "network", "multicast" ],
+  "version" : "0.9.1",
+  "website" : "https://github.com/PlotJuggler/pj-official-plugins"
+}

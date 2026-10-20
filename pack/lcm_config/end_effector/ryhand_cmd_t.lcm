@@ -1,0 +1,7 @@
+struct ryhand_cmd_t
+{
+    int64_t   timestamp;
+    int64_t   target_position[15]; // 0到4095 对应 0~满行程
+    int64_t   target_velocity[15]; // 0~65535 单位 0.001行程/s ， 实际值是 0~500左右
+    int64_t   target_current[15];  // -32768到32767 对应-32.768A到32.767A, 实际可用范围-1000到1000
+}

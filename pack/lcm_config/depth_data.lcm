@@ -1,0 +1,6 @@
+struct depth_data {
+    int64_t  timestamp;
+    int32_t height;
+    int32_t width;
+    float data[height][width];
+}

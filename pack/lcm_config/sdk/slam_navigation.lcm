@@ -1,0 +1,29 @@
+package magic.slam_navigation;
+
+/**
+ * 标准 ROS2 Header 对应结构，包含时间戳与帧名
+ */
+struct header_t
+{
+  // 时间戳，单位：纳秒
+  int64_t stamp;   
+  // 坐标系名称 
+  string frame_id;    
+}
+
+/**
+ * @brief 导航状态信息
+ */
+struct nav_status_t
+{
+  // 标准消息头
+  header_t header;
+  // 导航目标ID
+  int32_t id;
+  // 导航状态
+  int8_t status;
+  // 导航事件码
+  int32_t error_code;
+  // 导航事件描述
+  string error_desc;   
+}

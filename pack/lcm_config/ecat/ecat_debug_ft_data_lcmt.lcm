@@ -1,0 +1,18 @@
+/**
+ * @brief EtherCAT 调试传感器数据
+ */
+struct ecat_debug_ft_data_lcmt {
+    //send to motion control module(after change)
+    // 原始力，X方向
+    double  original_Fx[1];
+    // 原始力，Y方向
+    double  original_Fy[1];
+    // 原始力，Z方向
+    double  original_Fz[1];
+    // 原始力矩，X方向
+    double  original_Mx[1];
+    // 原始力矩，Y方向
+    double  original_My[1];
+    // 原始力矩，Z方向
+    double  original_Mz[1];
+}

@@ -1,0 +1,25 @@
+/**
+ * @brief EtherCAT 调试指令数据结构
+ */
+struct ecat_debug_cmd_lcmt {
+    // 关节数量
+    int32_t    dim;
+    // 控制字
+    int16_t  ctrlWord[dim];
+    // 位置环增益
+    float    mc_kp[dim];
+    // 速度环增益
+    float    mc_kd[dim];
+    // 目标位置
+    float    mc_tarPos[dim];
+    // 目标速度
+    float    mc_tarVel[dim];
+    // 目标转矩
+    float    mc_tarTor[dim];
+    // 原始目标位置
+    float    original_tarPos[dim];
+    // 原始目标速度
+    float    original_tarVel[dim];
+    // 原始目标转矩
+    float    original_tarTor[dim];
+}

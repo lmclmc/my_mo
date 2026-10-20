@@ -1,0 +1,31 @@
+
+
+/**
+ * @brief 错误码信息
+ */
+struct diag_error_code {
+    // 模块ID  
+    int16_t module_id;
+    // 组件ID
+    int16_t component_id;
+    // 故障等级
+    int16_t level;
+    // 针对ECAT模块，reserve代表从站ID;
+    // 针对运控模块，reserve代表关节ID;
+    // 针对其他模块，reserve是code扩展字段
+    int32_t reserve;
+    // 故障码，各模块自定义故障码
+    int16_t code;
+}
+
+/**
+ * @brief 小脑故障诊断数据
+ */
+struct diagnostic_data {
+  // 时间戳
+  int64_t timestamp;
+  // 故障数目
+  int16_t num_errors;
+  // 故障列表
+  diag_error_code errors[num_errors];
+}

@@ -1,0 +1,29 @@
+/**
+ * @brief 关节状态数据
+ */
+struct monitor_joint_state_t {
+  // 关节类型,HEAD,ARM,WAIT,LEG
+  string type;
+  // 关节ID，比如上臂的第id关节
+  int16_t id;
+  // 关节位置，单位rad
+  float joint_pos;
+  // mos温度，单位℃
+  float mos_temp;
+  // 电机温度，单位℃
+  float motor_temp; 
+  // 累积丢包数（一代ecat，二代canfd）
+  int64_t loss_packets;
+}
+
+/**
+ * @brief 本体状态数据
+ */
+struct monitor_body_state_t {
+  // 时间戳
+  int64_t timestamp;
+  // 关节数量，包含头部、手臂、腰部、腿部关节
+  int16_t num_joints;
+  // 关节状态信息
+  monitor_joint_state_t joint_states[num_joints];
+}

@@ -1,0 +1,51 @@
+/**
+ * @brief 错误数据结构
+ */
+struct error_data_lcmt {
+  // 时间戳
+  int64_t timestamp;
+  // 序列号
+  int64_t seq_num;
+  // 错误标志
+  byte error_flag;
+
+  // 运控状态机
+  byte motion_control_fsm;
+  // 运控错误堆栈
+  int32_t motion_control_error_stack[3];
+
+  // 左腿硬件错误
+  byte hard_error_leg_left[6];
+  // 右腿硬件错误
+  byte hard_error_leg_right[6];
+  // 左臂硬件错误
+  byte hard_error_arm_left[7];
+  // 右臂硬件错误
+  byte hard_error_arm_right[7];
+  // 腰部硬件错误
+  byte hard_error_waist[2];
+  // 头部硬件错误
+  byte hard_error_head[2];
+
+  // 手部硬件错误
+  byte hard_error_hand[2];
+  // 夹爪硬件错误
+  byte hard_error_gripper[2];
+
+  // 腿部传感器硬件错误
+  byte hard_error_leg_ft[2];
+  // 手臂传感器硬件错误
+  byte hard_error_arm_ft[2];
+  
+  // EtherCAT 硬件错误堆栈
+  byte hard_error_ecat_stack[8];
+  // IMU硬件错误
+  byte hard_error_imu;
+  // 电源硬件错误
+  byte hard_error_power;
+  // 其他硬件错误堆栈
+  int32_t hard_error_other_stack[3];
+
+  // EtherCAT 节点数量
+  byte ecat_node_num[3];
+}

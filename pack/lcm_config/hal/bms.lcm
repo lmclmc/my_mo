@@ -1,0 +1,35 @@
+package hal.bms;
+
+/**
+ * @brief BMS 状态结构体，用于 LCM 通信
+ * 
+ */
+struct bms_t
+{
+    // 电池电压（单位：mV）
+    float     voltage;
+
+    // 电池电流（单位：mA）
+    float     current;
+
+    // 电池温度（单位：摄氏度）
+    int8_t    temperature;
+
+    // 电池荷电状态SoC（State of Charge）计算公式：剩余电量/额定电量 * 100%
+    int8_t    charge;
+
+    // 电池健康状态SoH（State of Health）计算公式：当前实际容量/额定容量 * 100%
+    int8_t    health;
+
+    // 电池循环次数
+    int16_t   cycle;
+
+    // 紧急停止标志位
+    int8_t    emy_stop;
+
+    // 通信错误标志位
+    int8_t    com_error;
+
+    // 充电标志位
+    int8_t    charging;
+}

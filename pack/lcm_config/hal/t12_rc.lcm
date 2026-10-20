@@ -1,0 +1,36 @@
+package hal.rc;
+
+/**
+ * @brief 遥控器状态结构体，用于 LCM 通信
+ * 包含两个摇杆的坐标值和 8 个按钮状态（分为两段式和三段式）
+ */
+struct t12_rc_t
+{
+    // 时间戳，单位为纳秒（可选，若有采集时间）
+    int64_t  timestamp;
+
+    // 左摇杆X轴[-1.0,1.0]   ([1090,1950]-1500.0)/450.0
+    float  stick_left_x;
+
+    // 左摇杆Y轴[-1.0,1.0]   ([1090,1950]-1500.0)/450.0
+    float  stick_left_y;
+
+    // 右摇杆X轴[-1.0,1.0]   ([1090,1950]-1500.0)/450.0
+    float  stick_right_x;
+
+    // 右摇杆Y轴[-1.0,1.0]   ([1090,1950]-1500.0)/450.0
+    float  stick_right_y;
+
+    /**
+     * 每个bool表示一个按钮（button_a ~ button_d）
+     * true: 按下  false：未按下
+     */
+    boolean  dual_buttons[4];
+    
+    /**
+     * 每个int表示一个按钮（button_e ~ button_h）
+     * 每个位表示一个按钮（bit0 ~ bit7 分别表示 button_a ~ button_h）
+     * 0：下（左）  1：中  2：上（右）
+     */
+    int8_t  triple_buttons[4];
+}

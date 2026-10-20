@@ -1,0 +1,25 @@
+[0.008s] Invoking command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --build /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber -- -j24 -l24
+[0.062s] [ 50%] [32mBuilding CXX object CMakeFiles/lidar_subscriber_node.dir/src/lidar_subscriber.cpp.o[0m
+[5.381s] [100%] [32m[1mLinking CXX executable lidar_subscriber_node[0m
+[5.669s] [100%] Built target lidar_subscriber_node
+[5.677s] Invoked command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --build /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber -- -j24 -l24
+[5.685s] Invoking command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --install /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber
+[5.693s] -- Install configuration: ""
+[5.693s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/lib/lidar_subscriber/lidar_subscriber_node
+[5.695s] -- Set runtime path of "/work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/lib/lidar_subscriber/lidar_subscriber_node" to ""
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/ament_index/resource_index/package_run_dependencies/lidar_subscriber
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/ament_index/resource_index/parent_prefix_path/lidar_subscriber
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/ament_prefix_path.sh
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/ament_prefix_path.dsv
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/path.sh
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/environment/path.dsv
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.bash
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.sh
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.zsh
+[5.695s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/local_setup.dsv
+[5.695s] -- Installing: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/package.dsv
+[5.696s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/ament_index/resource_index/packages/lidar_subscriber
+[5.696s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/cmake/lidar_subscriberConfig.cmake
+[5.696s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/cmake/lidar_subscriberConfig-version.cmake
+[5.696s] -- Up-to-date: /work/lmc/Desktop/mnt/PlotJuggler/pack/123/install/lidar_subscriber/share/lidar_subscriber/package.xml
+[5.697s] Invoked command in '/work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --install /work/lmc/Desktop/mnt/PlotJuggler/pack/123/build/lidar_subscriber

@@ -1,0 +1,28 @@
+package hal.imu;
+
+/**
+ * @brief IMU 传感器数据
+ */
+struct imu_t
+{
+    // 时间戳（单位：纳秒），表示该IMU数据采集的时间点
+    int64_t  timestamp;
+
+    // 姿态四元数（w, x, y, z），用于表示空间姿态，避免欧拉角万向锁问题
+    double   orientation[4];
+
+    // 角速度（单位：rad/s），绕X、Y、Z轴的角速度，通常来自陀螺仪
+    double   angular_velocity[3];
+
+    // 线加速度（单位：m/s^2），X、Y、Z轴的线性加速度，通常来自加速度计
+    double   linear_acceleration[3];
+
+    // 温度（单位：摄氏度）
+    float    temperature;
+
+    // 姿态欧拉角（roll, pitch, yaw，单位：rad）
+    double   rpy[3];
+
+    // 离线标志位：无错误为0，当检测到连续crc报错则为1
+    int32_t offline;
+}

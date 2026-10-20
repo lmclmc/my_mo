@@ -1,0 +1,53 @@
+package hal.hand;
+
+/**
+ * @brief 单个手部关节的控制命令
+ */
+struct single_hand_joint_command_t
+{
+    // 控制字,工作模式
+    int16_t operation_mode; 
+    // 期望位置
+    float pos[6];           
+}
+
+/**
+ * @brief 整个手部控制命令
+ */
+struct hand_command_t
+{
+    // 时间戳（纳秒）
+    int64_t timestamp;          
+    // 所有手部关节的控制命令             
+    single_hand_joint_command_t cmd[2];      
+}
+
+/**
+ * @brief 单个手部关节的状态
+ */
+struct single_hand_joint_state_t
+{
+    // 状态字
+    int16_t status_word;   
+    // 实际位置
+    float pos[6];   
+    // 实际力矩
+    float toq[6];     
+    // 实际电流
+    float cur[6];
+    // 实际速度
+    float velo[6];     
+    // 错误码
+    int32_t error_code;
+}
+
+/**
+ * @brief 整个手部状态信息
+ */
+struct hand_state_t
+{
+    // 时间戳（纳秒）
+    int64_t timestamp;                
+    // 所有手部关节状态          
+    single_hand_joint_state_t state[2];                 
+}

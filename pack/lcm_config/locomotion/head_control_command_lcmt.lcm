@@ -1,0 +1,8 @@
+struct head_control_command_lcmt {
+    float tau_ff[2];
+    float q_des[2];
+    float qd_des[2];
+    float kp_motor[2];
+    float kd_motor[2];
+    float cmd_tau_est[2];
+}

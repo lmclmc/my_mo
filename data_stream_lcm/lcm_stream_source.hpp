@@ -116,7 +116,8 @@ private:
 };
 
 class LcmStreamSource : public PJ::StreamSourceBase {
- public:
+public:
+  LcmStreamSource();
   PJ_borrowed_dialog_t getDialog() override {
     return PJ::borrowDialog(dialog_);
   }

@@ -1,0 +1,25 @@
+/**
+ * @brief 故障码信息
+ */
+struct monitor_fault_code_t {
+    // 故障码
+    int64_t code;
+    // 故障操作状态, 0=RAISE,1=CLEAR,2=ONCE
+    // RAISE: 抛出异常，如果不手动清除，则常驻
+    // CLEAR: 清除异常，配置RAISE使用；
+    // ONCE: 一次性异常，如果不继续发布，则默认异常消失；
+    int8_t state;
+}
+
+/**
+ * @brief 小脑故障诊断数据类型
+ *        比如，humanoid_controller故障发布话题名：/monitor/cb/faults，发布频率：10HZ
+ */
+struct monitor_faults_t {
+  // 时间戳
+  int64_t timestamp;
+  // 故障数目
+  int16_t num_faults;
+  // 故障列表
+  monitor_fault_code_t faults[num_faults];
+}

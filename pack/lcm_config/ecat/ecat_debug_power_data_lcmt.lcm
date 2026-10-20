@@ -1,0 +1,19 @@
+/**
+ * @brief EtherCAT 调试电源数据结构
+ */
+struct ecat_debug_power_data_lcmt {
+    // 紧急停止标志
+    int8_t emy_stop;
+    // 电池电压
+    int32_t voltage;   
+    // 电池电流
+    int32_t current;   
+    // 电池温度 
+    int8_t temperature; 
+    // 电池电量
+    int8_t charge;     
+    // 电池健康
+    int8_t health;     
+    // 电池循环
+    int16_t cycle;     
+}

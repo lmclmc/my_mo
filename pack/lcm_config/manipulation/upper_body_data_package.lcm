@@ -1,0 +1,24 @@
+/**
+ * @brief 上半身数据包结构体
+ */
+struct upper_body_data_package
+{
+    // 关节状态标志
+    int32_t    isUsed;                              //current joint used status     (1 actuators)
+    // 关节当前状态
+    int32_t    curStatusVec[31];                    //current run mode              (14 actuators + 12 finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节当前错误代码
+    int32_t    curErrCodeVec[31];                   //current joint error code      (14 actuators + 12 finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节当前位置
+    float      curJointPosVec[31];                  //current joint pos             (14 actuators + 12 finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节当前速度
+    float      curSpeedVec[31];                     //current joint speed           (14 actuators + 12 finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节当前电流
+    float      curCurrentVec[31];                   //current joint current/figure force  (14 actuators + 12 finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 关节当前转矩
+    float      curTorqueVec[31];                    //current joint torque          (14 actuators + 12 finger + 3 waist pitch roll yaw + 2 head yaw pitch)
+    // 末端执行器位姿
+    float      endEffectorXYZRPY[24];               //real left arm xyzrpy / right arm xyzrpy + cmd left arm xyzrpy / right arm xyzrpy
+    // 预估身体偏航角
+    float      estimated_yaw;                       //estimated body yaw
+}

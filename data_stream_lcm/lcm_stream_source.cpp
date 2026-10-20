@@ -1,5 +1,6 @@
 #include "lcm_stream_source.hpp"
 
+#include "lidar_subscriber.hpp"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LcmSource plugin
@@ -108,6 +109,10 @@ PJ::Status LcmStreamSource::loadConfig(std::string_view config_json) {
   return PJ::okStatus();
 }
 
+LcmStreamSource::LcmStreamSource() {
+
+}
+
 void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
   if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
 
@@ -124,6 +129,14 @@ void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std
 }
 
 PJ::Status LcmStreamSource::onStart() {
+  //   rclcpp::init(0, nullptr);
+
+  // auto node = std::make_shared<LidarSubscriber>();
+
+  // std::thread([node] () {
+  //   rclcpp::spin(node);
+  // }).detach();
+
   robot_state_publisher_.init(dialog_.urdfpath(), dialog_.xmlpath(),
                               [this] (const std::string& urdf_xml) {
                                   publishRobotState(urdf_xml);
@@ -715,7 +728,7 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
   auto topic_handle = writeHost().ensureTopic(topic_name);
                             
   const PJ::sdk::NamedFieldValue fields[] = {
-      {.name = "value", .value = value}
+      {.name = "", .value = value}
   };
 
   // 2. 按正确顺序调用

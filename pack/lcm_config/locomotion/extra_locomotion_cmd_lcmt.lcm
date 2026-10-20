@@ -1,0 +1,3 @@
+struct extra_locomotion_cmd_lcmt {
+  float pitch_des, z_des;
+}
