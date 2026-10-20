@@ -77,7 +77,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
   }
 
   int log_max_size() const {
-    return log_max_size_;
+    return log_max_size_ * 1024 * 1024;
   }
 
   int log_max_files_num() const {
@@ -205,8 +205,8 @@ class LcmDialog : public PJ::DialogPluginTyped {
 
     // 日志保存设置
     wd.setText("logPathEdit", log_save_path_);
-    wd.setFilePicker("logPathBrowseBtn", "Browse",
-                     "所有文件 (*)", "选择日志保存目录");
+    wd.setSaveFilePicker("logPathBrowseBtn", "Browse",
+                     "所有文件 (*)", "选择日志保存路径", ".lcmlog");
     wd.setText("logMaxSizeEdit", std::to_string(log_max_size_));
     wd.setText("logMaxFilesEdit", std::to_string(log_max_files_num_));
 
