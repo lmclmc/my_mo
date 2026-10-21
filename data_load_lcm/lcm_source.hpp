@@ -159,6 +159,10 @@ class LcmSource : public PJ::FileSourceBase {
   static constexpr uint64_t kPushFailureLogInterval = 25;
 
 public:
+  LcmSource() {
+    m_image_handle_ = PJ::ParserBindingHandle();
+    m_tf_handle_ = PJ::ParserBindingHandle();
+  }
   PJ_borrowed_dialog_t getDialog() override {
     return PJ::borrowDialog(dialog_);
   }
@@ -209,6 +213,8 @@ private:
 
   RobotStatePublisher robot_state_publisher_;
 
+  PJ::ParserBindingHandle m_image_handle_;
+  PJ::ParserBindingHandle m_tf_handle_;
 };
 
 #endif

@@ -190,4 +190,7 @@ private:
   uint32_t publishTfCount = 0;
   int64_t last_TF_timestamp = 0;
   RobotStatePublisher robot_state_publisher_;
+
+  PJ::ParserBindingHandle m_image_handle_;
+  PJ::ParserBindingHandle m_tf_handle_;
 };

@@ -112,7 +112,8 @@ PJ::Status LcmStreamSource::loadConfig(std::string_view config_json) {
 }
 
 LcmStreamSource::LcmStreamSource() {
-
+  m_image_handle_ = PJ::ParserBindingHandle();
+  m_tf_handle_ = PJ::ParserBindingHandle();
 }
 
 void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
@@ -131,6 +132,7 @@ void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std
 }
 
 PJ::Status LcmStreamSource::onStart() {
+  m_image_handle_ = PJ::ParserBindingHandle();
   //   rclcpp::init(0, nullptr);
 
   // auto node = std::make_shared<LidarSubscriber>();
@@ -335,8 +337,7 @@ void LcmStreamSource::publishRobotState(const std::string& urdf_xml) {
 }
 
 void LcmStreamSource::publishDepthImage(void* recvbuf, int data_size, int64_t timestamp, int height, int width, std::vector<uint8_t>& image_data) {
-  static PJ::ParserBindingHandle image_handle = PJ::ParserBindingHandle();
-  if (image_handle.id == 0) {
+  if (m_image_handle_.id == 0) {
     const std::string topic_name = "/camera/image";
     const std::string type_name = "sensor_msgs/msg/Image";
 
@@ -394,7 +395,7 @@ uint32 nanosec
 
     auto image_handle_result =
       runtimeHost().ensureParserBinding(request);
-    image_handle = *image_handle_result;
+    m_image_handle_ = *image_handle_result;
   // if (!image_handle)
   // {
   // return PJ::unexpected(
@@ -425,16 +426,14 @@ uint32 nanosec
   cdr.writeByteSequence(image_data);
 
   auto bytes = std::make_shared<std::vector<uint8_t>>(std::move(cdr.data()));
-  (void)runtimeHost().pushMessage(image_handle, timestamp * 1000,
+  (void)runtimeHost().pushMessage(m_image_handle_, timestamp * 1000,
                            [bytes]() {return PJ::sdk::PayloadView{bytes};});
 }
-
 
 void LcmStreamSource::publishTF(void* recvbuf, int data_size, int64_t timestamp, const std::vector<geometry_msgs::msg::TransformStamped>& tf_transforms) {
   if (tf_transforms.empty()) return;
 
-  static PJ::ParserBindingHandle tf_handle = PJ::ParserBindingHandle();
-  if (tf_handle.id == 0) {
+  if (m_tf_handle_.id == 0) {
     // 处理 tf_transforms
     static constexpr char TF_MESSAGE_SCHEMA[] = R"SCHEMA(
 geometry_msgs/TransformStamped[] transforms
@@ -485,7 +484,7 @@ float64 w
     };
 
     auto tf_result = runtimeHost().ensureParserBinding(tf_request);
-    tf_handle = *tf_result;
+    m_tf_handle_ = *tf_result;
   }
 
   std::vector<geometry_msgs::msg::TransformStamped> stamped_transforms = tf_transforms;
@@ -496,7 +495,7 @@ float64 w
 
   auto tf_bytes = std::make_shared<std::vector<uint8_t>>(serializeTFMessage(stamped_transforms));
   (void)runtimeHost().pushMessage(
-      tf_handle,
+      m_tf_handle_,
       timestamp * 1000,
       [tf_bytes]() mutable {
         return PJ::sdk::PayloadView{tf_bytes};

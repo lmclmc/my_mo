@@ -340,8 +340,7 @@ int LcmSource::decode_type_1(const lcm::LogEvent* event, int offset, const std::
 }
 
 void LcmSource::publishDepthImage(const lcm::LogEvent* event, int height, int width, std::vector<uint8_t>& image_data) {
-  static PJ::ParserBindingHandle image_handle = PJ::ParserBindingHandle();
-  if (image_handle.id == 0) {
+  if (m_image_handle_.id == 0) {
     const std::string topic_name = "/camera/image";
     const std::string type_name = "sensor_msgs/msg/Image";
 
@@ -399,7 +398,7 @@ uint32 nanosec
 
     auto image_handle_result =
       runtimeHost().ensureParserBinding(request);
-    image_handle = *image_handle_result;
+    m_image_handle_ = *image_handle_result;
   // if (!image_handle)
   // {
   // return PJ::unexpected(
@@ -430,15 +429,14 @@ uint32 nanosec
   cdr.writeByteSequence(image_data);
 
   auto bytes = std::make_shared<std::vector<uint8_t>>(std::move(cdr.data()));
-  (void)runtimeHost().pushMessage(image_handle, event->timestamp * 1000,
+  (void)runtimeHost().pushMessage(m_image_handle_, event->timestamp * 1000,
                            [bytes]() {return PJ::sdk::PayloadView{bytes};});
 }
 
 
 void LcmSource::publishTF(const lcm::LogEvent* event,
                           const std::vector<geometry_msgs::msg::TransformStamped>& tf_transforms) {
-  static PJ::ParserBindingHandle tf_handle = PJ::ParserBindingHandle();
-  if (tf_handle.id == 0) {
+  if (m_tf_handle_.id == 0) {
     // 处理 tf_transforms
     static constexpr char TRANSFORM_STAMPED_SCHEMA[] = R"SCHEMA(
 std_msgs/Header header
@@ -488,7 +486,7 @@ float64 w
 
     // 注册或获取对应的解析器绑定
     auto tf_result = runtimeHost().ensureParserBinding(tf_request);
-    tf_handle = *tf_result;
+    m_tf_handle_ = *tf_result;
   }
 
   for (auto transform : tf_transforms) {
@@ -497,7 +495,7 @@ float64 w
     auto tf_bytes = std::make_shared<std::vector<uint8_t>>(serializeTransform(transform));
     // 5. 将消息载荷交给 PlotJuggler
     (void)runtimeHost().pushMessage(
-        tf_handle,
+        m_tf_handle_,
         event->timestamp * 1000,
         [tf_bytes]() mutable
         {
@@ -619,6 +617,9 @@ void LcmSource::savePoint(const lcm::LogEvent* event, const std::string& topic_n
 }
 
 PJ::Status LcmSource::importData() {
+  m_image_handle_ = PJ::ParserBindingHandle();
+  m_tf_handle_ = PJ::ParserBindingHandle();
+
   robot_state_publisher_.init(dialog_.urdfpath(), dialog_.xmlpath(),
                               [this] (const std::string& urdf_xml) {
                                   publishRobotState(urdf_xml);
