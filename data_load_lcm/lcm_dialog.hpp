@@ -397,7 +397,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
       std::ifstream file{std::string(path)};
       if (file) {
         std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        loadConfig(json);
+        loadUserConfig(json);
         return true;  // rebuild entire widget data
       }
       return false;
@@ -459,8 +459,42 @@ class LcmDialog : public PJ::DialogPluginTyped {
       }
     }
 
-    if (!filepath_.empty()) {
-      analyzeFile();
+    topic_config_.clear();
+    if (auto it = cfg.find("topic_config"); it != cfg.end() && it->is_array()) {
+      for (const auto& item : *it) {
+        TopicConfig tc;
+        tc.topic_name = item.value("topic_name", std::string{});
+        tc.port = item.value("port", std::string{});
+        tc.lcm_file_path = item.value("lcm_file_path", std::string{});
+        topic_config_.push_back(std::move(tc));
+      }
+    }
+
+    return true;
+  }
+
+  bool loadUserConfig(std::string_view config_json) override {
+    auto cfg = nlohmann::json::parse(config_json, nullptr, false);
+    if (cfg.is_discarded()) {
+      return false;
+    }
+
+    urdf_file_path_ = cfg.value("urdf_file_path", std::string{});
+    xml_file_path_ = cfg.value("xml_file_path", std::string{});
+    max_array_size_ = cfg.value("max_array_size", 500u);
+    clamp_large_arrays_ = cfg.value("clamp_large_arrays", true);
+    use_log_time_ = cfg.value("use_log_time", cfg.value("use_mcap_log_time", false));
+    // Backward compatibility: old MCAP configs used "use_timestamp" for the
+    // parser-level embedded timestamp option before the controls were split.
+    use_header_timestamp_ = cfg.value("use_header_timestamp", cfg.value("use_timestamp", false));
+
+    selected_topics_.clear();
+    if (auto it = cfg.find("selected_topics"); it != cfg.end() && it->is_array()) {
+      for (const auto& t : *it) {
+        if (t.is_string()) {
+          selected_topics_.insert(t.get<std::string>());
+        }
+      }
     }
 
     topic_config_.clear();
@@ -478,130 +512,6 @@ class LcmDialog : public PJ::DialogPluginTyped {
   }
 
  private:
-  void analyzeFile() {
-    all_channels_.clear();
-    analyze_error_.clear();
-
-    auto describe = [](const mcap::Status& s) {
-      return "Code: " + std::to_string(static_cast<int>(s.code)) + "\nMessage: " + s.message;
-    };
-
-    // A restored config still holds the PREVIOUS recording's selection. The
-    // pruning step near the end of this function is what normally reconciles
-    // it, so any early return has to drop it here — otherwise OK stays enabled
-    // over an empty table and starts an import that can bind nothing.
-    const auto fail = [this](std::string message) {
-      analyze_error_ = std::move(message);
-      selected_topics_.clear();
-    };
-
-    const auto recording = PJ::McapHelpers::resolveRecordingFiles(filepath_);
-    if (!recording.error.empty()) {
-      fail(recording.error);
-      return;
-    }
-    const bool multi_file = recording.paths.size() > 1;
-
-    // A split rosbag2 bag repeats its channels in every file: merge them by
-    // topic and sum the per-file message counts.
-    std::unordered_map<std::string, size_t> channel_index_by_topic;
-    size_t channels_with_dangling_schema = 0;
-    for (const std::string& path : recording.paths) {
-      const std::string where = multi_file ? "\n" + path : std::string{};
-      mcap::McapReader reader;
-      auto status = reader.open(path);
-      if (!status.ok()) {
-        fail("Cannot open this MCAP file." + where + "\n" + describe(status));
-        return;
-      }
-
-      // AllowFallbackScan reconstructs channels, schemas and statistics by
-      // scanning when the summary section is unusable, so a failure here means
-      // the data section itself could not be read.
-      status = reader.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan);
-      if (!status.ok()) {
-        fail("Cannot read the contents of this MCAP file." + where + "\n" + describe(status));
-        reader.close();
-        return;
-      }
-
-      // Build message count map from statistics
-      std::unordered_map<mcap::ChannelId, uint64_t> msg_counts;
-      if (auto stats = reader.statistics()) {
-        msg_counts = stats->channelMessageCounts;
-      }
-
-      const auto& schemas = reader.schemas();
-      for (const auto& [id, channel_ptr] : reader.channels()) {
-        // schema_id 0 is the MCAP spec's "no schema" sentinel, not an error:
-        // the channel is self-describing (schemaless JSON is the common case)
-        // and binds on its message encoding alone. Schema ids are 1-based, so a
-        // NON-zero id that resolves to nothing is a dangling reference in a
-        // damaged file — no parser can ever be bound to that, and offering it in
-        // the picker would promise data that never arrives.
-        const bool schemaless = PJ::McapHelpers::isSchemaless(channel_ptr->schemaId);
-        auto schema_it = schemas.find(channel_ptr->schemaId);
-        if (!schemaless && schema_it == schemas.end()) {
-          ++channels_with_dangling_schema;
-          continue;
-        }
-
-        auto count_it = msg_counts.find(id);
-        const uint64_t msg_count = (count_it != msg_counts.end()) ? count_it->second : 0;
-
-        if (auto known = channel_index_by_topic.find(channel_ptr->topic); known != channel_index_by_topic.end()) {
-          all_channels_[known->second].msg_count += msg_count;
-          continue;
-        }
-
-        ChannelInfo info;
-        info.topic = channel_ptr->topic;
-        if (schemaless) {
-          info.encoding = channel_ptr->messageEncoding;
-        } else {
-          info.schema = schema_it->second->name;
-          info.encoding =
-              channel_ptr->messageEncoding.empty() ? schema_it->second->encoding : channel_ptr->messageEncoding;
-        }
-        info.msg_count = msg_count;
-
-        channel_index_by_topic.emplace(info.topic, all_channels_.size());
-        all_channels_.push_back(std::move(info));
-      }
-      reader.close();
-    }
-
-    if (all_channels_.empty()) {
-      analyze_error_ = channels_with_dangling_schema > 0
-                           ? "No readable channels: all " + std::to_string(channels_with_dangling_schema) +
-                                 " channel(s) in this file reference a missing schema."
-                           : "No channels were found in this MCAP file.";
-    }
-
-    // Sort by topic name
-    std::sort(all_channels_.begin(), all_channels_.end(), [](const ChannelInfo& a, const ChannelInfo& b) {
-      return a.topic < b.topic;
-    });
-
-    // Saved selections belong to the previously opened recording. Drop names
-    // that do not exist (or have no messages) in this one; otherwise a stale,
-    // non-empty set leaves the dialog with no selected rows and OK disabled.
-    std::unordered_set<std::string> selectable_topics;
-    for (const auto& ch : all_channels_) {
-      if (ch.msg_count > 0) {
-        selectable_topics.insert(ch.topic);
-      }
-    }
-    std::erase_if(selected_topics_, [&](const std::string& topic) { return !selectable_topics.contains(topic); });
-
-    // If no previous selection survives, select all channels with messages.
-    if (selected_topics_.empty()) {
-      selected_topics_ = std::move(selectable_topics);
-    }
-
-    reassertAlwaysIncluded();
-  }
-
   /// Channels matching kAlwaysIncludeRules are always loaded: 3D rendering
   /// depends on them even when the user narrows their selection to a handful
   /// of unrelated topics. Idempotent -- safe to call after any mutation of
