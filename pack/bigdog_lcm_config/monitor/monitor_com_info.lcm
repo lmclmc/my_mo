@@ -1,0 +1,19 @@
+// trans_monitor_upload_t (motor 17~19, 72B). Topic: /monitor/body/com_info @ 10Hz, UDP port 7688
+struct monitor_com_info_t {
+    int64_t timestamp;              // ns
+    int8_t  master_id;              // ECAT master index
+    int16_t span_esc_mcu;           // esc外设到mcu的时长 us
+    int16_t span_mcu_can;           // mcu发送到can的时长 us
+    int16_t span_can_tx_total;      // can从发送第一帧到完成发送最后一帧发送的时长 us
+    int16_t span_can_rx_total;      // can从接受第一帧到接受最后一帧的时长 us
+    int16_t span_mcu_esc;           // mcu写数据到esc外设的时长 us
+    int16_t span_pdi_irq_interval;  // esc接受数据的帧间隔 us
+    int16_t span_pdi_run_time;      // esc触发后处理一帧的时长 us
+    int16_t span_txlink_state;      // 数据发送状态，按bit记录 bits
+    int16_t span_rxlink_state;      // 数据接受记录，按bit记录 bits
+    int16_t out_pdo_crc_u16;        // 最高bit为上一帧是否出现了crc校验错误，低15bit代表crc校验错误发生的次数
+    int16_t out_pdo_frame_u16;      // 最高bit为上一帧是否连续，最高bit1代表连续，0代表可能丢帧，低15bit代表跳帧发生的次数
+    int32_t out_pdo_can_hw_u32;     // CAN0~3发生的硬件错误，每个CAN口占用8bit
+    int16_t out_pdo_unmap_u16;      // CAN收包无法映射到ECAT槽位，最高bit代表上一帧是否出现了无法映射，低bit代表历史上出现的错误次数
+    int16_t out_pdo_unmap_last_u16; // PDO下行数据是否出现过无法映射
+}

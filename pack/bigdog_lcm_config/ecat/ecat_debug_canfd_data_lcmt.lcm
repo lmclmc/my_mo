@@ -1,0 +1,38 @@
+struct ecat_debug_canfd_data_lcmt {
+    int64_t     timestamp;
+    int32_t     dim;
+    // 索引 0~15 对应 motor 1~16 的真实电机数据;
+    // 索引 16~18 (motor 17~19) 与索引 19 (motor 20) 在主站接收方向已被重定义为监测/错误码上报,
+    // 见下方独立字段, 本处对应位置的数据无实际电机含义。
+    int16_t     stateWord[dim];     // 状态字
+    int8_t      stateData[dim];     // (可选)参数数据
+    int8_t      paraIndex[dim];     // 参数序列
+    float       curPos[dim];
+    float       curVel[dim];
+    float       curTor[dim];
+    float       paraData[dim];
+    int16_t     errCode[dim];
+    int16_t     reserved[dim];
+
+    // ===== motor 17~19 (3 * 24 = 72 bytes): 转接板监测数据上传 =====
+    // 字段顺序与 trans_monitor_upload_t 一一对应; LCM 无 uint, 此处用 int 表示位模式, 解读以注释为准。
+    int16_t     mon_span_esc_mcu;            // esc 外设到 mcu 的时长 (us)
+    int16_t     mon_span_mcu_can;            // mcu 发送到 can 的时长 (us)
+    int16_t     mon_span_can_tx_total;       // can 首末帧发送总时长 (us)
+    int16_t     mon_span_can_rx_total;       // can 首末帧接收总时长 (us)
+    int16_t     mon_span_mcu_esc;            // mcu 写数据到 esc 外设的时长 (us)
+    int16_t     mon_span_pdi_irq_interval;   // esc 接收帧间隔 (us)
+    int16_t     mon_span_pdi_run_time;       // esc 触发后处理一帧的时长 (us)
+    int16_t     mon_span_txlink_state;       // 发送链路状态 (按 bit 记录, 端口分辨率)
+    int16_t     mon_span_rxlink_state;       // 接收链路状态 (按 bit 记录, 模组分辨率)
+    int16_t     mon_out_pdo_crc_u16;         // bit15=本帧 CRC 是否一致(1=一致); bit14..0=累计 CRC 错次
+    int16_t     mon_out_pdo_frame_u16;       // bit15=本帧是否连续(1=连续);     bit14..0=累计跳变次数
+    int32_t     mon_out_pdo_can_hw_u32;      // CAN0~3 每口 8bit (低字节=CAN0..高字节=CAN3);
+                                             // 每口 bit7=自上次 PDO 以来是否产生过错误中断, bit6..0=该口历史累计次数 (最大 127)
+    int16_t     mon_out_pdo_unmap_u16;       // bit15=自上次 PDO 起是否发生过无法映射; bit14..0=累计次数 (最大 32767)
+    int16_t     mon_out_pdo_unmap_last_u16;  // 高字节=CAN ind(0~4), 低字节=该帧 data_8[22]; 未发生/口无效=0xFFFF
+    int16_t     mon_reserved[21];            // 对应 trans_monitor_upload_t.Reserved[21]
+
+    // motor 20: fault upload raw frame, 24 bytes
+    int8_t      motorFaultUpload[24];
+}

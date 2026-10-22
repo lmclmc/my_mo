@@ -1,0 +1,8 @@
+struct ryhand_data_t
+{
+    int64_t   timestamp;
+    int64_t   status[15];           // 故障状态 ，0 表示无故障
+    int64_t   current_position[15]; // 当前位置，0-4095 对应 0到满行程
+    int64_t   current_velocity[15]; // 当前速度，-2048~2047 单位 0.001行程/s
+    int64_t   current_current[15];  // 当前电流，-32768到32767 对应-32.768A到32.767A, 实际可用范围-1000到1000
+}

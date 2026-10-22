@@ -27,5 +27,5 @@ cp PlotJuggler4.conf ~/.config/PlotJuggler/
 export AMENT_PREFIX_PATH=$(pwd)/lcm_plugin/
 export LD_LIBRARY_PATH=$(pwd)/lcm_plugin/
 
-nohup ./plotjuggler4 & > plot.log
-#./plotjuggler4
+#nohup ./plotjuggler4 & > plot.log
+./plotjuggler4

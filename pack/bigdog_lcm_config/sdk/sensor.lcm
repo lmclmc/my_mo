@@ -1,0 +1,172 @@
+package magic.sensor;
+
+/**
+ * 标准 ROS2 Header 对应结构，包含时间戳与帧名
+ */
+struct header_t
+{
+  // 时间戳，单位：纳秒
+  int64_t stamp;   
+  // 坐标系名称 
+  string frame_id;    
+}
+
+/**
+ * @brief 点云字段描述结构体，对应于ROS2中的sensor_msgs::msg::PointField。
+ */
+struct point_field_t
+{
+  // 字段名，例如"x"、"y"、"z"、"intensity"等
+  string name;       
+  // 起始字节偏移
+  int32_t offset;     
+  // 数据类型（对应常量） 
+  int8_t datatype;     
+  // 该字段包含的元素数量
+  int32_t count;      
+}
+
+/**
+ * 通用点云数据结构，类似于 ROS2 的 sensor_msgs::msg::PointCloud2
+ */
+struct point_cloud2_t
+{
+  // 标准消息头
+  header_t header;
+
+  // 点云维度
+  int32_t height;         
+  int32_t width;          
+
+  // 点字段信息
+  int32_t fields_length;  
+  point_field_t fields[fields_length]; 
+
+  // 字节序
+  boolean is_bigendian;     
+  // 每个点占用的字节数
+  int32_t point_step;   
+  // 每行占用的字节数  
+  int32_t row_step;       
+
+  // 数据字节数
+  int32_t data_length;     
+  // 原始点云数据（按字段打包）
+  byte data[data_length];           
+  // 是否为稠密点云（无无效点）
+  boolean is_dense;         
+}
+
+/**
+ * 图像数据结构，支持多种编码格式
+ */
+struct image_t
+{
+    header_t header;
+
+    // 图像高度（像素）
+    int32_t height;      
+    // 图像宽度（像素） 
+    int32_t width;        
+
+    // 图像编码类型，如 "rgb8", "mono8", "bgr8"
+    string encoding;      
+    // 数据是否为大端模式
+    boolean is_bigendian; 
+    // 每行图像占用的字节数
+    int32_t step;         
+
+    // 图像数据总字节数
+    int32_t size;         
+    // 原始图像字节数据
+    byte data[size];      
+}
+
+/**
+ * 相机内参与畸变信息，通常与 Image 消息一起发布
+ */
+struct camera_info_t
+{
+  // 标准消息头（时间戳 + 坐标系）
+  header_t header;
+
+  // 图像维度
+  int32_t height;             
+  int32_t width;             
+
+  // 畸变模型，例如 "plumb_bob"
+  string distortion_model;  
+
+  // 畸变参数数组长度（通常为5或8）
+  int32_t D_length;        
+  // 畸变参数数组   
+  double D[D_length];               
+
+  // 内参矩阵 K：3x3，按行主序存储
+  double K[9];              
+
+  // 矫正矩阵 R：3x3，校正后的旋转矩阵
+  double R[9];             
+
+  // 投影矩阵 P：3x4，投影矩阵（含外参和内参）
+  double P[12];            
+
+  // 分辨率 binning 设置（图像下采样因子）
+  int32_t binning_x;         
+  int32_t binning_y;         
+
+  // ROI（感兴趣区域）
+  int32_t roi_x_offset;       
+  int32_t roi_y_offset;       
+  int32_t roi_height;         
+  int32_t roi_width;          
+  boolean roi_do_rectify;   
+}
+
+/**
+ * 三目相机帧数据结构，包含采集/解码时间和三个图像帧
+ */
+struct trinocular_camera_frame_t
+{
+  // 通用消息头（时间戳+frame_id）
+  header_t header;          
+
+  // 图像采集时间戳，单位：纳秒
+  int64_t vin_time;       
+  // 图像解码完成时间戳，单位：纳秒
+  int64_t decode_time;    
+
+  // 左目图像数据大小（字节数）
+  int32_t imgfl_size;     
+  // 左目图像数据（如 JPG/PNG 或原始图像）
+  byte imgfl_array[imgfl_size];  
+
+  // 中目图像数据大小
+  int32_t imgf_size;      
+  // 中目图像数据
+  byte imgf_array[imgf_size];    
+
+  // 右目图像数据大小
+  int32_t imgfr_size;     
+  // 右目图像数据
+  byte imgfr_array[imgfr_size];  
+}
+
+/**
+ * 里程计数据结构
+ */
+struct odometry_t
+{
+  // 通用消息头（时间戳+frame_id）
+  header_t header; 
+  // 一般是 "base_link"
+  string    child_frame_id;     
+  // x, y, z
+  double    position[3];       
+  // x, y, z, w (四元数)
+  double    orientation[4];     
+  // vx, vy, vz
+  double    linear_velocity[3]; 
+  // wx, wy, wz
+  double    angular_velocity[3];
+}

@@ -1,0 +1,13 @@
+struct lcm_command_struct {
+  int16_t robot_fsm; //choose state machine
+
+  float x_vel_des, y_vel_des, yaw_vel_des;
+  float stop;
+  float rpy_des[3];
+}
+
+struct lcm_response_lcmt {
+  int64_t timestamp;
+  int16_t robot_fsm;
+  int8_t switch_flag;
+}

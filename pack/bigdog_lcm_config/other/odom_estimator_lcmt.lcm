@@ -1,0 +1,3 @@
+struct odom_estimator_lcmt {
+    float body_vel[3];
+}

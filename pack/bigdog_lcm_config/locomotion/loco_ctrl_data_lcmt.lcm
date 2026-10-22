@@ -1,0 +1,4 @@
+struct loco_ctrl_data_lcmt {
+    // ctrl_arr[0]: T12 control flag(1 - use T12)
+    int8_t ctrl_arr[10]; 
+}

@@ -1,0 +1,5 @@
+struct gesture_status_t
+{
+    int64_t timestamp;
+    int32_t gesture;      // 手势标识：0 - 移动, 1 - 拍手, 2 - 石头, 3 - 剪刀
+}

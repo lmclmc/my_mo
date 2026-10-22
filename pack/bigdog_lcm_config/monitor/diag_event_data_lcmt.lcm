@@ -1,0 +1,23 @@
+struct diag_event_lcmt {
+  byte source;
+  byte severity;
+  byte status;
+
+  byte vendor_id;
+  byte module_id;
+  byte type_id;
+  byte component_id;
+  byte object_id;
+  int32_t code_id;
+
+  int64_t legacy_code;
+  int64_t timestamp_ns;
+}
+
+struct diag_event_data_lcmt {
+  int64_t timestamp;
+  int64_t seq_num;
+
+  int32_t event_count;
+  diag_event_lcmt events[event_count];
+}

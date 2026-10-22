@@ -1,0 +1,41 @@
+package magic.audio;
+
+/**
+ * 标准 ROS2 Header 对应结构，包含时间戳与帧名
+ */
+struct header_t
+{
+  // 时间戳，单位：纳秒
+  int64_t stamp;   
+  // 坐标系名称 
+  string frame_id;    
+}
+
+
+/**
+ * 音频流数据结构，支持原始音频和BF音频
+ */
+struct audio_stream_t
+{
+  // 标准消息头
+  header_t header;
+
+  // 音频数据大小（字节数）
+  int32_t data_length;
+
+  // 原始音频数据
+  byte data[data_length];
+} 
+
+/**
+ * 唤醒状态数据结构
+ */
+struct speech_wakeup_status_t
+{
+  // 唤醒状态
+  boolean is_wakeup;
+  // 唤醒角度是否使能
+  boolean enable_wakeup_orientation;
+  // 唤醒角度
+  float wakeup_orientation;
+}

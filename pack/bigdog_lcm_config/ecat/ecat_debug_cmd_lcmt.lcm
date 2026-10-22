@@ -1,0 +1,13 @@
+struct ecat_debug_cmd_lcmt {
+    int64_t    timestamp;
+    int32_t    dim;
+    int16_t  ctrlWord[dim];
+    float    mc_kp[dim];
+    float    mc_kd[dim];
+    float    mc_tarPos[dim];
+    float    mc_tarVel[dim];
+    float    mc_tarTor[dim];
+    float    original_tarPos[dim];
+    float    original_tarVel[dim];
+    float    original_tarTor[dim];
+}

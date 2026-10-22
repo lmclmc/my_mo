@@ -1,0 +1,27 @@
+struct battery_info_t
+{
+    // 时间戳 （ns）
+    int64_t timestamp;
+    // 当前电压（mV）
+    float voltage;
+    // 当前电流（mA）
+    float current;
+    // 当前电池温度（摄氏度，℃）
+    float battery_temperature;
+    // 当前电量百分比（范围 0 到 1）
+    float battery_level;
+    // 当前剩余容量（上次满充容量，10mAh）
+    float remaining_capacity;
+    // 电池标称容量（设计容量，10mAh）
+    float nominal_capacity;
+    // 当前循环次数（次）
+    float cycles;
+    // 当前保护状态
+    int8_t protected_state;
+    // 电池健康度
+    int8_t health;              
+    // 充电状态
+    int8_t in_charging;
+    // 急停（非0为触发急停）
+    int8_t emy_stop;
+}

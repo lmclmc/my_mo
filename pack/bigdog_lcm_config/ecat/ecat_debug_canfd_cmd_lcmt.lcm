@@ -1,0 +1,21 @@
+struct ecat_debug_canfd_cmd_lcmt {
+    int64_t     timestamp;
+    int32_t     dim;
+    // 索引 0~15 对应 motor 1~16 的真实电机指令;
+    // motor 17~19 在主站接收方向被重定义为监测数据上传 (trans_monitor_upload_t),
+    // motor 20 在主站接收方向被重定义为电机错误码上报 (14 bytes);
+    // 主站发送方向 (cmd) 暂未重定义, 索引 16~19 在本消息中作为保留位填 0 即可,
+    // 监测/错误码内容请订阅 ecat_debug_canfd_data_lcmt 查看。
+    int8_t      canPort[dim];   // 传输 can 口
+    int8_t      canId[dim];     // 传输 can 节点
+    int8_t      cmdWord[dim];   // 指令控制字
+    int8_t      cmdArgs[dim];   // 指令参数
+    int8_t      cmdPara[dim];   // 指令配置
+    int8_t      cmdAccu[dim];   // 指令精度
+    float       tarPos[dim];
+    float       tarVel[dim];
+    float       tarTor[dim];
+    int16_t     kp[dim];
+    int16_t     kd[dim];
+    int16_t     reserved[dim];
+}

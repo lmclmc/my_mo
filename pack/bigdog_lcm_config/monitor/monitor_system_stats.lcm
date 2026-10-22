@@ -1,0 +1,184 @@
+/**
+ * @brief CPU核心统计信息
+ * 包含单个CPU核心的性能数据
+ */
+struct system_cpu_core_stats_t {
+    int32_t core_id;           ///< 核心ID (0, 1, 2, ...)
+    double  frequency_mhz;     ///< 当前频率 (MHz)
+    double  temperature_c;     ///< 核心温度 (摄氏度)
+    double  usage_percent;     ///< 总使用率百分比
+    double  user_percent;      ///< 用户态使用率百分比
+    double  system_percent;    ///< 系统态使用率百分比
+    double  idle_percent;      ///< 空闲时间百分比
+}
+
+/**
+ * @brief 内存统计信息
+ * 包含物理内存和交换空间的使用情况
+ */
+struct system_memory_stats_t {
+    double total_gb;          ///< 总内存大小 (GB)
+    double used_gb;           ///< 已用内存大小 (GB)
+    double free_gb;           ///< 空闲内存大小 (GB)
+    double cached_gb;         ///< 缓存内存大小 (GB)
+    double buffered_gb;       ///< 缓冲内存大小 (GB)
+    double usage_percent;     ///< 内存使用率百分比
+    
+    double swap_total_gb;     ///< 交换空间总大小 (GB)
+    double swap_used_gb;      ///< 已用交换空间大小 (GB)
+    double swap_free_gb;      ///< 空闲交换空间大小 (GB)
+    double swap_usage_percent;///< 交换空间使用率百分比
+}
+
+/**
+ * @brief 磁盘分区信息
+ * 包含文件系统挂载点的使用情况
+ */
+struct system_disk_partition_t {
+    string mount_point;       ///< 挂载点路径 (如: "/", "/home")
+    string device;            ///< 磁盘设备名 (如: "sda", "nvme0n1")
+    string filesystem;        ///< 文件系统类型 (如: "ext4", "xfs")
+    double total_gb;          ///< 分区总大小 (GB)
+    double used_gb;           ///< 已用空间大小 (GB)
+    double free_gb;           ///< 空闲空间大小 (GB)
+    double usage_percent;     ///< 空间使用率百分比
+}
+
+/**
+ * @brief 磁盘IO统计信息
+ * 包含磁盘读写性能和IO利用率
+ */
+struct system_disk_io_stats_t {
+    string   device;           ///< 磁盘设备名 (如: "sda", "nvme0n1")
+    double   read_mbps;        ///< 读取速率 (MB/秒)
+    double   write_mbps;       ///< 写入速率 (MB/秒)
+    double   io_utilization;   ///< IO利用率百分比
+    int64_t  read_ops;         ///< 读操作次数
+    int64_t  write_ops;        ///< 写操作次数
+    int32_t  queue_length;     ///< IO队列长度
+}
+
+/**
+ * @brief 网络接口统计信息
+ * 包含网络接口的流量和错误统计
+ */
+struct system_network_interface_t {
+    string   name;                  ///< 网络接口名 (如: "eth0", "wlan0")
+    string   ip_address;            ///< IP地址 (如: "192.168.1.100")
+    double   rx_mbps;               ///< 接收速率 (Mbps)
+    double   tx_mbps;               ///< 发送速率 (Mbps)
+    int64_t  rx_packets;            ///< 接收包数
+    int64_t  tx_packets;            ///< 发送包数
+    int64_t  rx_errors;             ///< 接收错误数
+    int64_t  tx_errors;             ///< 发送错误数
+    double   bandwidth_utilization; ///< 带宽利用率百分比
+}
+
+/**
+ * @brief 系统负载信息
+ * 包含系统负载平均值和进程统计
+ */
+struct system_load_t {
+    double   load_1min;          ///< 1分钟负载平均值
+    double   load_5min;          ///< 5分钟负载平均值
+    double   load_15min;         ///< 15分钟负载平均值
+    int32_t  running_processes;  ///< 运行中的进程数
+    int32_t  total_processes;    ///< 总进程数
+}
+
+/**
+ * @brief 系统进程信息
+ * 获取系统进程信息
+ */
+struct system_process_t {
+    int32_t     pid;                    ///< 进程ID
+    string      name;                   ///< 进程名称
+    string      state;                  ///< 进程状态 (R运行, S睡眠, D不可中断, Z僵尸等)
+    int32_t     parent_pid;             ///< 父进程ID
+    int32_t     priority;               ///< 进程优先级 (nice值)
+    int32_t     num_threads;            ///< 线程数量
+    double      cpu_usage_percent;      ///< CPU使用率百分比
+    double      memory_usage_mb;        ///< 内存使用量 (MB, VmRSS)
+    int64_t     utime;                  ///< 用户态CPU时间（时钟 tick）
+    int64_t     stime;                  ///< 内核态CPU时间（时钟 tick）
+    int64_t     total_time;             ///< 总CPU时间（utime + stime）
+    int64_t     start_time;             ///< 进程启动时间（纳秒，Unix时间戳）
+    int64_t     read_bytes;             ///< 读取字节数
+    int64_t     write_bytes;            ///< 写入字节数
+    int64_t     read_ops;               ///< 读操作次数
+    int64_t     write_ops;              ///< 写操作次数
+}
+
+/**
+ * @brief SOC信息
+ * 获取SOC信息
+ */
+struct system_soc_t {
+    double usage_percent;  ///< 使用率（百分比）
+    double frequency_mhz;  ///< 频率（MHz）
+    double memory_used_mb; ///< 内存使用（MB）
+    double temperature_c;  ///< 温度（摄氏度）
+    double power_w;        ///< 功耗（瓦特）
+}
+
+/**
+ * @brief ROS2节点状态信息
+ */
+struct system_ros2_node_t {
+    string   node_name;           ///< 节点名称
+    boolean  is_alive;            ///< 是否存活
+    int32_t  pid;                 ///< 进程ID（-1表示死亡）
+}
+
+/**
+ * @brief 完整的系统统计信息
+ * 嵌入式系统资源监视模块的主要数据结构
+ * 包含CPU、内存、磁盘、网络、ROS节点等全方位的系统性能数据
+ */
+struct system_stats_t {
+    // 时间戳和系统标识
+    int64_t                    timestamp;                 ///< 时间戳 (纳秒，Unix时间)
+    string                     hostname;                  ///< 主机名
+    string                     system_version;            ///< 系统版本信息
+    
+    // CPU相关统计
+    int32_t                    num_cores;                  ///< CPU核心数量
+    system_cpu_core_stats_t    cpu_cores[num_cores];       ///< 每个CPU核心的详细统计
+    double                     total_cpu_usage;            ///< 总CPU使用率百分比
+    
+    // 内存相关统计
+    system_memory_stats_t      memory;                     ///< 内存使用情况统计
+    
+    // 磁盘相关统计
+    int32_t                    num_partitions;             ///< 分区数量
+    system_disk_partition_t    partitions[num_partitions]; ///< 磁盘分区使用情况
+    double                     total_disk_usage;           ///< 总磁盘使用率百分比
+    int32_t                    num_disks;                  ///< 磁盘设备数量
+    system_disk_io_stats_t     disk_io[num_disks];         ///< 磁盘IO性能统计
+    
+    // 网络相关统计
+    int32_t                    num_interfaces;             ///< 网络接口数量
+    system_network_interface_t networks[num_interfaces];   ///< 网络接口统计
+    
+    // 系统负载统计
+    system_load_t              load;                       ///< 系统负载信息
+    
+    // 系统运行信息
+    double                     system_temperature;         ///< 系统温度 (摄氏度)
+    double                     system_frequency;           ///< 系统频率
+    int64_t                    uptime_seconds;             ///< 系统运行时间 (秒)
+
+    // 进程信息
+    int32_t                    num_processes;              ///< 进程数量
+    system_process_t           processes[num_processes];   ///< 进程信息
+
+    // SOC信息（RK NPU/NV GPU）
+    system_soc_t               soc;                        ///< SOC信息
+    
+    // ROS2节点信息
+    int32_t                    num_ros2_nodes;             ///< ROS2节点数量
+    system_ros2_node_t         ros2_nodes[num_ros2_nodes]; ///< ROS2节点状态
+
+    // 性能监控元数据
+    double                     collection_time_ms;         ///< 数据收集耗时 (毫秒)
+}

@@ -1,0 +1,17 @@
+package magic.imu;
+/**
+ * @brief IMU传感器数据
+ */
+struct imu_t
+{
+    // 时间戳（单位：纳秒），表示该IMU数据采集的时间点
+    int64_t timestamp;       
+    // 姿态四元数（w, x, y, z），用于表示空间姿态，避免欧拉角万向锁问题         
+    double orientation[4];           
+    // 角速度（单位：rad/s），绕X、Y、Z轴的角速度，通常来自陀螺仪
+    double angular_velocity[3];      
+    // 线加速度（单位：m/s^2），X、Y、Z轴的线性加速度，通常来自加速度计
+    double linear_acceleration[3];   
+    // 温度（单位：℃）
+    float temperature;               
+}
