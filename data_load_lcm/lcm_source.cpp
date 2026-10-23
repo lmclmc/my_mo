@@ -591,8 +591,15 @@ int LcmSource::decode_type_1(const lcm::LogEvent* event, int offset, const std::
             }
 
             if (lcmStructType->first == "neural_mapping_lcm.neural_map_query_t") {
-                  int nx = memberMap.find("nx")->second;
-              int ny = memberMap.find("ny")->second;
+              int nx = 0;
+              int ny = 0;
+              if (auto it = memberMap.find("nx"); it != memberMap.end()) {
+                nx = it->second;
+              }
+              if (auto it = memberMap.find("ny"); it != memberMap.end()) {
+                ny = it->second;
+              }
+              if (nx <= 0 || ny <= 0) break;
 
               float center_x = 0.0f;
               float center_y = 0.0f;
@@ -608,19 +615,20 @@ int LcmSource::decode_type_1(const lcm::LogEvent* event, int offset, const std::
               }
 
               if (!strcmp(member->membername, "height")) {
-              height_data.resize(nx * ny);
-              for (size_t e = 0; e < nx * ny; e++) {
-                int tlen = decode_type_2(event, pos_offset, member->type->lctypename, "",
-                                        member->membername, memberMap, lcmTypeTable,
-                                        [this, e] (const std::string&, PJ::sdk::ValueRef value) {
-                                          height_data[e] = std::get<float>(value);
-                                        });
-                if(tlen < 0) break; else {
-                  pos_offset += tlen;
-                  decode_len += tlen;
+                height_data.resize(nx * ny);
+                for (size_t e = 0; e < nx * ny; e++) {
+                  int tlen = decode_type_2(event, pos_offset, member->type->lctypename, "",
+                                          member->membername, memberMap, lcmTypeTable,
+                                          [this, e] (const std::string&, PJ::sdk::ValueRef value) {
+                                            height_data[e] = std::get<float>(value);
+                                          });
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
                 }
-              }
-              continue;
+                // 退出多维数组循环。
+                break;
               }
 
               if (!strcmp(member->membername, "std")) {
@@ -665,7 +673,8 @@ int LcmSource::decode_type_1(const lcm::LogEvent* event, int offset, const std::
 
                 publishVisualizationErrBar(event, elevation_marker_error_bar);
                 publishVisualization(event, elevation_marker);
-                continue;
+                // 退出多维数组循环。
+                break;
               }
               
             }
@@ -1169,6 +1178,8 @@ void LcmSource::savePoint(const lcm::LogEvent* event, const std::string& topic_n
 PJ::Status LcmSource::importData() {
   m_image_handle_ = PJ::ParserBindingHandle();
   m_tf_handle_ = PJ::ParserBindingHandle();
+  m_marker_handle_ = PJ::ParserBindingHandle();
+  m_marker_error_bar_handle_ = PJ::ParserBindingHandle();
 
   robot_state_publisher_.init(dialog_.urdfpath(), dialog_.xmlpath(),
                               [this] (const std::string& urdf_xml) {

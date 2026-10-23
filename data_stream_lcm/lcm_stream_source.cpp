@@ -417,6 +417,9 @@ void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std
 
 PJ::Status LcmStreamSource::onStart() {
   m_image_handle_ = PJ::ParserBindingHandle();
+  m_tf_handle_ = PJ::ParserBindingHandle();
+  m_marker_handle_ = PJ::ParserBindingHandle();
+  m_marker_error_bar_handle_ = PJ::ParserBindingHandle();
   //   rclcpp::init(0, nullptr);
 
   // auto node = std::make_shared<LidarSubscriber>();
@@ -942,7 +945,6 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
   int pos_offset = offset;
   int decode_len = 0;
   std::unordered_map<std::string, int> memberMap;
-  
   if (auto lcmStructType = lcmTypeTable.find(type); lcmStructType != lcmTypeTable.end()) {
     lcm_struct_t* structType = lcmStructType->second;
     for (unsigned int mind = 0; mind < g_ptr_array_size(structType->members); mind++) {
@@ -957,6 +959,7 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
           decode_len += tlen;
         }
       } else {
+        //多维数组走该分支
         for (unsigned int d = 0; d < g_ptr_array_size(member->dimensions); d++) {
           lcm_dimension_t *ld =
               (lcm_dimension_t *) g_ptr_array_index(member->dimensions, d);
@@ -984,8 +987,15 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
             }
 
             if (lcmStructType->first == "neural_mapping_lcm.neural_map_query_t") {
-              int nx = memberMap.find("nx")->second;
-              int ny = memberMap.find("ny")->second;
+              int nx = 0;
+              int ny = 0;
+              if (auto it = memberMap.find("nx"); it != memberMap.end()) {
+                nx = it->second;
+              }
+              if (auto it = memberMap.find("ny"); it != memberMap.end()) {
+                ny = it->second;
+              }
+              if (nx <= 0 || ny <= 0) break;
 
               float center_x = 0.0f;
               float center_y = 0.0f;
@@ -1001,24 +1011,27 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
               }
 
               if (!strcmp(member->membername, "height")) {
-              height_data.resize(nx * ny);
-              for (size_t e = 0; e < nx * ny; e++) {
-                int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
-                                        member->membername, memberMap, lcmTypeTable,
-                                        [this, e] (const std::string&, PJ::sdk::ValueRef value) {
-                                          height_data[e] = std::get<float>(value);
-                                        });
-                if(tlen < 0) break; else {
-                  pos_offset += tlen;
-                  decode_len += tlen;
+                height_data.resize(nx * ny);
+                for (size_t e = 0; e < nx * ny; e++) {
+                  int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
+                                          member->membername, memberMap, lcmTypeTable,
+                                          [this, e] (const std::string&, PJ::sdk::ValueRef value) {
+                                            height_data[e] = std::get<float>(value);
+                                          });
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
                 }
-              }
-              continue;
+                // 退出多维数组循环。
+                break;
               }
 
               if (!strcmp(member->membername, "std")) {
                 std_data.resize(nx * ny);
+               // std::cout << "pos_offset: " << pos_offset << " size: " << nx * ny << " data_size: " << data_size << "recvbuf: " << recvbuf << std::endl;
                 for (size_t e = 0; e < nx * ny; e++) {
+                  
                   int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
                                           member->membername, memberMap, lcmTypeTable,
                                           [this, e] (const std::string&, PJ::sdk::ValueRef value) {
@@ -1055,12 +1068,11 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
                     -0.5f, 0.5f       // min_z, max_z（颜色范围）
                 );
 
-
                 publishVisualizationErrBar(timestamp, elevation_marker_error_bar);
                 publishVisualization(timestamp, elevation_marker);
-                continue;
+                // 退出多维数组循环。
+                break;
               }
-              
             }
 
             if (auto it = memberMap.find(ld->size); it != memberMap.end()) {
@@ -1367,7 +1379,7 @@ PJ::Status LcmStreamSource::onPoll() {
         for (int struct_idx = 0; struct_idx < topic_lcmgen->structs->len; struct_idx++) {
           lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(topic_lcmgen->structs, struct_idx);
           if (msg_hash == ((struct_item->hash<<1) + ((struct_item->hash>>63)&1))) {
-            decode_type_1(msg.data.data(), msg.data.size(), msg.timestamp / 1000000, 8, struct_item->structname->lctypename, msg.channel + "/", lcm_type_table,
+            decode_type_1(msg.data.data(), msg.data.size(), msg.timestamp, 8, struct_item->structname->lctypename, msg.channel + "/", lcm_type_table,
                       [&msg, this] (const std::string& topic_name, PJ::sdk::ValueRef value) {
                         savePoint(msg.data.data(), msg.data.size(), msg.timestamp, topic_name, value);
                       });

@@ -125,7 +125,7 @@ public:
   }
 
   uint64_t extraCapabilities() const override {
-    return PJ::kCapabilityDelegatedIngest | PJ::kCapabilityHasDialog;
+    return PJ::kCapabilityDelegatedIngest | PJ::kCapabilityHasDialog | PJ::kCapabilitySupportsPause;
   }
 
   std::string saveConfig() const override {
