@@ -24,6 +24,8 @@
 #include <lcm/lcm_coretypes.h>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
 #include <rclcpp/serialization.hpp>
 #include <rclcpp/serialized_message.hpp>
@@ -162,6 +164,8 @@ public:
   LcmSource() {
     m_image_handle_ = PJ::ParserBindingHandle();
     m_tf_handle_ = PJ::ParserBindingHandle();
+    m_marker_handle_ = PJ::ParserBindingHandle();
+    m_marker_error_bar_handle_ = PJ::ParserBindingHandle();
   }
   PJ_borrowed_dialog_t getDialog() override {
     return PJ::borrowDialog(dialog_);
@@ -183,6 +187,8 @@ public:
   void publishDepthImage(const lcm::LogEvent*, int, int, std::vector<uint8_t>&);
   void publishTF(const lcm::LogEvent*, const std::vector<geometry_msgs::msg::TransformStamped>&);
   void publishJointState(const lcm::LogEvent*, const sensor_msgs::msg::JointState&);
+  void publishVisualization(const lcm::LogEvent*, const visualization_msgs::msg::Marker&);
+  void publishVisualizationErrBar(const lcm::LogEvent*, const visualization_msgs::msg::Marker&);
 
   //二级解析函数，调用lcm解析函数进行解析，调用不了的则递归调用一级解析函数处理
   int decode_type_2(const lcm::LogEvent*, int, const std::string&,
@@ -215,6 +221,11 @@ private:
 
   PJ::ParserBindingHandle m_image_handle_;
   PJ::ParserBindingHandle m_tf_handle_;
+  PJ::ParserBindingHandle m_marker_handle_;
+  PJ::ParserBindingHandle m_marker_error_bar_handle_;
+
+  std::vector<float> height_data;
+  std::vector<float> std_data;
 };
 
 #endif

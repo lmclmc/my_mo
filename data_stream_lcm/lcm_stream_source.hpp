@@ -14,6 +14,8 @@
 #include <pj_plugins/sdk/streaming_source.hpp>
 #include <rclcpp/serialization.hpp>
 #include <rclcpp/serialized_message.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <geometry_msgs/msg/point.hpp>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -145,6 +147,8 @@ public:
   void publishDepthImage(void*, int, int64_t, int, int, std::vector<uint8_t>&);
   void publishTF(void*, int, int64_t, const std::vector<geometry_msgs::msg::TransformStamped>&);
   void publishJointState(void*, int, int64_t, const sensor_msgs::msg::JointState&);
+  void publishVisualization(int64_t, const visualization_msgs::msg::Marker&);
+  void publishVisualizationErrBar(int64_t, const visualization_msgs::msg::Marker&);
 
   //二级解析函数，调用lcm解析函数进行解析，调用不了的则递归调用一级解析函数处理
   int decode_type_2(void*, int, int64_t, int, const std::string&,
@@ -193,4 +197,9 @@ private:
 
   PJ::ParserBindingHandle m_image_handle_;
   PJ::ParserBindingHandle m_tf_handle_;
+  PJ::ParserBindingHandle m_marker_handle_;
+  PJ::ParserBindingHandle m_marker_error_bar_handle_;
+
+  std::vector<float> height_data;
+  std::vector<float> std_data;
 };

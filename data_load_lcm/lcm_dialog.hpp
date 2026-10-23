@@ -473,7 +473,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
     return true;
   }
 
-  bool loadUserConfig(std::string_view config_json) override {
+  bool loadUserConfig(std::string_view config_json) {
     auto cfg = nlohmann::json::parse(config_json, nullptr, false);
     if (cfg.is_discarded()) {
       return false;

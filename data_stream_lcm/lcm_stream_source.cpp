@@ -2,6 +2,288 @@
 
 #include "lidar_subscriber.hpp"
 
+static std::vector<uint8_t> serializeVisualization(
+    visualization_msgs::msg::Marker& msg) {
+    rclcpp::Serialization<visualization_msgs::msg::Marker> serializer;
+
+    rclcpp::SerializedMessage serialized_msg;
+
+    serializer.serialize_message(&msg, &serialized_msg);
+
+    const auto& raw =
+        serialized_msg.get_rcl_serialized_message();
+
+    return std::vector<uint8_t>(
+        raw.buffer,
+        raw.buffer + raw.buffer_length);
+}
+
+// ------------------------------------------------------------
+// 3. visualization_msgs::msg::Marker 辅助常量与工具
+// ------------------------------------------------------------
+
+static constexpr int32_t MARKER_TRIANGLE_LIST = 11;
+static constexpr int32_t MARKER_ACTION_ADD = 0;
+
+static std_msgs::msg::ColorRGBA makeColor(
+    float r, float g, float b, float a = 1.0f) {
+  std_msgs::msg::ColorRGBA c;
+  c.r = r; c.g = g; c.b = b; c.a = a;
+  return c;
+}
+
+static geometry_msgs::msg::Point makePoint(double x, double y, double z) {
+  geometry_msgs::msg::Point p;
+  p.x = x; p.y = y; p.z = z;
+  return p;
+}
+
+static geometry_msgs::msg::Vector3 makeVector3(double x, double y, double z) {
+  geometry_msgs::msg::Vector3 v;
+  v.x = x; v.y = y; v.z = z;
+  return v;
+}
+
+
+// 假设你已有以下辅助函数：
+// makePoint(x, y, z)
+// makeColor(r, g, b, a)
+// makeVector3(x, y, z)
+
+static visualization_msgs::msg::Marker makeElevationErrorBarMap(
+    const std::string& frame_id,
+    const std::string& ns,
+    int32_t id,
+    int rows,
+    int cols,
+    const std::vector<float>& height_data,
+    const std::vector<float>& error_data,
+    double resolution,
+    double origin_x,
+    double origin_y,
+    double z_scale,
+    float min_z,
+    float max_z,
+    double error_cap_width = 0.05,
+    double error_line_width = 0.5,
+    int error_stride = 1)
+{
+    auto idx = [&](int r, int c) -> size_t
+    {
+        return static_cast<size_t>(r) * cols + c;
+    };
+
+    // ========================================================
+    // 误差棒 LINE_LIST
+    // ========================================================
+
+    visualization_msgs::msg::Marker error_marker;
+
+    error_marker.header.frame_id = frame_id;
+
+    error_marker.ns = ns + "_error_bars";
+    error_marker.id = id;
+
+    error_marker.type =
+        visualization_msgs::msg::Marker::LINE_LIST;
+
+    error_marker.action =
+        visualization_msgs::msg::Marker::ADD;
+
+    error_marker.pose.orientation.w = 1.0;
+
+    // LINE_LIST 只使用 scale.x 表示线宽
+    error_marker.scale.x = error_line_width;
+
+    // 亮红色误差棒，半透明，便于在高程图上叠加显示
+    error_marker.color.r = 1.0f;
+    error_marker.color.g = 0.0f;
+    error_marker.color.b = 0.0f;
+    error_marker.color.a = 0.9f;
+
+    // 误差棒 z 轴整体向上偏移，避免被高程表面遮挡
+    const double z_offset = 0.05;
+
+    error_marker.lifetime.sec = 0;
+    error_marker.lifetime.nanosec = 0;
+
+    auto addLine = [&](double x1, double y1, double z1,
+                       double x2, double y2, double z2)
+    {
+        error_marker.points.push_back(
+            makePoint(x1, y1, z1));
+
+        error_marker.points.push_back(
+            makePoint(x2, y2, z2));
+    };
+
+    // ========================================================
+    // 4. 每个网格点添加误差棒
+    // ========================================================
+
+    for (int r = 0; r < rows; r += error_stride)
+    {
+        for (int c = 0; c < cols; c += error_stride)
+        {
+            const size_t i = idx(r, c);
+
+            const double h = height_data[i];
+            const double e = error_data[i];
+
+            if (!std::isfinite(h) ||
+                !std::isfinite(e) ||
+                e < 0.0)
+            {
+                continue;
+            }
+
+            const double x =
+                origin_x + c * resolution;
+
+            const double y =
+                origin_y + r * resolution;
+
+            // 高度与误差使用相同的缩放比例
+            const double z = h * z_scale;
+
+            const double error =
+                e * std::abs(z_scale);
+
+            const double z_min = z - error;
+            const double z_max = z + error;
+
+            const double half_cap =
+                error_cap_width * 0.5;
+
+            // 1. 误差棒主体（z 轴偏移避免被表面遮挡）
+            addLine(
+                x, y, z_min + z_offset,
+                x, y, z_max + z_offset
+            );
+
+            // 2. 顶部横线
+            addLine(
+                x - half_cap, y, z_max + z_offset,
+                x + half_cap, y, z_max + z_offset
+            );
+
+            // 3. 底部横线
+            addLine(
+                x - half_cap, y, z_min + z_offset,
+                x + half_cap, y, z_min + z_offset
+            );
+        }
+    }
+
+    return error_marker;
+}
+
+// 4. 高程图：2D 高度数组 -> TRIANGLE_LIST Marker
+// ------------------------------------------------------------
+static visualization_msgs::msg::Marker makeElevationMap(
+    const std::string& frame_id,
+    const std::string& ns,
+    int32_t id,
+    int rows, int cols,
+    const std::vector<float>& height_data,
+    double resolution,
+    double origin_x, double origin_y,
+    double z_scale,
+    float min_z, float max_z) {
+ 
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = frame_id;
+  marker.ns = ns;
+  marker.id = id;
+  marker.type = 11;
+  marker.action = MARKER_ACTION_ADD;
+  marker.scale = makeVector3(1.0, 1.0, 1.0);
+  marker.pose.orientation.w = 1.0;
+  marker.lifetime.sec = 0;
+  marker.lifetime.nanosec = 0;
+ 
+  const size_t n = static_cast<size_t>(rows) * cols;
+  if (height_data.size() < n || rows < 2 || cols < 2) {
+    return marker;
+  }
+ 
+  const int tri_count = (rows - 1) * (cols - 1) * 2;
+  marker.points.reserve(tri_count * 3);
+  marker.colors.reserve(tri_count * 3);
+ 
+  const float z_range = (max_z > min_z) ? (max_z - min_z) : 1.0f;
+ 
+  auto heightToColor = [&](double h) {
+    float t = (static_cast<float>(h) - min_z) / z_range;
+    t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+    float r, g, b;
+    if (t < 0.25f) {
+      float s = t / 0.25f;
+      r = 0.0f;  g = s;     b = 1.0f;
+    } else if (t < 0.5f) {
+      float s = (t - 0.25f) / 0.25f;
+      r = 0.0f;  g = 1.0f;  b = 1.0f - s;
+    } else if (t < 0.75f) {
+      float s = (t - 0.5f) / 0.25f;
+      r = s;     g = 1.0f;  b = 0.0f;
+    } else {
+      float s = (t - 0.75f) / 0.25f;
+      r = 1.0f;  g = 1.0f - s;  b = 0.0f;
+    }
+    return makeColor(r, g, b, 0.6f);
+  };
+ 
+  for (int r = 0; r < rows - 1; ++r) {
+    for (int c = 0; c < cols - 1; ++c) {
+      auto idx = [&](int rr, int cc) -> size_t {
+        return static_cast<size_t>(rr) * cols + static_cast<size_t>(cc);
+      };
+      size_t i00 = idx(r,   c);
+      size_t i10 = idx(r+1, c);
+      size_t i01 = idx(r,   c+1);
+      size_t i11 = idx(r+1, c+1);
+ 
+      double x0 = origin_x + c * resolution;
+      double y0 = origin_y + r * resolution;
+      double x1 = x0 + resolution;
+      double y1 = y0 + resolution;
+ 
+      double z00 = height_data[i00] * z_scale;
+      double z10 = height_data[i10] * z_scale;
+      double z01 = height_data[i01] * z_scale;
+      double z11 = height_data[i11] * z_scale;
+ 
+      auto p00 = makePoint(x0, y0, z00);
+      auto p10 = makePoint(x0, y1, z10);
+      auto p01 = makePoint(x1, y0, z01);
+      auto p11 = makePoint(x1, y1, z11);
+ 
+      auto c00 = heightToColor(z00);
+      auto c10 = heightToColor(z10);
+      auto c01 = heightToColor(z01);
+      auto c11 = heightToColor(z11);
+ 
+      // 三角形 1: (r,c) - (r+1,c) - (r,c+1)
+      marker.points.push_back(p00);
+      marker.points.push_back(p10);
+      marker.points.push_back(p01);
+      marker.colors.push_back(c00);
+      marker.colors.push_back(c10);
+      marker.colors.push_back(c01);
+ 
+      // 三角形 2: (r+1,c+1) - (r,c+1) - (r+1,c)
+      marker.points.push_back(p11);
+      marker.points.push_back(p01);
+      marker.points.push_back(p10);
+      marker.colors.push_back(c11);
+      marker.colors.push_back(c01);
+      marker.colors.push_back(c10);
+    }
+  }
+ 
+  return marker;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LcmSource plugin
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,6 +396,8 @@ PJ::Status LcmStreamSource::loadConfig(std::string_view config_json) {
 LcmStreamSource::LcmStreamSource() {
   m_image_handle_ = PJ::ParserBindingHandle();
   m_tf_handle_ = PJ::ParserBindingHandle();
+  m_marker_handle_ = PJ::ParserBindingHandle();
+  m_marker_error_bar_handle_ = PJ::ParserBindingHandle();
 }
 
 void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
@@ -699,6 +983,86 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
               return decode_len;
             }
 
+            if (lcmStructType->first == "neural_mapping_lcm.neural_map_query_t") {
+              int nx = memberMap.find("nx")->second;
+              int ny = memberMap.find("ny")->second;
+
+              float center_x = 0.0f;
+              float center_y = 0.0f;
+              float resolution = 0.05f;
+              if (auto it = memberMap.find("resolution"); it != memberMap.end()) {
+                resolution = it->second;
+              }
+              if (auto it = memberMap.find("center_x"); it != memberMap.end()) {
+                center_x = it->second;
+              }
+              if (auto it = memberMap.find("center_y"); it != memberMap.end()) {
+                center_y = it->second;
+              }
+
+              if (!strcmp(member->membername, "height")) {
+              height_data.resize(nx * ny);
+              for (size_t e = 0; e < nx * ny; e++) {
+                int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
+                                        member->membername, memberMap, lcmTypeTable,
+                                        [this, e] (const std::string&, PJ::sdk::ValueRef value) {
+                                          height_data[e] = std::get<float>(value);
+                                        });
+                if(tlen < 0) break; else {
+                  pos_offset += tlen;
+                  decode_len += tlen;
+                }
+              }
+              continue;
+              }
+
+              if (!strcmp(member->membername, "std")) {
+                std_data.resize(nx * ny);
+                for (size_t e = 0; e < nx * ny; e++) {
+                  int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
+                                          member->membername, memberMap, lcmTypeTable,
+                                          [this, e] (const std::string&, PJ::sdk::ValueRef value) {
+                                            std_data[e] = std::get<float>(value);
+                                          });
+                  if(tlen < 0) break; else {
+                    pos_offset += tlen;
+                    decode_len += tlen;
+                  }
+                }
+
+                auto elevation_marker_error_bar = makeElevationErrorBarMap(
+                  "map",            // frame_id
+                    "elevation_std",      // ns
+                    1,                // id
+                    ny, nx,    // rows, cols
+                    height_data,      // 高度数据
+                    std_data,           // 错误条误差
+                    resolution,             // resolution: 每格 5cm
+                    center_x, center_y,         // origin
+                    1.0f,             // z_scale
+                    -0.5f, 0.5f       // min_z, max_z（颜色范围）
+                );
+
+                auto elevation_marker = makeElevationMap(
+                    "map",            // frame_id
+                    "elevation",      // ns
+                    0,                // id
+                    ny, nx,    // rows, cols
+                    height_data,      // 高度数据
+                    resolution,             // resolution: 每格 5cm
+                    center_x, center_y,         // origin
+                    1.0f,             // z_scale
+                    -0.5f, 0.5f       // min_z, max_z（颜色范围）
+                );
+
+
+                publishVisualizationErrBar(timestamp, elevation_marker_error_bar);
+                publishVisualization(timestamp, elevation_marker);
+                continue;
+              }
+              
+            }
+
             if (auto it = memberMap.find(ld->size); it != memberMap.end()) {
               for (size_t i = 0; i < it->second; i++) {
                 int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, 
@@ -728,6 +1092,194 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
   }
 
   return decode_len;
+}
+
+void LcmStreamSource::publishVisualizationErrBar(
+    int64_t timestamp,
+    const visualization_msgs::msg::Marker& marker_error_bar) {
+  if (m_marker_error_bar_handle_.id == 0) {
+    static constexpr char MARKER_ERROR_BAR_SCHEMA[] = R"SCHEMA(
+std_msgs/Header header
+string ns
+int32 id
+int32 type
+int32 action
+geometry_msgs/Pose pose
+geometry_msgs/Vector3 scale
+std_msgs/ColorRGBA color
+builtin_interfaces/Duration lifetime
+bool frame_locked
+geometry_msgs/Point[] points
+std_msgs/ColorRGBA[] colors
+string text
+string mesh_resource
+bool mesh_use_embedded_materials
+================================================================================
+MSG: std_msgs/Header
+builtin_interfaces/Time stamp
+string frame_id
+================================================================================
+MSG: builtin_interfaces/Time
+int32 sec
+uint32 nanosec
+================================================================================
+MSG: geometry_msgs/Pose
+geometry_msgs/Point position
+geometry_msgs/Quaternion orientation
+================================================================================
+MSG: geometry_msgs/Point
+float64 x
+float64 y
+float64 z
+================================================================================
+MSG: geometry_msgs/Quaternion
+float64 x
+float64 y
+float64 z
+float64 w
+================================================================================
+MSG: geometry_msgs/Vector3
+float64 x
+float64 y
+float64 z
+================================================================================
+MSG: std_msgs/ColorRGBA
+float32 r
+float32 g
+float32 b
+float32 a
+================================================================================
+MSG: builtin_interfaces/Duration
+int32 sec
+uint32 nanosec
+)SCHEMA";
+
+    const auto* schema_data = reinterpret_cast<const uint8_t*>(MARKER_ERROR_BAR_SCHEMA);
+    const size_t schema_size = sizeof(MARKER_ERROR_BAR_SCHEMA) - 1;
+
+    nlohmann::json marker_parser_config;
+    marker_parser_config["serialization"] = "cdr";
+    marker_parser_config["schema_encoding"] = "ros2msg";
+    marker_parser_config["topic_name"] = "/elevation_map";
+
+    PJ::ParserBindingRequest marker_request{
+        .topic_name = "/elevation_map_err_bar",
+        .parser_encoding = "ros2msg",
+        .type_name = "visualization_msgs/msg/Marker",
+        .schema = PJ::Span<const uint8_t>(schema_data, schema_size),
+        .parser_config_json = marker_parser_config.dump(),
+    };
+
+    auto marker_result = runtimeHost().ensureParserBinding(marker_request);
+    m_marker_error_bar_handle_ = *marker_result;
+  }
+
+  auto marker_tmp = marker_error_bar;
+  marker_tmp.header.stamp.sec = timestamp / 1000000;
+  marker_tmp.header.stamp.nanosec = timestamp * 1000;
+  auto marker_bytes = std::make_shared<std::vector<uint8_t>>(
+      serializeVisualization(marker_tmp));
+
+  (void)runtimeHost().pushMessage(
+      m_marker_error_bar_handle_,
+      timestamp * 1000,
+      [marker_bytes]() {
+        return PJ::sdk::PayloadView{marker_bytes};
+      });
+}
+
+void LcmStreamSource::publishVisualization(
+    int64_t timestamp,
+    const visualization_msgs::msg::Marker& marker) {
+  if (m_marker_handle_.id == 0) {
+    static constexpr char MARKER_SCHEMA[] = R"SCHEMA(
+std_msgs/Header header
+string ns
+int32 id
+int32 type
+int32 action
+geometry_msgs/Pose pose
+geometry_msgs/Vector3 scale
+std_msgs/ColorRGBA color
+builtin_interfaces/Duration lifetime
+bool frame_locked
+geometry_msgs/Point[] points
+std_msgs/ColorRGBA[] colors
+string text
+string mesh_resource
+bool mesh_use_embedded_materials
+================================================================================
+MSG: std_msgs/Header
+builtin_interfaces/Time stamp
+string frame_id
+================================================================================
+MSG: builtin_interfaces/Time
+int32 sec
+uint32 nanosec
+================================================================================
+MSG: geometry_msgs/Pose
+geometry_msgs/Point position
+geometry_msgs/Quaternion orientation
+================================================================================
+MSG: geometry_msgs/Point
+float64 x
+float64 y
+float64 z
+================================================================================
+MSG: geometry_msgs/Quaternion
+float64 x
+float64 y
+float64 z
+float64 w
+================================================================================
+MSG: geometry_msgs/Vector3
+float64 x
+float64 y
+float64 z
+================================================================================
+MSG: std_msgs/ColorRGBA
+float32 r
+float32 g
+float32 b
+float32 a
+================================================================================
+MSG: builtin_interfaces/Duration
+int32 sec
+uint32 nanosec
+)SCHEMA";
+
+    const auto* schema_data = reinterpret_cast<const uint8_t*>(MARKER_SCHEMA);
+    const size_t schema_size = sizeof(MARKER_SCHEMA) - 1;
+
+    nlohmann::json marker_parser_config;
+    marker_parser_config["serialization"] = "cdr";
+    marker_parser_config["schema_encoding"] = "ros2msg";
+    marker_parser_config["topic_name"] = "/elevation_map";
+
+    PJ::ParserBindingRequest marker_request{
+        .topic_name = "/elevation_map",
+        .parser_encoding = "ros2msg",
+        .type_name = "visualization_msgs/msg/Marker",
+        .schema = PJ::Span<const uint8_t>(schema_data, schema_size),
+        .parser_config_json = marker_parser_config.dump(),
+    };
+
+    auto marker_result = runtimeHost().ensureParserBinding(marker_request);
+    m_marker_handle_ = *marker_result;
+  }
+
+  auto marker_tmp = marker;
+  marker_tmp.header.stamp.sec = timestamp / 1000000;
+  marker_tmp.header.stamp.nanosec = timestamp * 1000;
+  auto marker_bytes = std::make_shared<std::vector<uint8_t>>(
+      serializeVisualization(marker_tmp));
+
+  (void)runtimeHost().pushMessage(
+      m_marker_handle_,
+      timestamp * 1000,
+      [marker_bytes]() {
+        return PJ::sdk::PayloadView{marker_bytes};
+      });
 }
 
 void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp, const std::string& topic_name,

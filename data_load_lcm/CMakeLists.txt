@@ -46,6 +46,7 @@ target_include_directories(lcm_source_plugin SYSTEM PRIVATE ${CMAKE_CURRENT_SOUR
   /opt/ros/humble/include/class_loader/
   /opt/ros/humble/include/urdf/
   /opt/ros/humble/include/urdfdom_headers/
+  /opt/ros/humble/include/visualization_msgs/
 )
 target_link_libraries(lcm_source_plugin PRIVATE
   plotjuggler_sdk::plugin_sdk
@@ -60,6 +61,7 @@ target_link_libraries(lcm_source_plugin PRIVATE
   /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_cpp.so
   /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
   /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+  /opt/ros/humble/lib/libvisualization_msgs__rosidl_typesupport_cpp.so
 )
 
 pj_embed_ui(lcm_source_plugin

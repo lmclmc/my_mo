@@ -41,6 +41,7 @@ target_include_directories(lcm_stream_source_plugin SYSTEM PRIVATE ${CMAKE_CURRE
   /opt/ros/humble/include/class_loader/
   /opt/ros/humble/include/urdf/
   /opt/ros/humble/include/urdfdom_headers/
+  /opt/ros/humble/include/visualization_msgs/
 )
 target_link_libraries(lcm_stream_source_plugin PRIVATE
   asio::asio
@@ -56,6 +57,7 @@ target_link_libraries(lcm_stream_source_plugin PRIVATE
   /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
   /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_cpp.so
   /opt/ros/humble/lib/libtf2_msgs__rosidl_typesupport_cpp.so
+  /opt/ros/humble/lib/libvisualization_msgs__rosidl_typesupport_cpp.so
 )
 
 pj_embed_ui(lcm_stream_source_plugin
