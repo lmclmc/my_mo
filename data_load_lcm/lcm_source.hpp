@@ -160,6 +160,7 @@ class LcmSource : public PJ::FileSourceBase {
   static constexpr uint64_t kMaxConsecutivePushFailures = 100;
   static constexpr uint64_t kPushFailureLogInterval = 25;
 
+  using WriteCB = std::function<void(const std::string&, const std::string&, PJ::sdk::ValueRef)>;
 public:
   LcmSource() {
     m_image_handle_ = PJ::ParserBindingHandle();
@@ -195,13 +196,13 @@ public:
                     const std::string&, const std::string&,
                     std::unordered_map<std::string, int>&,
                     std::map<std::string, lcm_struct_t*>&,
-                    const std::function<void(const std::string&, PJ::sdk::ValueRef)>&);
+                    const WriteCB&);
   //一级解析函数，解析LCM消息中，任意类型的结构体数据，解开结构体内部任意成员数据后，调用二级解析函数处理
   int decode_type_1(const lcm::LogEvent*, int, const std::string&, 
                     const std::string&, std::map<std::string, lcm_struct_t*>&,
-                    const std::function<void(const std::string&, PJ::sdk::ValueRef)>&);
+                    const WriteCB&);
 
-  void savePoint(const lcm::LogEvent*, const std::string&, PJ::sdk::ValueRef);
+  void savePoint(const lcm::LogEvent*, const std::string&, const std::string&, PJ::sdk::ValueRef);
 
   uint32_t publishTfCount = 0;
 

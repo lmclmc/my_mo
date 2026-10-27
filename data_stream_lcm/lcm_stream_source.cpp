@@ -851,7 +851,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
                              const std::string& base, const std::string& memberName,
                              std::unordered_map<std::string, int>& memberMap,
                              std::map<std::string, lcm_struct_t*>& lcmTypeTable,
-                             const std::function<void(const std::string&, PJ::sdk::ValueRef)>& writeCb) {
+                             const WriteCB& writeCb) {
   int pos_offset = offset;
   int decode_len = 0;
   
@@ -862,7 +862,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
       pos_offset += tlen;
       decode_len += tlen;
     }
-    writeCb(base, value);
+    writeCb(base, memberName, value);
     memberMap[memberName] = value;
   } else if (type == "int16_t") {
     int16_t value;
@@ -871,7 +871,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
       pos_offset += tlen;
       decode_len += tlen;
     }
-    writeCb(base, value);
+    writeCb(base, memberName, value);
     memberMap[memberName] = value;
   } else if (type == "int32_t") {
     int32_t value;
@@ -880,7 +880,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
       pos_offset += tlen;
       decode_len += tlen;
     }
-    writeCb(base, value);
+    writeCb(base, memberName, value);
     memberMap[memberName] = value;
   } else if (type == "int64_t") {
     int64_t value;
@@ -889,7 +889,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
       pos_offset += tlen;
       decode_len += tlen;
     }
-    writeCb(base, value);
+    writeCb(base, memberName, value);
     memberMap[memberName] = value;
   } else if (type == "float") {
     float value;
@@ -898,7 +898,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
       pos_offset += tlen;
       decode_len += tlen;
     }
-    writeCb(base, value);
+    writeCb(base, memberName, value);
   } else if (type == "double") {
     double value;
     int tlen = __double_decode_array(recvbuf, pos_offset, data_size, &value, 1);
@@ -906,7 +906,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
       pos_offset += tlen;
       decode_len += tlen;
     }
-    writeCb(base, value);
+    writeCb(base, memberName, value);
   } else if (type == "string") {
     int32_t __d_len__;
     int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &__d_len__, 1);
@@ -919,7 +919,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
     pos_offset += __d_len__;
     decode_len += __d_len__;
 
-    writeCb(base + memberName, lcm_str);
+    writeCb(base, memberName, lcm_str);
   } else if (type == "boolean") {
     int8_t value;
     int tlen = __boolean_decode_array(recvbuf, pos_offset, data_size, &value, 1);
@@ -927,7 +927,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
       pos_offset += tlen;
       decode_len += tlen;
     }
-    writeCb(base, value);
+    writeCb(base, memberName, value);
   } else {
     int tlen = decode_type_1(recvbuf, data_size, timestamp, pos_offset, type, base + memberName + "/", lcmTypeTable, writeCb);
     if(tlen > 0) {
@@ -941,7 +941,7 @@ int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timesta
 
 int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timestamp, int offset, const std::string& type, 
                              const std::string& base, std::map<std::string, lcm_struct_t*>& lcmTypeTable,
-                             const std::function<void(const std::string&, PJ::sdk::ValueRef)>& writeCb) {
+                             const WriteCB& writeCb) {
   int pos_offset = offset;
   int decode_len = 0;
   std::unordered_map<std::string, int> memberMap;
@@ -952,7 +952,7 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
 
       if (g_ptr_array_size(member->dimensions) == 0) {
         int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, 
-                                base + member->membername + "/", member->membername,
+                                base + "/", member->membername,
                                 memberMap, lcmTypeTable, writeCb);
         if(tlen < 0) break; else {
           pos_offset += tlen;
@@ -973,7 +973,8 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
               for (size_t e = 0; e < height * width; e++) {
                 int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
                                         member->membername, memberMap, lcmTypeTable,
-                                        [&image_data, e] (const std::string&, PJ::sdk::ValueRef value) {
+                                        [&image_data, e] (const std::string&, const std::string&,
+                                                          PJ::sdk::ValueRef value) {
                                           image_data[e] = std::get<float>(value) * 255.0f + 127;
                                         });
                 if(tlen < 0) break; else {
@@ -1015,7 +1016,8 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
                 for (size_t e = 0; e < nx * ny; e++) {
                   int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
                                           member->membername, memberMap, lcmTypeTable,
-                                          [this, e] (const std::string&, PJ::sdk::ValueRef value) {
+                                          [this, e] (const std::string&, const std::string&,
+                                                     PJ::sdk::ValueRef value) {
                                             height_data[e] = std::get<float>(value);
                                           });
                   if(tlen < 0) break; else {
@@ -1034,7 +1036,8 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
                   
                   int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
                                           member->membername, memberMap, lcmTypeTable,
-                                          [this, e] (const std::string&, PJ::sdk::ValueRef value) {
+                                          [this, e] (const std::string&, const std::string&,
+                                                     PJ::sdk::ValueRef value) {
                                             std_data[e] = std::get<float>(value);
                                           });
                   if(tlen < 0) break; else {
@@ -1044,28 +1047,28 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
                 }
 
                 auto elevation_marker_error_bar = makeElevationErrorBarMap(
-                  "map",            // frame_id
-                    "elevation_std",      // ns
-                    1,                // id
-                    ny, nx,    // rows, cols
-                    height_data,      // 高度数据
-                    std_data,           // 错误条误差
-                    resolution,             // resolution: 每格 5cm
-                    center_x, center_y,         // origin
-                    1.0f,             // z_scale
-                    -0.5f, 0.5f       // min_z, max_z（颜色范围）
+                  "base",            // frame_id
+                  "elevation_std",      // ns
+                  1,                // id
+                  ny, nx,    // rows, cols
+                  height_data,      // 高度数据
+                  std_data,           // 错误条误差
+                  resolution,             // resolution: 每格 5cm
+                  center_x, center_y,         // origin
+                  1.0f,             // z_scale
+                  -0.5f, 0.5f       // min_z, max_z（颜色范围）
                 );
 
                 auto elevation_marker = makeElevationMap(
-                    "map",            // frame_id
-                    "elevation",      // ns
-                    0,                // id
-                    ny, nx,    // rows, cols
-                    height_data,      // 高度数据
-                    resolution,             // resolution: 每格 5cm
-                    center_x, center_y,         // origin
-                    1.0f,             // z_scale
-                    -0.5f, 0.5f       // min_z, max_z（颜色范围）
+                  "base",            // frame_id
+                  "elevation",      // ns
+                  0,                // id
+                  ny, nx,    // rows, cols
+                  height_data,      // 高度数据
+                  resolution,             // resolution: 每格 5cm
+                  center_x, center_y,         // origin
+                  1.0f,             // z_scale
+                  -0.5f, 0.99f       // min_z, max_z（颜色范围）
                 );
 
                 publishVisualizationErrBar(timestamp, elevation_marker_error_bar);
@@ -1078,8 +1081,8 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
             if (auto it = memberMap.find(ld->size); it != memberMap.end()) {
               for (size_t i = 0; i < it->second; i++) {
                 int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, 
-                                        base + member->membername + "/" + std::to_string(i) + "/",
-                                        member->membername, memberMap, lcmTypeTable, writeCb);
+                                        base + member->membername + "/",
+                                        std::to_string(i), memberMap, lcmTypeTable, writeCb);
                 if(tlen < 0) break; else {
                   pos_offset += tlen;
                   decode_len += tlen;
@@ -1091,8 +1094,8 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
           
           for (size_t i = 0; i < atoi(ld->size); i++) {
             int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, 
-                                    base + member->membername + "/" + std::to_string(i),
-                                    member->membername, memberMap, lcmTypeTable, writeCb);
+                                    base + member->membername + "/",
+                                    std::to_string(i), memberMap, lcmTypeTable, writeCb);
             if(tlen < 0) break; else {
               pos_offset += tlen;
               decode_len += tlen;
@@ -1295,11 +1298,11 @@ uint32 nanosec
 }
 
 void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp, const std::string& topic_name,
-                                PJ::sdk::ValueRef value) {
+                                const std::string& field, PJ::sdk::ValueRef value) {
   auto topic_handle = writeHost().ensureTopic(topic_name);
                             
   const PJ::sdk::NamedFieldValue fields[] = {
-      {.name = "", .value = value}
+      {.name = field, .value = value}
   };
 
   // 2. 按正确顺序调用
@@ -1311,8 +1314,8 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
 
   if (publishTfCount < 34) {
     for (int leg_idx = 0; leg_idx < 12; leg_idx++) {
-      std::string str_q = std::string("leg_control_data/q/") + std::to_string(leg_idx);
-      if (str_q == topic_name) {
+      std::string str_q = std::string("leg_control_data/q/");
+      if (str_q == topic_name && field == std::to_string(leg_idx)) {
         robot_state_publisher_.setLegPos(leg_idx, std::get<float>(value));
         publishTfCount++;
         return;
@@ -1320,8 +1323,8 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
     }
 
     for (int arm_idx = 0; arm_idx < 14; arm_idx++) {
-      std::string str_q = std::string("arm_control_data/joint_curPos/") + std::to_string(arm_idx);
-      if (str_q == topic_name) {
+      std::string str_q = std::string("arm_control_data/joint_curPos/");
+      if (str_q == topic_name && field == std::to_string(arm_idx)) {
         robot_state_publisher_.setArmPos(arm_idx, std::get<float>(value));
         publishTfCount++;
         return;
@@ -1329,8 +1332,8 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
     }
 
     for (int waist_idx = 0; waist_idx < 3; waist_idx++) {
-      std::string str_q = std::string("waist_control_data/q/") + std::to_string(waist_idx);
-      if (str_q == topic_name) {
+      std::string str_q = std::string("waist_control_data/q/");
+      if (str_q == topic_name && field == std::to_string(waist_idx)) {
         robot_state_publisher_.setWaistPos(waist_idx, std::get<float>(value));
         publishTfCount++;
         return;
@@ -1338,8 +1341,8 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
     }
 
     for (int quat_idx = 0; quat_idx < 4; quat_idx++) {
-      std::string str_q = std::string("state_estimator/quat/") + std::to_string(quat_idx);
-      if (str_q == topic_name) {
+      std::string str_q = std::string("state_estimator/quat/");
+      if (str_q == topic_name && field == std::to_string(quat_idx)) {
         robot_state_publisher_.setStateEstimator(quat_idx, std::get<float>(value));
         publishTfCount++;
         return;
@@ -1380,8 +1383,8 @@ PJ::Status LcmStreamSource::onPoll() {
           lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(topic_lcmgen->structs, struct_idx);
           if (msg_hash == ((struct_item->hash<<1) + ((struct_item->hash>>63)&1))) {
             decode_type_1(msg.data.data(), msg.data.size(), msg.timestamp, 8, struct_item->structname->lctypename, msg.channel + "/", lcm_type_table,
-                      [&msg, this] (const std::string& topic_name, PJ::sdk::ValueRef value) {
-                        savePoint(msg.data.data(), msg.data.size(), msg.timestamp, topic_name, value);
+                      [&msg, this] (const std::string& topic_name, const std::string& field, PJ::sdk::ValueRef value) {
+                        savePoint(msg.data.data(), msg.data.size(), msg.timestamp, topic_name, field, value);
                       });
             channel_match = true;
             break;

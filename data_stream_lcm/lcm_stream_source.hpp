@@ -118,6 +118,7 @@ private:
 };
 
 class LcmStreamSource : public PJ::StreamSourceBase {
+  using WriteCB = std::function<void(const std::string&, const std::string&, PJ::sdk::ValueRef)>;
 public:
   LcmStreamSource();
   PJ_borrowed_dialog_t getDialog() override {
@@ -155,13 +156,13 @@ public:
                     const std::string&, const std::string&,
                     std::unordered_map<std::string, int>&,
                     std::map<std::string, lcm_struct_t*>&,
-                    const std::function<void(const std::string&, PJ::sdk::ValueRef)>&);
+                    const WriteCB&);
   //一级解析函数，解析LCM消息中，任意类型的结构体数据，解开结构体内部任意成员数据后，调用二级解析函数处理
   int decode_type_1(void*, int, int64_t, int, const std::string&, 
                     const std::string&, std::map<std::string, lcm_struct_t*>&,
-                    const std::function<void(const std::string&, PJ::sdk::ValueRef)>&);
+                    const WriteCB&);
 
-  void savePoint(void*, int, int64_t, const std::string&, PJ::sdk::ValueRef);
+  void savePoint(void*, int, int64_t, const std::string&, const std::string&, PJ::sdk::ValueRef);
 
 private:
   LcmDialog dialog_;
