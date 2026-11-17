@@ -1,0 +1,22 @@
+{
+  "id": "dds-server",
+  "name": "DDS Server",
+  "version": "0.9.1",
+  "description": "Real-time data streaming via DDS",
+  "author": "PlotJuggler Team",
+  "publisher": "PlotJuggler",
+  "website": "https://github.com/PlotJuggler/pj-official-plugins",
+  "repository": "https://github.com/PlotJuggler/pj-official-plugins",
+  "license": "MIT",
+  "icon_url": "",
+  "category": "data_stream",
+  "tags": [
+    "dds",
+    "stream",
+    "realtime",
+    "network",
+    "multicast"
+  ],
+  "min_sdk_required": "0.28.0",
+  "min_plotjuggler_version": "4.0.0"
+}

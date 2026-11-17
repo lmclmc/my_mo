@@ -44,6 +44,7 @@ if(TARGET plotjuggler_sdk::plugin_sdk)
   # intermediate stop. Uncomment each as it is brought over to v4.
   add_subdirectory(data_load_csv)
   add_subdirectory(data_load_lcm)
+  add_subdirectory(data_stream_dds)
   add_subdirectory(data_load_mcap)
   add_subdirectory(data_load_parquet)
   add_subdirectory(data_load_ulog)

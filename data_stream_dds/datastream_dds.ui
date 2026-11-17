@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DdsDiscoveryDialog</class>
+ <widget class="QDialog" name="DdsDiscoveryDialog">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>1540</width><height>900</height></rect></property>
+  <property name="minimumSize"><size><width>1180</width><height>740</height></size></property>
+  <property name="windowTitle"><string>CycloneDDS · 连接与发现</string></property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="spacing"><number>12</number></property>
+   <property name="leftMargin"><number>16</number></property>
+   <property name="topMargin"><number>12</number></property>
+   <property name="rightMargin"><number>16</number></property>
+   <property name="bottomMargin"><number>16</number></property>
+   <item>
+    <widget class="QLabel" name="authorLabel">
+     <property name="text">
+      <string>作者：&lt;font color='#42A5F5'&gt;&lt;b&gt;罗敏成&lt;/b&gt;&lt;/font&gt; | 邮箱：&lt;a href='mailto:luomincheng@dreame.tech'&gt;&lt;font color='#2935a1'&gt;&lt;b&gt;luomincheng@dreame.tech&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 手机：&lt;a href='tel:19168720030'&gt;&lt;font color='#a02fa0'&gt;&lt;b&gt;19168720030&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 文档：&lt;a href='https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO'&gt;&lt;font color='#FFB74D'&gt;&lt;b&gt;Wiki&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 仓库：&lt;a href='https://gitlab.magiclab.top/dreamebiped/controlsoftware/motionstudio'&gt;&lt;font color='#AED581'&gt;&lt;b&gt;GitLab&lt;/b&gt;&lt;/font&gt;&lt;/a&gt;</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 12px; color: #888888; padding: 4px;</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeft</set>
+     </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="connectionGroup">
+     <property name="title"><string>DDS 连接</string></property>
+     <layout class="QGridLayout" name="connectionLayout">
+      <item row="0" column="0"><widget class="QLabel" name="domainIdLabel"><property name="text"><string>Domain ID</string></property><property name="buddy"><cstring>domainIdSpinBox</cstring></property></widget></item>
+      <item row="0" column="1"><widget class="QSpinBox" name="domainIdSpinBox"><property name="maximum"><number>232</number></property><property name="value"><number>200</number></property><property name="keyboardTracking"><bool>false</bool></property><property name="toolTip"><string>切换 Domain ID 后自动重新发现该域内的端点。</string></property></widget></item>
+      <item row="0" column="2"><widget class="QLabel" name="partitionLabel"><property name="text"><string>订阅 Partition</string></property><property name="buddy"><cstring>partitionEdit</cstring></property></widget></item>
+      <item row="0" column="3"><widget class="QLineEdit" name="partitionEdit"><property name="placeholderText"><string>留空使用默认分区，也可点击下方发现的分区</string></property><property name="minimumSize"><size><width>360</width><height>0</height></size></property></widget></item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="qosGroup">
+     <property name="title"><string>订阅 QoS</string></property>
+     <layout class="QGridLayout" name="qosLayout">
+      <item row="0" column="0"><widget class="QLabel" name="reliabilityLabel"><property name="text"><string>Reliability · 可靠性</string></property></widget></item>
+      <item row="0" column="1"><widget class="QComboBox" name="reliabilityComboBox"/></item>
+      <item row="0" column="2"><widget class="QLabel" name="durabilityLabel"><property name="text"><string>Durability · 持久性</string></property></widget></item>
+      <item row="0" column="3"><widget class="QComboBox" name="durabilityComboBox"/></item>
+      <item row="0" column="4"><widget class="QLabel" name="historyLabel"><property name="text"><string>History · 历史策略</string></property></widget></item>
+      <item row="0" column="5"><widget class="QComboBox" name="historyComboBox"/></item>
+      <item row="1" column="0"><widget class="QLabel" name="historyDepthLabel"><property name="text"><string>History depth · 深度</string></property></widget></item>
+      <item row="1" column="1"><widget class="QSpinBox" name="historyDepthSpinBox"><property name="minimum"><number>1</number></property><property name="maximum"><number>100000</number></property><property name="value"><number>1</number></property></widget></item>
+      <item row="1" column="2"><widget class="QLabel" name="blockingTimeLabel"><property name="text"><string>最大阻塞时间</string></property></widget></item>
+      <item row="1" column="3"><widget class="QSpinBox" name="blockingTimeSpinBox"><property name="suffix"><string> ms</string></property><property name="maximum"><number>60000</number></property><property name="value"><number>100</number></property></widget></item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="recordingGroup">
+     <property name="title"><string>MCAP / CDR 数据录制 · 滚动覆盖</string></property>
+     <layout class="QGridLayout" name="recordingLayout">
+      <item row="0" column="0"><widget class="QCheckBox" name="recordingEnabledCheckBox"><property name="text"><string>连接后录制</string></property><property name="toolTip"><string>保存选中话题的有效 CDR 样本及 IDL 类型描述。停止订阅时结束录制并写完缓存。</string></property></widget></item>
+      <item row="0" column="1"><widget class="QLabel" name="recordingDirectoryLabel"><property name="text"><string>录制目录</string></property><property name="buddy"><cstring>recordingDirectoryEdit</cstring></property></widget></item>
+      <item row="0" column="2" colspan="4"><widget class="QLineEdit" name="recordingDirectoryEdit"><property name="enabled"><bool>false</bool></property><property name="placeholderText"><string>输入目录或点击右侧选择；不存在的目录会自动创建</string></property><property name="toolTip"><string>同一目录中的 cyclonedds_record_XXXXXX.mcap 文件属于同一个滚动录制集合，旧文件可能被覆盖。</string></property></widget></item>
+      <item row="0" column="6"><widget class="QPushButton" name="recordingDirectoryButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>选择目录…</string></property></widget></item>
+      <item row="1" column="0"><widget class="QLabel" name="recordingFileSizeLabel"><property name="text"><string>单文件最大大小</string></property><property name="buddy"><cstring>recordingFileSizeSpinBox</cstring></property></widget></item>
+      <item row="1" column="1"><widget class="QSpinBox" name="recordingFileSizeSpinBox"><property name="enabled"><bool>false</bool></property><property name="minimum"><number>1</number></property><property name="maximum"><number>1048576</number></property><property name="value"><number>128</number></property><property name="suffix"><string> MB</string></property><property name="keyboardTracking"><bool>false</bool></property><property name="toolTip"><string>1 MB = 1024 × 1024 字节，包含 MCAP 文件头、消息、统计和文件尾。完整样本超出剩余容量时提前切换文件。</string></property></widget></item>
+      <item row="1" column="2"><widget class="QLabel" name="recordingFileCountLabel"><property name="text"><string>最多录制文件数</string></property><property name="buddy"><cstring>recordingFileCountSpinBox</cstring></property></widget></item>
+      <item row="1" column="3"><widget class="QSpinBox" name="recordingFileCountSpinBox"><property name="enabled"><bool>false</bool></property><property name="minimum"><number>1</number></property><property name="maximum"><number>10000</number></property><property name="value"><number>10</number></property><property name="suffix"><string> 个</string></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+      <item row="1" column="4" colspan="3"><widget class="QLabel" name="recordingFormatLabel"><property name="text"><string>格式：MCAP / CDR · 包含 IDL 类型描述</string></property></widget></item>
+      <item row="2" column="0" colspan="7"><widget class="QLabel" name="recordingStatusLabel"><property name="text"><string>勾选后随连接开始录制。MCAP 保存所选话题的 CDR 数据、IDL 类型描述和上位机接收时间；1 MB = 1024 × 1024 字节。</string></property><property name="wordWrap"><bool>true</bool></property><property name="textFormat"><enum>Qt::PlainText</enum></property></widget></item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="discoveryHeaderLayout">
+     <item><widget class="QLabel" name="discoveryStatusLabel"><property name="text"><string>正在发现 DDS 端点…</string></property><property name="wordWrap"><bool>true</bool></property><property name="textFormat"><enum>Qt::PlainText</enum></property></widget></item>
+     <item><spacer name="discoveryHeaderSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+     <item><widget class="QPushButton" name="refreshDiscoveryButton"><property name="text"><string>重新发现</string></property><property name="toolTip"><string>清空当前发现列表，并重新监听所选 Domain。</string></property></widget></item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSplitter" name="discoverySplitter">
+     <property name="orientation"><enum>Qt::Horizontal</enum></property>
+     <property name="childrenCollapsible"><bool>false</bool></property>
+     <widget class="QGroupBox" name="partitionGroup">
+      <property name="title"><string>Partition 分区发现</string></property>
+      <property name="minimumSize"><size><width>240</width><height>200</height></size></property>
+      <property name="maximumSize"><size><width>320</width><height>16777215</height></size></property>
+      <property name="sizePolicy"><sizepolicy hsizetype="Preferred" vsizetype="Expanding"><horstretch>0</horstretch><verstretch>1</verstretch></sizepolicy></property>
+      <layout class="QVBoxLayout" name="partitionLayout">
+       <item><widget class="QLabel" name="partitionCountLabel"><property name="text"><string>0 个分区</string></property></widget></item>
+       <item><widget class="QTableWidget" name="partitionTableWidget"><property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property><property name="selectionMode"><enum>QAbstractItemView::SingleSelection</enum></property><property name="selectionBehavior"><enum>QAbstractItemView::SelectRows</enum></property><property name="alternatingRowColors"><bool>true</bool></property><property name="sortingEnabled"><bool>true</bool></property><attribute name="verticalHeaderVisible"><bool>false</bool></attribute><attribute name="horizontalHeaderStretchLastSection"><bool>true</bool></attribute></widget></item>
+       <item><widget class="QLabel" name="partitionHintLabel"><property name="text"><string>点击分区后在右侧选择话题。切换 Domain 或分区会清空话题选择；空名称显示为“默认分区”。</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+      </layout>
+     </widget>
+     <widget class="QGroupBox" name="topicGroup">
+      <property name="title"><string>Topic 话题发现与订阅选择</string></property>
+      <property name="minimumSize"><size><width>880</width><height>200</height></size></property>
+      <property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Expanding"><horstretch>1</horstretch><verstretch>1</verstretch></sizepolicy></property>
+      <layout class="QVBoxLayout" name="topicLayout">
+       <item>
+        <layout class="QHBoxLayout" name="topicSelectionLayout">
+         <item><widget class="QLabel" name="topicCountLabel"><property name="text"><string>当前分区发现 0 个话题 · 已选 0 个</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+         <item><spacer name="topicSelectionSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+         <item><widget class="QPushButton" name="selectAllTopicsButton"><property name="text"><string>全选</string></property><property name="toolTip"><string>选中当前分区已发现的话题；后续新出现的话题需手动选择。</string></property></widget></item>
+         <item><widget class="QPushButton" name="clearTopicsButton"><property name="text"><string>清空</string></property></widget></item>
+        </layout>
+       </item>
+       <item><widget class="QTableWidget" name="topicTableWidget"><property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property><property name="selectionMode"><enum>QAbstractItemView::MultiSelection</enum></property><property name="selectionBehavior"><enum>QAbstractItemView::SelectRows</enum></property><property name="toolTip"><string>单击一行选择或取消，可选择多个话题。高亮行表示将要订阅的话题。</string></property><property name="alternatingRowColors"><bool>true</bool></property><property name="sortingEnabled"><bool>true</bool></property><attribute name="verticalHeaderVisible"><bool>false</bool></attribute><attribute name="horizontalHeaderStretchLastSection"><bool>true</bool></attribute></widget></item>
+       <item><widget class="QLabel" name="topicHintLabel"><property name="text"><string>单击选择或取消（可多选），高亮行将被订阅。XTypes 列绿色标记表示 IDL 已匹配，黄色标记表示部分类型已匹配；右侧 IDL 文件路径列显示对应文件，悬停查看完整路径与类型对应关系。Complete 可直接解析；其余话题可导入匹配的 IDL 后连接。</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+       <item>
+        <layout class="QHBoxLayout" name="idlImportLayout">
+         <item><widget class="QPushButton" name="importIdlButton"><property name="text"><string>导入 IDL…</string></property><property name="toolTip"><string>导入与发布端消息定义一致的 IDL；按 DDS 类型名自动匹配，可导入多个文件。</string></property></widget></item>
+         <item><widget class="QPushButton" name="clearIdlButton"><property name="text"><string>清除 IDL</string></property><property name="toolTip"><string>清除所有本地 IDL 定义，继续使用在线 XTypes 类型发现。</string></property></widget></item>
+         <item><spacer name="idlImportSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>20</height></size></property></spacer></item>
+        </layout>
+       </item>
+       <item><widget class="QPlainTextEdit" name="idlStatusText"><property name="minimumSize"><size><width>0</width><height>65</height></size></property><property name="maximumSize"><size><width>16777215</width><height>90</height></size></property><property name="readOnly"><bool>true</bool></property><property name="plainText"><string>未导入 IDL。缺少完整 XTypes 信息的话题可通过 IDL 解析。</string></property></widget></item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="actionLayout">
+     <item><spacer name="actionSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+     <item><widget class="QPushButton" name="connectButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>连接</string></property><property name="toolTip"><string>仅订阅列表中高亮选中的话题。</string></property><property name="default"><bool>true</bool></property></widget></item>
+     <item><widget class="QDialogButtonBox" name="buttonBox"><property name="standardButtons"><set>QDialogButtonBox::Cancel</set></property></widget></item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

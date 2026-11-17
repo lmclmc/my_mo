@@ -1,0 +1,467 @@
+#pragma once
+
+#include <algorithm>
+#include <chrono>
+#include <deque>
+#include <filesystem>
+#include <future>
+#include <map>
+#include <nlohmann/json.hpp>
+#include <pj_plugins/sdk/dialog_plugin_typed.hpp>
+#include <pj_plugins/sdk/widget_data.hpp>
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "dds_discovery.hpp"
+#include "dds_idl.hpp"
+#include "dds_settings.hpp"
+#include "datastream_dds_ui.hpp"
+#include "dds_manifest.hpp"
+
+class DdsDialog : public PJ::DialogPluginTyped {
+  using PJ::DialogPluginTyped::onValueChanged;
+
+ public:
+  const DdsSettings& ddsSettings() const { return settings_; }
+  std::string manifest() const override { return kDdsManifest; }
+  std::string ui_content() const override { return kDataStreamDdsUi; }
+
+  std::string widget_data() override {
+    pollIdlImports();
+    if (restart_discovery_) {
+      discovery_.start(settings_.domain_id);
+      restart_discovery_ = false;
+    }
+    discovery_.poll();
+    PJ::WidgetData wd;
+    wd.setRange("domainIdSpinBox", 0, 232).setValue("domainIdSpinBox", settings_.domain_id);
+    wd.setItems("reliabilityComboBox", {"Best effort", "Reliable"});
+    wd.setCurrentIndex("reliabilityComboBox", settings_.reliable ? 1 : 0);
+    wd.setItems("durabilityComboBox", {"Volatile", "Transient local"});
+    wd.setCurrentIndex("durabilityComboBox", settings_.transient_local ? 1 : 0);
+    wd.setItems("historyComboBox", {"Keep last", "Keep all"});
+    wd.setCurrentIndex("historyComboBox", settings_.keep_all ? 1 : 0);
+    wd.setRange("historyDepthSpinBox", 1, 100000).setValue("historyDepthSpinBox", settings_.history_depth);
+    wd.setEnabled("historyDepthSpinBox", !settings_.keep_all);
+    wd.setRange("blockingTimeSpinBox", 0, 60000).setValue("blockingTimeSpinBox", settings_.max_blocking_time_ms);
+    wd.setEnabled("blockingTimeSpinBox", settings_.reliable);
+    wd.setText("partitionEdit", settings_.partition);
+    wd.setFilePicker("importIdlButton", "导入 IDL…", "DDS IDL (*.idl);;所有文件 (*)", "导入 DDS 消息定义");
+    const bool importing = idl_import_.valid() || !pending_idl_files_.empty();
+    wd.setEnabled("importIdlButton", !importing);
+    wd.setEnabled("clearIdlButton", !importing && !settings_.idl_files.empty());
+    std::string import_status = importing ? "正在导入 IDL：" + importing_idl_path_ :
+        idl_status_.empty() ? "未导入 IDL。缺少完整 XTypes 信息的话题可通过 IDL 解析。" : idl_status_;
+    for (const auto& [path, error] : idl_errors_) import_status += "\n" + path + "：" + error;
+    wd.setText("idlStatusText", import_status);
+    const auto& recording = settings_.recording;
+    wd.setChecked("recordingEnabledCheckBox", recording.enabled);
+    wd.setText("recordingDirectoryEdit", recording.directory);
+    wd.setRange("recordingFileSizeSpinBox", 1, DdsRecordingSettings::kMaxFileSizeMb)
+      .setValue("recordingFileSizeSpinBox", recording.max_file_size_mb);
+    wd.setRange("recordingFileCountSpinBox", 1, DdsRecordingSettings::kMaxFiles)
+      .setValue("recordingFileCountSpinBox", recording.max_files);
+    PJ::FilePickerOptions directory_picker;
+    directory_picker.mode = PJ::FilePickerMode::SelectDirectory;
+    directory_picker.title = "选择 DDS 数据录制目录";
+    directory_picker.initial_directory = recording.directory;
+    wd.setFilePicker("recordingDirectoryButton", "选择目录…", directory_picker);
+    for (const auto* widget : {"recordingDirectoryEdit", "recordingDirectoryButton",
+                               "recordingFileSizeSpinBox", "recordingFileCountSpinBox"})
+      wd.setEnabled(widget, recording.enabled);
+    const auto recording_error = recording.validationError();
+    wd.setLabel("recordingStatusLabel", !recording_error.empty() ? recording_error : recording.enabled
+        ? "连接后录制已选话题，断开时完成写盘。文件达到上限后覆盖最早的录制文件；再次连接继续使用同一文件数量上限。"
+        : "勾选后随连接开始录制。MCAP 保存所选话题的 CDR 数据、IDL 类型描述和上位机接收时间；1 MB = 1024 × 1024 字节。");
+
+    struct Counts { int writers = 0; int readers = 0; };
+    struct Topic : Counts {
+      std::set<std::string> types, partitions, reliability, durability, xtypes;
+    };
+    std::map<std::string, Counts> partitions;
+    // One row per exact topic name: the host uses the first column as the selection key.
+    std::map<std::string, Topic> topics;
+    for (const auto& [key, endpoint] : discovery_.endpoints()) {
+      (void)key;
+      std::set<std::string> matching_partitions;
+      for (const auto& name : endpoint.partitions) {
+        auto& partition = partitions[name];
+        if (endpoint.writer) ++partition.writers;
+        else ++partition.readers;
+        if (settings_.matchesPartition(name)) matching_partitions.insert(partitionLabel(name));
+      }
+      if (matching_partitions.empty()) continue;
+      auto& topic = topics[endpoint.topic];
+      if (endpoint.writer) ++topic.writers;
+      else ++topic.readers;
+      if (endpoint.writer) topic.xtypes.insert(xtypesLabel(endpoint.xtypes));
+      topic.types.insert(endpoint.type);
+      topic.partitions.insert(matching_partitions.begin(), matching_partitions.end());
+      if (!endpoint.reliability.empty()) topic.reliability.insert(endpoint.reliability);
+      if (!endpoint.durability.empty()) topic.durability.insert(endpoint.durability);
+    }
+    wd.setTableHeaders("partitionTableWidget", {"Partition 分区", "发布端", "订阅端"});
+    std::vector<std::vector<PJ::TableItem>> partition_rows;
+    std::vector<std::string> selection;
+    for (const auto& [name, count] : partitions) {
+      const auto display = partitionLabel(name);
+      partition_rows.push_back({display, count.writers, count.readers});
+      if (name == settings_.partition) selection.push_back(display);
+    }
+    wd.setTableRows("partitionTableWidget", partition_rows);
+    wd.setSelectedItems("partitionTableWidget", selection);
+    wd.setTableHeaders("topicTableWidget", {"Topic 话题", "Type 类型", "XTypes / IDL 匹配", "IDL 文件路径", "Partition 分区", "发布端", "订阅端",
+                                           "Reliability", "Durability"});
+    discovered_topics_.clear();
+    for (const auto& [name, topic] : topics) {
+      (void)topic;
+      discovered_topics_.insert(name);
+    }
+    // Keep saved/offline selections visible and removable while discovery is refreshing.
+    for (const auto& name : settings_.selected_topics) topics.try_emplace(name);
+    std::vector<std::vector<PJ::TableItem>> topic_rows;
+    size_t waiting = 0;
+    for (const auto& [name, topic] : topics) {
+      if (topic.writers == 0 && settings_.selected_topics.count(name)) ++waiting;
+      auto xtypes = topic.xtypes.empty() ? "等待发布端" : join(topic.xtypes);
+      size_t local_types = 0;
+      std::set<std::string> idl_paths;
+      for (const auto& type : topic.types) {
+        if (const auto* idl = localIdl(type)) {
+          ++local_types;
+          idl_paths.insert(idl->sourcePath());
+        }
+      }
+      // The host renders table cells as plain text. Color status markers keep
+      // the match visible in this column, including on a selected topic row.
+      if (local_types) xtypes = std::string(local_types == topic.types.size()
+          ? "🟢 IDL 已匹配；" : "🟡 部分类型已匹配 IDL；") + xtypes;
+      std::string idl_path_text;
+      for (const auto& path : idl_paths) {
+        if (!idl_path_text.empty()) idl_path_text += " | ";
+        idl_path_text += path;
+      }
+      topic_rows.push_back({name, topic.types.empty() ? "等待发现类型" : join(topic.types),
+                            xtypes,
+                            idl_path_text.empty() ? "—" : idl_path_text,
+                            topic.partitions.empty() ? partitionLabel(settings_.partition) : join(topic.partitions),
+                            topic.writers, topic.readers,
+                            join(topic.reliability), join(topic.durability)});
+    }
+    wd.setTableRows("topicTableWidget", topic_rows);
+    int row = 0;
+    for (const auto& [name, topic] : topics) {
+      (void)name;
+      std::string source;
+      for (const auto& type : topic.types) {
+        if (!source.empty()) source += '\n';
+        const auto* idl = localIdl(type);
+        source += type + (idl ? " ← " + idl->sourcePath() : "：没有匹配的本地 IDL");
+      }
+      wd.setCellTooltip("topicTableWidget", row, 2,
+          "绿色标记：全部类型已匹配 IDL；黄色标记：部分类型已匹配。\n"
+          "发布端 XTypes 状态仍来自其声明的 TypeInformation。\n" + source);
+      wd.setCellTooltip("topicTableWidget", row++, 3,
+          source.empty() ? "等待发现类型，尚未匹配本地 IDL" : source);
+    }
+    wd.setSelectedItems("topicTableWidget", std::vector<std::string>(settings_.selected_topics.begin(),
+                                                                    settings_.selected_topics.end()));
+    wd.setEnabled("selectAllTopicsButton", !discovered_topics_.empty());
+    wd.setEnabled("clearTopicsButton", !settings_.selected_topics.empty());
+    wd.setEnabled("connectButton", !settings_.selected_topics.empty() && !importing && recording_error.empty());
+    wd.setLabel("partitionCountLabel", std::to_string(partitions.size()) + " 个分区");
+    wd.setLabel("topicCountLabel", "当前分区发现 " + std::to_string(discovered_topics_.size()) +
+                " 个话题 · 已选 " + std::to_string(settings_.selected_topics.size()) + " 个" +
+                (waiting ? "（" + std::to_string(waiting) + " 个等待发布端）" : ""));
+    wd.setLabel("discoveryStatusLabel", discovery_.error().empty()
+        ? "Domain " + std::to_string(settings_.domain_id) + " · 正在监听发现信息 · " +
+          std::to_string(discovery_.endpoints().size()) + " 个端点"
+        : "发现失败：" + discovery_.error());
+    if (request_accept_) {
+      wd.requestAccept();
+      request_accept_ = false;
+    }
+    return wd.toJson();
+  }
+
+  bool onTick() override {
+    const bool idl_changed = pollIdlImports();
+    const auto now = std::chrono::steady_clock::now();
+    if (now - last_poll_ < std::chrono::milliseconds(250)) return idl_changed;
+    last_poll_ = now;
+    return discovery_.poll() || idl_changed;
+  }
+
+  bool onValueChanged(std::string_view widget, int value) override {
+    if (widget == "domainIdSpinBox") {
+      const int domain = std::clamp(value, 0, 232);
+      if (settings_.domain_id == domain) return false;
+      settings_.domain_id = domain;
+      settings_.selected_topics.clear();
+      restart_discovery_ = true;
+      return true;
+    }
+    if (widget == "historyDepthSpinBox") settings_.history_depth = std::clamp(value, 1, 100000);
+    if (widget == "blockingTimeSpinBox") settings_.max_blocking_time_ms = std::clamp(value, 0, 60000);
+    if (widget == "recordingFileSizeSpinBox") {
+      settings_.recording.max_file_size_mb = std::clamp(value, 1, DdsRecordingSettings::kMaxFileSizeMb);
+      return true;
+    }
+    if (widget == "recordingFileCountSpinBox") {
+      settings_.recording.max_files = std::clamp(value, 1, DdsRecordingSettings::kMaxFiles);
+      return true;
+    }
+    return false;
+  }
+
+  bool onToggled(std::string_view widget, bool checked) override {
+    if (widget != "recordingEnabledCheckBox" || settings_.recording.enabled == checked) return false;
+    settings_.recording.enabled = checked;
+    return true;
+  }
+
+  bool onIndexChanged(std::string_view widget, int index) override {
+    if (index < 0 || index > 1) return false;
+    if (widget == "reliabilityComboBox") settings_.reliable = index == 1;
+    else if (widget == "durabilityComboBox") settings_.transient_local = index == 1;
+    else if (widget == "historyComboBox") settings_.keep_all = index == 1;
+    else return false;
+    return true;
+  }
+
+  bool onTextChanged(std::string_view widget, std::string_view text) override {
+    if (widget == "recordingDirectoryEdit") {
+      if (settings_.recording.directory == text) return false;
+      settings_.recording.directory = std::string(text);
+      return true;
+    }
+    if (widget != "partitionEdit") return false;
+    if (settings_.partition == text) return false;
+    settings_.partition = std::string(text);
+    settings_.selected_topics.clear();
+    return true;
+  }
+
+  bool onSelectionChanged(std::string_view widget, const std::vector<std::string>& selected) override {
+    if (widget == "topicTableWidget") {
+      std::set<std::string> next;
+      for (const auto& topic : selected) {
+        if (discovered_topics_.count(topic) || settings_.selected_topics.count(topic)) next.insert(topic);
+      }
+      if (next == settings_.selected_topics) return false;
+      settings_.selected_topics = std::move(next);
+      return true;
+    }
+    if (widget != "partitionTableWidget" || selected.empty()) return false;
+    for (const auto& [key, endpoint] : discovery_.endpoints()) {
+      (void)key;
+      for (const auto& name : endpoint.partitions) {
+        if (partitionLabel(name) == selected.front()) {
+          if (settings_.partition == name) return false;
+          settings_.partition = name;
+          settings_.selected_topics.clear();
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool onClicked(std::string_view widget) override {
+    if (widget == "clearIdlButton") {
+      if (idl_import_.valid()) return false;
+      settings_.idl_files.clear();
+      settings_.idl_libraries.clear();
+      pending_idl_files_.clear();
+      idl_status_.clear();
+      idl_errors_.clear();
+      return true;
+    }
+    if (widget == "selectAllTopicsButton") {
+      settings_.selected_topics.insert(discovered_topics_.begin(), discovered_topics_.end());
+      return true;
+    }
+    if (widget == "clearTopicsButton") {
+      settings_.selected_topics.clear();
+      return true;
+    }
+    if (widget == "refreshDiscoveryButton") {
+      restart_discovery_ = true;
+      return true;
+    }
+    if (widget == "connectButton") {
+      if (settings_.selected_topics.empty() || idl_import_.valid() || !pending_idl_files_.empty() ||
+          !settings_.recording.validationError().empty()) return false;
+      request_accept_ = true;
+      return true;
+    }
+    return false;
+  }
+
+  bool onFileSelected(std::string_view widget, std::string_view path) override {
+    if (widget != "importIdlButton" || path.empty() || idl_import_.valid()) return false;
+    pending_idl_files_.emplace_back(path);
+    pollIdlImports();
+    return true;
+  }
+
+  bool onFolderSelected(std::string_view widget, std::string_view path) override {
+    if (widget != "recordingDirectoryButton" || path.empty()) return false;
+    return onTextChanged("recordingDirectoryEdit", path);
+  }
+
+  void onAccepted(std::string_view) override { closeDiscovery(); }
+  void onRejected() override { closeDiscovery(); }
+
+  std::string saveConfig() const override {
+    auto cfg = nlohmann::json::object();
+    cfg["dds"] = {{"domain_id", settings_.domain_id}, {"partition", settings_.partition},
+      {"selected_topics", settings_.selected_topics},
+      {"idl_files", settings_.idl_files},
+      {"reliability", settings_.reliable ? "reliable" : "best_effort"},
+      {"durability", settings_.transient_local ? "transient_local" : "volatile"},
+      {"history", settings_.keep_all ? "keep_all" : "keep_last"},
+      {"history_depth", settings_.history_depth}, {"max_blocking_time_ms", settings_.max_blocking_time_ms},
+      {"recording", {{"enabled", settings_.recording.enabled}, {"directory", settings_.recording.directory},
+        {"max_file_size_mb", settings_.recording.max_file_size_mb}, {"max_files", settings_.recording.max_files}}}};
+    return cfg.dump();
+  }
+
+  bool loadConfig(std::string_view json) override {
+    try {
+      auto cfg = nlohmann::json::parse(json);
+      if (!cfg.is_object()) return false;
+      const auto dds = cfg.value("dds", nlohmann::json::object());
+      if (!dds.is_object()) return false;
+      DdsSettings next;
+      next.domain_id = dds.value("domain_id", 200);
+      next.partition = dds.value("partition", std::string{});
+      if (const auto it = dds.find("idl_files"); it != dds.end()) {
+        if (!it->is_array()) return false;
+        std::set<std::string> unique;
+        for (const auto& path : *it) {
+          if (!path.is_string() || path.get_ref<const std::string&>().empty()) return false;
+          const auto value = path.get<std::string>();
+          if (unique.insert(value).second) next.idl_files.push_back(value);
+        }
+      }
+      if (const auto it = dds.find("selected_topics"); it != dds.end()) {
+        if (!it->is_array()) return false;
+        for (const auto& topic : *it) {
+          if (!topic.is_string() || topic.get_ref<const std::string&>().empty()) return false;
+          next.selected_topics.insert(topic.get<std::string>());
+        }
+      }
+      const auto reliability = dds.value("reliability", std::string("best_effort"));
+      const auto durability = dds.value("durability", std::string("volatile"));
+      const auto history = dds.value("history", std::string("keep_last"));
+      next.history_depth = dds.value("history_depth", 1);
+      next.max_blocking_time_ms = dds.value("max_blocking_time_ms", 100);
+      if (const auto it = dds.find("recording"); it != dds.end()) {
+        if (!it->is_object()) return false;
+        next.recording.enabled = it->value("enabled", false);
+        next.recording.directory = it->value("directory", std::string{});
+        next.recording.max_file_size_mb = it->value("max_file_size_mb", 128);
+        next.recording.max_files = it->value("max_files", 10);
+        if (!next.recording.validationError().empty()) return false;
+      }
+      if (next.domain_id < 0 || next.domain_id > 232 || next.history_depth < 1 || next.history_depth > 100000 ||
+          next.max_blocking_time_ms < 0 || next.max_blocking_time_ms > 60000 ||
+          (reliability != "best_effort" && reliability != "reliable") ||
+          (durability != "volatile" && durability != "transient_local") ||
+          (history != "keep_last" && history != "keep_all")) return false;
+      next.reliable = reliability == "reliable";
+      next.transient_local = durability == "transient_local";
+      next.keep_all = history == "keep_all";
+      settings_ = std::move(next);
+      ++idl_generation_;
+      pending_idl_files_.assign(settings_.idl_files.begin(), settings_.idl_files.end());
+      idl_status_.clear();
+      idl_errors_.clear();
+      closeDiscovery();
+      return true;
+    } catch (const nlohmann::json::exception&) {
+      return false;
+    }
+  }
+
+ private:
+  static std::string xtypesLabel(DdsDiscovery::Endpoint::XTypes support) {
+    switch (support) {
+      case DdsDiscovery::Endpoint::XTypes::Complete: return "支持（Complete）";
+      case DdsDiscovery::Endpoint::XTypes::Minimal: return "仅 Minimal（需 IDL）";
+      case DdsDiscovery::Endpoint::XTypes::None: return "未提供（需 IDL）";
+    }
+    return "未知";
+  }
+  const DdsIdlLibrary* localIdl(const std::string& type) const {
+    for (auto it = settings_.idl_libraries.rbegin(); it != settings_.idl_libraries.rend(); ++it)
+      if ((*it)->find(type)) return it->get();
+    return nullptr;
+  }
+  bool pollIdlImports() {
+    bool changed = false;
+    if (idl_import_.valid() && idl_import_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+      try {
+        auto library = idl_import_.get();
+        if (importing_idl_generation_ == idl_generation_) {
+          const auto& path = library->sourcePath();
+          // Reimporting a source replaces its previous definitions atomically.
+          std::erase(settings_.idl_files, importing_idl_path_);
+          std::erase(settings_.idl_files, path);
+          settings_.idl_files.push_back(path);
+          std::erase_if(settings_.idl_libraries, [&path](const auto& old) { return old->sourcePath() == path; });
+          settings_.idl_libraries.push_back(library);
+          idl_errors_.erase(importing_idl_path_);
+          idl_errors_.erase(path);
+          idl_status_ = "已导入 " + std::to_string(settings_.idl_libraries.size()) + " 个 IDL 文件。最近导入：" +
+                        std::filesystem::path(path).filename().string() + "（" +
+                        std::to_string(library->typeNames().size()) + " 个类型）。匹配状态与路径显示在话题列表中，悬停可查看完整对应关系。";
+        }
+      } catch (const std::exception& error) {
+        if (importing_idl_generation_ == idl_generation_) {
+          idl_errors_[importing_idl_path_] = error.what();
+          idl_status_ = "部分 IDL 未能导入，请查看下方原因。此前成功导入的定义仍可使用。";
+        }
+      }
+      changed = true;
+    }
+    if (!idl_import_.valid() && !pending_idl_files_.empty()) {
+      importing_idl_path_ = std::move(pending_idl_files_.front());
+      pending_idl_files_.pop_front();
+      importing_idl_generation_ = idl_generation_;
+      const auto path = importing_idl_path_;
+      idl_import_ = std::async(std::launch::async, [path] { return DdsIdlLibrary::load(path); });
+      changed = true;
+    }
+    return changed;
+  }
+  static std::string partitionLabel(const std::string& name) { return name.empty() ? "(默认分区)" : name; }
+  static std::string join(const std::set<std::string>& values) {
+    std::string result;
+    for (const auto& value : values) {
+      if (!result.empty()) result += " / ";
+      result += value;
+    }
+    return result;
+  }
+  void closeDiscovery() {
+    discovery_.stop();
+    restart_discovery_ = true;
+    request_accept_ = false;
+  }
+
+  DdsSettings settings_;
+  std::set<std::string> discovered_topics_;
+  DdsDiscovery discovery_;
+  std::deque<std::string> pending_idl_files_;
+  std::string importing_idl_path_, idl_status_;
+  std::map<std::string, std::string> idl_errors_;
+  size_t idl_generation_ = 0, importing_idl_generation_ = 0;
+  std::future<std::shared_ptr<const DdsIdlLibrary>> idl_import_;
+  bool restart_discovery_ = true;
+  bool request_accept_ = false;
+  std::chrono::steady_clock::time_point last_poll_{};
+};

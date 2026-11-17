@@ -1,0 +1,33 @@
+package neural_mapping_lcm;
+
+// v2: yaw-aligned base-relative height[ny][nx], x varies fastest (i = iy*nx+ix).
+// Timestamps are NX ROS time in nanoseconds, NOT RK monotonic time.
+struct neural_map_query_t {
+    const int32_t VERSION = 2;
+    const int32_t OK = 0;
+    const int32_t NO_MAP = 1;
+    const int32_t TF_UNAVAILABLE = 2;
+    const int32_t STALE_POSE = 3;
+    const int32_t STALE_DEPTH = 4;
+    const int32_t CLOCK_ERROR = 5;
+    const int32_t STALE_ATTITUDE = 6;
+    int32_t version;
+    string session_id;      // changes on process restart
+    string model_sha256;
+    string map_frame;
+    string base_frame;
+    int64_t sequence;
+    int64_t map_epoch;      // changes on reset in this session
+    int64_t query_stamp_ns;
+    int64_t pose_stamp_ns;
+    int64_t depth_stamp_ns;
+    int8_t valid;           // 0 => discard heights, never feed to actor
+    int32_t status;
+    int32_t nx;             // column count along x; current trained policy expects 19
+    int32_t ny;             // row count along y; current trained policy expects 29
+    float resolution;      // 0.05 m
+    float center_x;         // 0.4 m
+    float center_y;         // 0 m
+    float height[ny][nx];   // [iy][ix], world terrain z - query base world z, m
+    float std[ny][nx];      // [iy][ix], sqrt(variance), m; unknown cells retain high std
+}
