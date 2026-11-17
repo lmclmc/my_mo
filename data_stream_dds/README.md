@@ -37,12 +37,14 @@ PlotJuggler 左侧变量采用“原生 DDS 话题名 / 实际字段路径”，
 
 ```text
 /hal/canfd/command/header/time_pub
-/hal/canfd/command/joints[0]/pos
-/hal/canfd/command/joints[0]/vel
-/hal/canfd/command/joints[1]/pos
+/hal/canfd/command/joints/[0]/pos
+/hal/canfd/command/joints/[0]/vel
+/hal/canfd/command/joints/[1]/pos
 ```
 
-字段名称来自类型发现结果，上述名称仅为示例。嵌套结构用 `/` 分层，sequence 和数组用 `[索引]`，多维数组保留各维索引，如 `matrix[1][2]`。收到第一个有效样本后生成相应变量；空 sequence、缺省 optional 字段不会产生伪造值。枚举和 bitmask 保存数值，字符串保存文本。
+字段名称来自类型发现结果，上述名称仅为示例。嵌套结构用 `/` 分层，sequence 和数组的每个 `[索引]` 也独立占一层。因此话题下先显示数组变量分组，展开后再列出 `[0]`、`[1]` 等索引；结构体数组在索引下继续显示成员。多维数组逐维展开，如 `matrix/[1]/[2]`。这些分组是 PlotJuggler 中的字段层级，DDS 仍订阅原始话题。收到第一个有效样本后生成相应变量；空 sequence、缺省 optional 字段不会产生伪造值。枚举和 bitmask 保存数值，字符串保存文本。
+
+数组曲线路径相较旧版增加了索引前的 `/`，已有布局若使用 `joints[0]/pos` 等旧路径，需要重新选择相应曲线。
 
 当前支持 struct、基类成员、alias、布尔/整数/浮点数、枚举、bitmask、字符串、有界/无界 sequence、数组及其嵌套组合，并读取已存在的 optional / external 成员。Final、Appendable、Mutable 的内存布局和 XCDR1/XCDR2 反序列化由 CycloneDDS 处理；插件根据运行时描述中的偏移和 stride 读取数据。
 

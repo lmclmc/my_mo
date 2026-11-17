@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- 数组和 sequence 按“话题 / 数组变量 / [索引]”分组；结构体数组继续展开成员，多维数组逐维展开索引。
 - 增加 MCAP 后台滚动录制，可设置目录、单文件最大 MB 数和最多文件数；达到上限后覆盖最早文件，重新连接时已有文件计入限制，停止时写完缓存、统计及文件尾。
 - MCAP 改为保存 Reader 提供的 CDR 数据（含封装头），按订阅类型携带从 Complete TypeObjects 重建的 OMG IDL Schema；支持在线 XTypes 和本地 IDL 两种来源。
 - 接收时间写入 logTime/publishTime；文件大小上限包含所有类型 Schema、Channel 和完整 MCAP 文件结构；录制在字段展开之前进行。

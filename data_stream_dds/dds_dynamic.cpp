@@ -476,14 +476,16 @@ class DynamicDecoder {
         require(count <= kMaxFields, "单个集合元素数量超过 100000");
         for (size_t i = 0; i < count; ++i) {
           std::string name = path;
+          // Each index is a separate path segment so the host groups elements
+          // under their array/sequence member instead of listing q[0], q[1], ...
           if (layout.code == DDS_OP_VAL_ARR) {
             size_t remaining = i, divisor = count;
             for (const auto dim : layout.dimensions) {
               divisor /= dim;
-              name += "[" + std::to_string(remaining / divisor) + "]";
+              name += "/[" + std::to_string(remaining / divisor) + "]";
               remaining %= divisor;
             }
-          } else name += "[" + std::to_string(i) + "]";
+          } else name += "/[" + std::to_string(i) + "]";
           walk(*layout.element, elements + i * layout.size, name, fields, depth + 1);
         }
         return;
