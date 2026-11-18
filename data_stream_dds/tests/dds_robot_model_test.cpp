@@ -16,19 +16,23 @@
 #include <stdexcept>
 
 namespace {
+/// 断言 success 为真，失败时抛出包含 reason 的异常，无返回值。
 void check(bool success, const std::string& reason) {
   if (!success) throw std::runtime_error(reason);
 }
+/// 校验 actual 为有限值且与 expected 相差小于 1e-10。失败时抛出异常，无返回值。
 void near(double actual, double expected) {
   check(std::isfinite(actual) && std::abs(actual - expected) < 1e-10,
         "Expected " + std::to_string(expected) + ", got " + std::to_string(actual));
 }
+/// 执行 fn，要求其抛出标准异常以验证输入被拒绝，无返回值。
 template <typename Fn>
 void rejects(Fn fn) {
   bool rejected = false;
   try { fn(); } catch (const std::exception&) { rejected = true; }
   check(rejected, "Invalid mapping or sample was accepted");
 }
+/// 返回测试夹具的模型文件路径以及用于验证执行器顺序的四组关节配置。
 DdsRobotSettings fixtureSettings() {
   DdsRobotSettings settings;
   settings.enabled = true;
@@ -38,11 +42,14 @@ DdsRobotSettings fixtureSettings() {
                       {"arm_control_data", 3, 1}, {"head_control_data", 2, 1}}};
   return settings;
 }
+/// 在 transforms 中查找子坐标系 child 对应的变换，返回容器内元素的引用。
+/// 找不到时抛出异常。
 const PJ::sdk::FrameTransform& edge(const PJ::sdk::FrameTransforms& transforms, std::string_view child) {
   for (const auto& transform : transforms.transforms)
     if (transform.child_frame_id == child) return transform;
   throw std::runtime_error("Missing transform for " + std::string(child));
 }
+/// 比较 rotation 的四个分量与预期的 x、y、z、w，任一分量偏差过大时抛出异常。
 void rotationNear(const PJ::sdk::Quaternion& rotation, double x, double y, double z, double w) {
   near(rotation.x, x);
   near(rotation.y, y);
@@ -50,6 +57,7 @@ void rotationNear(const PJ::sdk::Quaternion& rotation, double x, double y, doubl
   near(rotation.w, w);
 }
 
+/// 验证模型映射、关节运动学及无效输入拒绝，断言失败时抛出异常，无返回值。
 void testModel() {
   auto settings = fixtureSettings();
   DdsRobotModel model(settings);
@@ -76,6 +84,7 @@ void testModel() {
   near(edge(tf, "arm_link").rotation.z, std::sqrt(0.5) * std::cos(0.3));
   near(edge(tf, "tool_link").translation.z, 3);
   check(edge(tf, "tool_link").parent_frame_id == "arm_link", "Broken parent-child graph");
+  // 无效样本包含多余索引、缺失索引和错误值类型，逐一验证上一帧有效关节状态仍可读取。
   rejects([&] { model.update({"leg_control_data", 0, {{"q/[0]", 1.0}, {"q/[1]", 2.0}}}); });
   rejects([&] { model.update({"leg_control_data", 0, {{"q/[1]", 1.0}}}); });
   rejects([&] { model.update({"leg_control_data", 0, {{"q/[0]", std::numeric_limits<double>::quiet_NaN()}}}); });
@@ -104,6 +113,7 @@ void testModel() {
                "arm compatibility, axis/origin kinematics, fixed/mimic joints, atomic rejection and invalid mappings\n";
 }
 
+/// 验证根姿态订阅、四元数分量顺序、归一化和无效姿态处理，无返回值。
 void testOrientation() {
   auto settings = fixtureSettings();
   std::set<std::string> topics{"existing_topic"};
@@ -148,6 +158,7 @@ void testOrientation() {
         "Y-axis quaternion update missing");
   rotationNear(edge(model.transforms(0), model.rootLink()).rotation, 0, half_sqrt, 0, half_sqrt);
   const double large = std::numeric_limits<double>::max();
+  // 最大有限值与最小次正规值分别覆盖平方求和时可能上溢或下溢的输入。
   check(model.update({"state_estimator", 0,
                       {{"quat/[0]", large}, {"quat/[1]", 0.0},
                        {"quat/[2]", 0.0}, {"quat/[3]", large}}}),
@@ -193,6 +204,7 @@ void testOrientation() {
                "independent joint/orientation state and atomic malformed-quaternion rejection\n";
 }
 
+/// 使用 urdf 和 xml 指定的 X1 模型验证 31 个关节及根姿态，失败时抛出异常，无返回值。
 void testX1(const char* urdf, const char* xml) {
   DdsRobotSettings settings;
   settings.urdf_path = urdf;
@@ -229,6 +241,8 @@ void testX1(const char* urdf, const char* xml) {
   std::cout << "PASS: actual X1 model, all 31 joints moved in the correct groups, independent root orientation\n";
 }
 
+/// 动态加载 path 指定的 ROS 解析插件，验证 URDF 与 TF 的流式解析和对象解码。
+/// 加载、解析或比较失败时抛出异常，无返回值。
 void testRosParser(const char* path) {
   void* library = dlopen(path, RTLD_NOW | RTLD_LOCAL);
   if (!library) throw std::runtime_error(dlerror());
@@ -251,8 +265,7 @@ void testRosParser(const char* path) {
     if (!status) throw std::runtime_error(status.error());
     status = parser.bindSchema(type, {reinterpret_cast<const uint8_t*>(schema.data()), schema.size()});
     if (!status) throw std::runtime_error(status.error());
-    // Streaming calls parse() before accepting the object. Object decode alone
-    // misses missing scalar companions in older ROS parser builds.
+    // 实时流会先调用 parse() 再接收对象。先走该入口，覆盖旧版解析器缺少标量解析能力的情况。
     status = parser.parse(1790000000123456789, PJ::Span<const uint8_t>(bytes.data(), bytes.size()));
     if (!status) throw std::runtime_error(status.error());
     auto result = parser.parseObjectFunctional(1790000000123456789, PJ::Span<const uint8_t>(bytes.data(), bytes.size()));
@@ -276,6 +289,8 @@ void testRosParser(const char* path) {
 }
 }  // namespace
 
+/// 执行基础回归。argv 按顺序可附带 X1 的 URDF 和 XML，以及 ROS 解析插件路径。
+/// argc 决定执行哪些附加用例，全部通过返回 0，捕获到测试异常时返回 1。
 int main(int argc, char** argv) {
   try {
     testModel();

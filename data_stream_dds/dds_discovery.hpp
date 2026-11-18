@@ -26,11 +26,18 @@ class DdsDiscovery {
     XTypes xtypes = XTypes::None;
   };
 
+  /// 析构时释放 DDS Participant 及其下的内置 Reader，并清除发现缓存。
   ~DdsDiscovery() { stop(); }
+
+  /// 创建一个尚未开始发现、端点列表为空的对象。
   DdsDiscovery() = default;
+
+  /// 禁止复制和拷贝赋值。发现对象独占 DDS 实体句柄。
   DdsDiscovery(const DdsDiscovery&) = delete;
   DdsDiscovery& operator=(const DdsDiscovery&) = delete;
 
+  /// 清除旧发现并在 domain_id 指定的 DDS 域中创建发布端和订阅端的内置 Reader。
+  /// 启动成功返回 true，失败时释放已建实体，记录原因并返回 false。
   bool start(int domain_id) {
     stop();
     try {
@@ -48,17 +55,24 @@ class DdsDiscovery {
     }
   }
 
+  /// 停止发现并清空端点和错误缓存。可重复调用，无返回值。
   void stop() {
     closeParticipant();
     endpoints_.clear();
     error_.clear();
   }
 
+  /// 已持有用于发现的有效 Participant 时返回 true。
   bool active() const { return participant_ > 0; }
+
+  /// 返回最近一次发现错误的只读引用，无错误时为空字符串。
   const std::string& error() const { return error_; }
+
+  /// 返回按端点角色和实例句柄索引的缓存的只读引用。更新由后续发现轮询负责。
   const auto& endpoints() const { return endpoints_; }
 
-  // 由对话框 tick 非阻塞调用，无后台线程访问 UI 或对话框状态。
+  /// 由对话框周期性调用，非阻塞读取已就绪的发布端和订阅端事件。
+  /// 端点缓存更新或发现出错时返回 true，便于宿主刷新表格和错误提示。
   bool poll() {
     if (!active()) return false;
     try {
@@ -73,22 +87,27 @@ class DdsDiscovery {
   }
 
  private:
+  /// 检查 DDS 返回值 entity。非负时原样返回，负值时抛出含 operation 名称的运行时错误。
   static dds_entity_t checked(dds_entity_t entity, const char* operation) {
     if (entity < 0) throw std::runtime_error(std::string(operation) + ": " + dds_strretcode(entity));
     return entity;
   }
 
+  /// 删除 Participant 及其子实体，将句柄重置为空。端点缓存和错误信息由调用方处理。
   void closeParticipant() {
     if (participant_ > 0) dds_delete(participant_);
     participant_ = publications_ = subscriptions_ = DDS_ENTITY_NIL;
   }
 
+  /// 将内置发现样本 sample 转为独立的端点描述，writer 指定其是否为发布端。
+  /// 返回值包含复制的主题、类型、分区及 QoS 信息，可在归还 DDS 样本后继续使用。
   static Endpoint describe(const dds_builtintopic_endpoint_t& sample, bool writer) {
     Endpoint endpoint;
     endpoint.topic = sample.topic_name ? sample.topic_name : "";
     endpoint.type = sample.type_name ? sample.type_name : "";
     endpoint.writer = writer;
     const dds_typeinfo_t* info = nullptr;
+    // 优先记录 Complete 类型标识，只有 Minimal 时界面会提示还需本地 IDL。
     if (dds_builtintopic_get_endpoint_type_info(const_cast<dds_builtintopic_endpoint_t*>(&sample), &info) ==
         DDS_RETCODE_OK && info) {
       const auto* complete = ddsi_typeinfo_complete_typeid(info);
@@ -105,6 +124,7 @@ class DdsDiscovery {
       }
       dds_free(partitions);
     }
+    // 空名称代表默认分区。去重后再统计，避免同一端点在同名分区重复计数。
     if (endpoint.partitions.empty()) endpoint.partitions.emplace_back();
     std::sort(endpoint.partitions.begin(), endpoint.partitions.end());
     endpoint.partitions.erase(std::unique(endpoint.partitions.begin(), endpoint.partitions.end()),
@@ -124,6 +144,8 @@ class DdsDiscovery {
     return endpoint;
   }
 
+  /// 从内置 Reader reader 批量处理待取样本，writer 区分发布端和订阅端的缓存键。
+  /// 插入、更新或删除缓存项时返回 true，DDS 取样或归还失败时抛出异常。
   bool drain(dds_entity_t reader, bool writer) {
     bool changed = false;
     // 限制每个 tick 的工作量，避免大量端点发现阻塞界面。
@@ -136,6 +158,7 @@ class DdsDiscovery {
       try {
         for (dds_return_t i = 0; i < count; ++i) {
           const auto key = std::make_pair(writer, info[i].instance_handle);
+          // 下线事件可只带实例状态。先按缓存键删除，再对带有效数据的在线事件读取样本内容。
           if (info[i].instance_state != DDS_IST_ALIVE) {
             changed = endpoints_.erase(key) > 0 || changed;
           } else if (info[i].valid_data) {
@@ -146,6 +169,7 @@ class DdsDiscovery {
           }
         }
       } catch (...) {
+        // 样本归 Reader 所有，解析中途出现异常也要归还这批借用样本。
         dds_return_loan(reader, samples.data(), count);
         throw;
       }

@@ -19,8 +19,6 @@ class DataStreamDdsConan(ConanFile):
         "nlohmann_json/3.12.0",
         "tinyxml2/10.0.0",
     )
-    # CycloneDDS (including idlc) is provided by the native installation.
-    # Uncompressed MCAP recording uses the vendored writer headers in contrib/mcap.
-    # Bundle TinyXML2 statically so the build and installed plugin do not rely
-    # on a system libtinyxml2-dev package or a separate TinyXML2 shared library.
+    # CycloneDDS 和 idlc 由本机安装提供，无压缩 MCAP 录制使用 contrib/mcap 中的头文件。
+    # 静态链接 TinyXML2，使构建和安装后的插件由 Conan 依赖提供 XML 解析实现。
     default_options = {"*:shared": False}

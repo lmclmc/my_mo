@@ -33,13 +33,20 @@ class DdsDialog : public PJ::DialogPluginTyped {
   using PJ::DialogPluginTyped::onValueChanged;
 
  public:
+  /// 返回当前 DDS 配置的只读引用。对话框持有该配置，需独立使用时应复制。
   const DdsSettings& ddsSettings() const { return settings_; }
+
+  /// 返回插件清单的 JSON 文本，供宿主读取插件身份和元数据。
   std::string manifest() const override { return kDdsManifest; }
+
+  /// 返回构建时嵌入的 Qt Designer UI 文本，供宿主创建对话框控件。
   std::string ui_content() const override { return kDataStreamDdsUi; }
 
+  /// 处理已完成的后台导入并刷新发现结果，返回本次控件状态和宿主动作的 JSON。
   std::string widget_data() override {
     pollIdlImports();
     pollRobotImport();
+    // 3D 模型使用的关节和姿态话题也是订阅输入，生成界面前将它们补入选中集合。
     settings_.robot.addTopics(settings_.selected_topics);
     if (restart_discovery_) {
       discovery_.start(settings_.domain_id);
@@ -83,6 +90,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
                              entry.xml_index, entry.joint});
     wd.setTableRows("robotMappingTableWidget", robot_rows);
     wd.setFilePicker("importIdlButton", "导入 IDL…", "DDS IDL (*.idl);;所有文件 (*)", "导入 DDS 消息定义");
+    // 正在编译的 IDL 和待处理队列都会影响保存结果。导入结束后再允许保存和连接。
     const bool importing = idl_import_.valid() || !pending_idl_files_.empty();
     PJ::FilePickerOptions config_picker;
     config_picker.mode = PJ::FilePickerMode::SaveFile;
@@ -132,7 +140,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
       std::set<std::string> types, partitions, reliability, durability, xtypes;
     };
     std::map<std::string, Counts> partitions;
-    // One row per exact topic name: the host uses the first column as the selection key.
+    // 分区表统计全部发现端点。话题表只聚合与当前分区匹配的端点，按完整话题名生成一行。
+    // 宿主用第一列作为选中项的键，同名端点必须汇总在同一行。
     std::map<std::string, Topic> topics;
     for (const auto& [key, endpoint] : discovery_.endpoints()) {
       (void)key;
@@ -170,7 +179,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
       (void)topic;
       discovered_topics_.insert(name);
     }
-    // Keep saved/offline selections visible and removable while discovery is refreshing.
+    // 将旧配置中已选的话题补回表中，发现刷新期间仍可看到和取消离线项。
     for (const auto& name : settings_.selected_topics) topics.try_emplace(name);
     std::vector<std::vector<PJ::TableItem>> topic_rows;
     size_t waiting = 0;
@@ -185,8 +194,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
           idl_paths.insert(idl->sourcePath());
         }
       }
-      // The host renders table cells as plain text. Color status markers keep
-      // the match visible in this column, including on a selected topic row.
+      // 宿主按纯文本渲染单元格。用颜色标记展示本地 IDL 匹配比例，
+      // 同一列继续保留发布端声明的 XTypes 状态，悬停时提供类型与文件的对应关系。
       if (local_types) xtypes = std::string(local_types == topic.types.size()
           ? "🟢 IDL 已匹配；" : "🟡 部分类型已匹配 IDL；") + xtypes;
       std::string idl_path_text;
@@ -231,6 +240,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
         ? "Domain " + std::to_string(settings_.domain_id) + " · 正在监听发现信息 · " +
           std::to_string(discovery_.endpoints().size()) + " 个端点"
         : "发现失败：" + discovery_.error());
+    // 将按钮回调留下的请求交给宿主执行，发送后清除标志，避免下一次刷新重复执行。
     if (request_update_history_) {
       wd.requestSubDialog(PjUpdateHistory::dialogUi());
       request_update_history_ = false;
@@ -242,6 +252,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return wd.toJson();
   }
 
+  /// 宿主周期回调。检查后台导入，每隔至少 250 毫秒轮询发现，状态有变化时返回 true。
   bool onTick() override {
     const bool idl_changed = pollIdlImports();
     const bool robot_changed = pollRobotImport();
@@ -251,6 +262,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return discovery_.poll() || idl_changed || robot_changed;
   }
 
+  /// 处理整数控件。widget 是控件名，value 是输入值，按对应范围截断。
+  /// 映射、域或录制项需要刷新时返回 true，历史深度和阻塞时间只写入配置并返回 false。
   bool onValueChanged(std::string_view widget, int value) override {
     for (size_t g = 0; g < settings_.robot.groups.size(); ++g) {
       const auto prefix = std::string("robot_") + DdsRobotSettings::kGroupNames[g];
@@ -268,6 +281,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
       const int domain = std::clamp(value, 0, 232);
       if (settings_.domain_id == domain) return false;
       settings_.domain_id = domain;
+      // DDS 域切换后端点属于另一发现范围，原选项清空，下一次生成控件数据时重建发现实例。
       settings_.selected_topics.clear();
       restart_discovery_ = true;
       return true;
@@ -285,6 +299,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return false;
   }
 
+  /// 按控件名 widget 设置 3D 机器人或 MCAP 录制开关。checked 是新状态，发生变化时返回 true。
   bool onToggled(std::string_view widget, bool checked) override {
     if (widget == "robotEnabledCheckBox") {
       if (settings_.robot.enabled == checked) return false;
@@ -297,6 +312,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return true;
   }
 
+  /// 将名为 widget 的 QoS 下拉框的索引 index 应用到对应策略。
+  /// 支持索引 0 和 1，成功处理返回 true，未知控件或越界返回 false。
   bool onIndexChanged(std::string_view widget, int index) override {
     if (index < 0 || index > 1) return false;
     if (widget == "reliabilityComboBox") settings_.reliable = index == 1;
@@ -306,6 +323,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return true;
   }
 
+  /// 应用文本控件 widget 的新内容 text。更新模型路径或关节话题会触发重新校验，
+  /// 更换分区会清空已选话题。已更新的控件返回 true，其余情况返回 false。
   bool onTextChanged(std::string_view widget, std::string_view text) override {
     std::string* robot_target = widget == "robotUrdfPathEdit" ? &settings_.robot.urdf_path
         : widget == "robotMujocoPathEdit" ? &settings_.robot.mujoco_path : nullptr;
@@ -330,12 +349,15 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return true;
   }
 
+  /// 处理表格 widget 的选择变化。selected 是所选行的第一列文本。
+  /// 话题表更新完整名称集合，分区表用第一项查找分区。配置变化时返回 true。
   bool onSelectionChanged(std::string_view widget, const std::vector<std::string>& selected) override {
     if (widget == "topicTableWidget") {
       std::set<std::string> next;
       for (const auto& topic : selected) {
         if (discovered_topics_.count(topic) || settings_.selected_topics.count(topic)) next.insert(topic);
       }
+      // 离线但已选中的旧话题可以保留，启用 3D 模型时重新补齐其必需话题。
       settings_.robot.addTopics(next);
       if (next == settings_.selected_topics) return false;
       settings_.selected_topics = std::move(next);
@@ -356,6 +378,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return false;
   }
 
+  /// 保存设置页签 widget 的新索引 index。索引 0 到 2 有效，实际切换时返回 true。
   bool onTabChanged(std::string_view widget, int index) override {
     if (widget != "settingsTabWidget" || index < 0 || index >= 3 || index == settings_tab_index_)
       return false;
@@ -363,6 +386,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return true;
   }
 
+  /// 按按钮名 widget 执行更新记录、重载模型、管理 IDL 或话题及连接操作。
+  /// 已处理并需要刷新时返回 true，未识别按钮或操作条件不满足时返回 false。
   bool onClicked(std::string_view widget) override {
     if (widget == "updateHistoryButton") {
       request_update_history_ = true;
@@ -395,6 +420,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
       return true;
     }
     if (widget == "connectButton") {
+      // 点击时重新检查输入，确保 IDL 导入已完成，且话题、录制参数和 3D 模型满足连接条件。
       if (settings_.selected_topics.empty() || idl_import_.valid() || !pending_idl_files_.empty() ||
           !settings_.recording.validationError().empty() || !robotReady()) return false;
       request_accept_ = true;
@@ -403,6 +429,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return false;
   }
 
+  /// 根据文件按钮名 widget 将所选 path 分发给配置读写、模型重载或 IDL 导入。
+  /// 已受理返回 true，包括需要在界面报告的配置读写失败。取消或未受理时返回 false。
   bool onFileSelected(std::string_view widget, std::string_view path) override {
     if (widget == "saveConfigButton" || widget == "loadConfigButton") {
       if (path.empty()) return false;
@@ -422,14 +450,20 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return true;
   }
 
+  /// widget 标识选择目录的按钮，path 是所选路径。录制目录实际更新时返回 true。
   bool onFolderSelected(std::string_view widget, std::string_view path) override {
     if (widget != "recordingDirectoryButton" || path.empty()) return false;
     return onTextChanged("recordingDirectoryEdit", path);
   }
 
+  /// 确认连接后释放对话框的发现资源。宿主传入的确认数据未使用，无返回值。
   void onAccepted(std::string_view) override { closeDiscovery(); }
+
+  /// 取消对话框后释放发现资源，无返回值。
   void onRejected() override { closeDiscovery(); }
 
+  /// 将订阅、QoS、IDL 路径、3D 映射和 MCAP 录制设置序列化为含 dds 对象的 JSON。
+  /// 布局保存和独立配置文件共用此结构，IDL 只保存来源路径。
   std::string saveConfig() const override {
     auto cfg = nlohmann::json::object();
     cfg["dds"] = {{"domain_id", settings_.domain_id}, {"partition", settings_.partition},
@@ -452,10 +486,11 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return cfg.dump();
   }
 
+  /// 校验并应用 json 中的 DDS 配置。宿主传入空文本或缺少 dds 对象时采用默认值。
+  /// 应用成功返回 true，字段类型、范围或 JSON 格式错误返回 false 并保留原配置。
   bool loadConfig(std::string_view json) override {
     try {
-      // The streaming manager calls loadConfig with an empty string on first
-      // use. Treat absent settings as defaults while rejecting malformed JSON.
+      // 宿主首次打开时传入空字符串，将仅含空白的输入视为缺省配置。
       auto cfg = json.find_first_not_of(" \t\r\n") == std::string_view::npos
           ? nlohmann::json::object() : nlohmann::json::parse(json);
       if (!cfg.is_object()) return false;
@@ -467,6 +502,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
       };
       if (!valid_integer(dds, "domain_id", 0, 232) || !valid_integer(dds, "history_depth", 1, 100000) ||
           !valid_integer(dds, "max_blocking_time_ms", 0, 60000)) return false;
+      // 在临时配置中完成字段校验。IDL 文件去重并保留输入顺序，后续按此顺序重新导入。
       DdsSettings next;
       next.domain_id = dds.value("domain_id", 200);
       next.partition = dds.value("partition", std::string{});
@@ -530,6 +566,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
       next.reliable = reliability == "reliable";
       next.transient_local = durability == "transient_local";
       next.keep_all = history == "keep_all";
+      // 全部校验通过后替换配置。更新导入代次，使旧 IDL 任务完成时无法覆盖新配置。
       settings_ = std::move(next);
       invalidateRobot();
       ++idl_generation_;
@@ -544,8 +581,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
   }
 
  private:
-  // Keep standalone configuration files independent of the process working
-  // directory. Relative paths in imported files are relative to that file.
+  /// 就地更新 dds 对象中的 IDL、模型和录制目录路径，无返回值。
+  /// base 为相对路径基准，导入用配置文件目录，导出用当前进程的工作目录。
   static void resolveConfigPaths(nlohmann::json& dds, const std::filesystem::path& base) {
     const auto resolve = [&base](nlohmann::json& value) {
       if (!value.is_string() || value.get_ref<const std::string&>().empty()) return;
@@ -561,6 +598,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
       resolve((*it)["directory"]);
   }
 
+  /// 处理独立配置文件操作。save 选择保存或加载，selected_path 为对话框选出的路径。
+  /// 成败均写入状态栏并返回 true，通知宿主刷新结果。
   bool configFileSelected(bool save, std::string_view selected_path) {
     std::filesystem::path temporary;
     int fd = -1;
@@ -575,8 +614,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
         auto cfg = nlohmann::json::parse(saveConfig());
         resolveConfigPaths(cfg["dds"], std::filesystem::current_path());
         const auto contents = cfg.dump(2) + '\n';
-        // Write beside the destination, then rename only after a complete,
-        // flushed write. Existing files survive all earlier failures.
+        // 在目标目录创建临时文件，循环处理短写和系统调用中断。
+        // 写全、同步并关闭后才重命名到目标位置，替换前出现错误时可保留原文件。
         auto pattern = (path.parent_path() / ".dds-config-XXXXXX").string();
         fd = ::mkstemp(pattern.data());
         if (fd < 0) throw std::system_error(errno, std::generic_category(), "无法创建配置文件");
@@ -607,6 +646,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
             "durability", "history", "history_depth", "max_blocking_time_ms", "robot", "recording"};
         if (std::none_of(known_fields.begin(), known_fields.end(), [&it](const auto* key) { return it->contains(key); }))
           throw std::runtime_error("文件中没有可识别的 DDS 配置项。");
+        // 独立导入必须包含已知 DDS 字段。解析相对路径后复用布局配置的字段校验。
         resolveConfigPaths(*it, path.parent_path());
         if (!loadConfig(cfg.dump())) throw std::runtime_error("配置字段类型、取值或范围无效。");
       }
@@ -624,6 +664,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return true;
   }
 
+  /// 清除旧模型预览并标记重新校验，增加配置代次以作废正在运行的旧任务，无返回值。
   void invalidateRobot() {
     ++robot_generation_;
     robot_import_requested_ = true;
@@ -632,13 +673,17 @@ class DdsDialog : public PJ::DialogPluginTyped {
     settings_.robot.addTopics(settings_.selected_topics);
   }
 
+  /// 3D 功能关闭或当前配置已通过模型校验时返回 true。
   bool robotReady() const { return !settings_.robot.enabled || imported_robot_ != nullptr; }
 
+  /// 非阻塞收集模型校验结果，必要时用当前配置启动一次后台校验。
+  /// 已处理任务或刷新状态时返回 true，无变化时返回 false。
   bool pollRobotImport() {
     bool changed = false;
     if (robot_import_.valid() && robot_import_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       try {
         auto model = robot_import_.get();
+        // 校验执行期间用户可能再次编辑。当任务代次仍与当前配置相等时才接收结果。
         if (importing_robot_generation_ == robot_generation_) {
           imported_robot_ = std::move(model);
           robot_status_ = "模型与映射校验通过：" + std::to_string(imported_robot_->mapping().size()) +
@@ -671,6 +716,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return changed;
   }
 
+  /// 将发现到的 XTypes 支持级别 support 转为话题表中的中文状态，返回显示文本。
   static std::string xtypesLabel(DdsDiscovery::Endpoint::XTypes support) {
     switch (support) {
       case DdsDiscovery::Endpoint::XTypes::Complete: return "支持（Complete）";
@@ -679,19 +725,23 @@ class DdsDialog : public PJ::DialogPluginTyped {
     }
     return "未知";
   }
+  /// 按完整类型名 type 查找最近导入且匹配的 IDL 库。
+  /// 返回由当前配置持有的借用指针，无匹配时返回 nullptr。
   const DdsIdlLibrary* localIdl(const std::string& type) const {
     for (auto it = settings_.idl_libraries.rbegin(); it != settings_.idl_libraries.rend(); ++it)
       if ((*it)->find(type)) return it->get();
     return nullptr;
   }
+  /// 非阻塞收集已完成的 IDL 导入，空闲时从队列取出下一项。
+  /// 收集结果或启动任务时返回 true，队列和任务均无进展时返回 false。
   bool pollIdlImports() {
     bool changed = false;
     if (idl_import_.valid() && idl_import_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
       try {
         auto library = idl_import_.get();
+        // 只应用当前配置发起的任务。重新导入成功后再替换同源定义，失败时保留已加载的库。
         if (importing_idl_generation_ == idl_generation_) {
           const auto& path = library->sourcePath();
-          // Reimporting a source replaces its previous definitions atomically.
           std::erase(settings_.idl_files, importing_idl_path_);
           std::erase(settings_.idl_files, path);
           settings_.idl_files.push_back(path);
@@ -721,7 +771,10 @@ class DdsDialog : public PJ::DialogPluginTyped {
     }
     return changed;
   }
+  /// 返回分区 name 的显示名，空名称显示为默认分区。
   static std::string partitionLabel(const std::string& name) { return name.empty() ? "(默认分区)" : name; }
+
+  /// 按集合 values 的迭代顺序用分隔符拼接文本，空集合返回空字符串。
   static std::string join(const std::set<std::string>& values) {
     std::string result;
     for (const auto& value : values) {
@@ -730,6 +783,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     }
     return result;
   }
+  /// 停止发现、清除待确认请求，并安排下次生成控件数据时重新发现，无返回值。
   void closeDiscovery() {
     discovery_.stop();
     restart_discovery_ = true;
