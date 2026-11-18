@@ -39,6 +39,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     }
     discovery_.poll();
     PJ::WidgetData wd;
+    wd.setTabIndex("settingsTabWidget", settings_tab_index_);
     wd.setRange("domainIdSpinBox", 0, 232).setValue("domainIdSpinBox", settings_.domain_id);
     wd.setItems("reliabilityComboBox", {"Best effort", "Reliable"});
     wd.setCurrentIndex("reliabilityComboBox", settings_.reliable ? 1 : 0);
@@ -326,6 +327,13 @@ class DdsDialog : public PJ::DialogPluginTyped {
     return false;
   }
 
+  bool onTabChanged(std::string_view widget, int index) override {
+    if (widget != "settingsTabWidget" || index < 0 || index >= 3 || index == settings_tab_index_)
+      return false;
+    settings_tab_index_ = index;
+    return true;
+  }
+
   bool onClicked(std::string_view widget) override {
     if (widget == "robotReloadButton") {
       invalidateRobot();
@@ -602,6 +610,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
   }
 
   DdsSettings settings_;
+  int settings_tab_index_ = 0;
   std::set<std::string> discovered_topics_;
   DdsDiscovery discovery_;
   std::deque<std::string> pending_idl_files_;

@@ -119,6 +119,10 @@ IDL 从当前订阅使用的 Complete TypeObjects 重建，包括依赖类型、
 
 更新依赖后，在仓库根目录运行 `./build.sh data_stream_dds`（或 `./pack.sh`），让 Conan 重新生成依赖和工具链，再执行 CMake。不要仅重跑旧构建目录中的 `cmake --build`，旧工具链尚未包含新依赖。第一次构建需要从配置的 Conan 源下载 TinyXML2；后续可复用缓存。`pack.sh` 会在构建失败时立即退出，避免继续复制上次编译的插件。
 
+3D 桥接生成的 `/robot_description` 和 `/tf` 需要 ROS 解析插件。`pack.sh` 会同时构建并复制 ROS 解析器的共享库和 manifest，默认源码目录为相邻的 `../pj-official-plugins`；可通过 `PJ_ROS_PLUGIN_SOURCE_DIR=/path/to/pj-official-plugins ./pack.sh` 指定其他位置。若出现 `registered handler has no parse_scalars: std_msgs/msg/String`，表示正在使用的 ROS 解析器未包含机器人描述的实时解析修复，应同步更新包内及已安装的 `ros-parser` 插件并重启 PlotJuggler。
+
+插件安装目录以运行用户为准：容器内以 root 启动时使用 `/root/.local/share/PlotJuggler/PlotJuggler4`。`extensions.profiles/loaded.json` 中的 `ros-parser` 绑定可让应用优先加载 `extensions.artifacts` 中的旧库，覆盖 `extensions/ros-parser` 后仍需解除该绑定。`pack/start.sh` 安装包内解析器后会自动处理此项，保留其他插件的版本绑定；必须完全退出旧进程再启动，使新库生效。
+
 若 CycloneDDS 安装在非系统目录，将其安装前缀加入 `CMAKE_PREFIX_PATH`，或设置 `CycloneDDS_DIR` 指向其 CMake 配置目录。本机所用 CycloneDDS 位于 `/opt/ros/jazzy`，使用该路径只为查找 CycloneDDS，无需初始化 ROS 环境。
 
 目录中的入口为 `dds_stream_source.cpp/.hpp`，界面逻辑和布局为 `dds_dialog.hpp` 与 `datastream_dds.ui`；`dds_discovery.hpp`、`dds_dynamic.cpp/.hpp`、`dds_idl.cpp/.hpp` 和 `dds_settings.hpp` 分别负责端点发现、消息动态解析、本地 IDL 加载及 DDS 配置。`dds_type_schema.cpp/.hpp` 从 Complete TypeObjects 导出录制用 IDL，`dds_cdr_record.hpp` 定义跨线程持有的 CDR 数据及共享类型描述；`dds_recorder.cpp/.hpp` 与 `dds_recording_settings.hpp` 负责后台滚动录制及其配置，`dds_mcap_writer.cpp/.hpp` 负责 MCAP 通道、类型 Schema、大小预估和文件完成。实时订阅的数据解析在插件内部完成，直接写入 PlotJuggler，无需额外消息解析插件；从 MCAP 文件加载 CDR 数据时需要对应解析插件。
