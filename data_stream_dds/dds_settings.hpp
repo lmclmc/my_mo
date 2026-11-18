@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dds_recording_settings.hpp"
+#include "dds_robot_settings.hpp"
 
 #include <dds/dds.h>
 #include <cstdint>
@@ -31,6 +32,7 @@ struct DdsSettings {
   // Transient cache shared with the stream; only source paths are persisted.
   std::vector<std::shared_ptr<const DdsIdlLibrary>> idl_libraries;
   DdsRecordingSettings recording;
+  DdsRobotSettings robot;
 
   bool matchesPartition(const std::string& offered) const {
     return fnmatch(partition.c_str(), offered.c_str(), 0) == 0 ||

@@ -1,13 +1,6 @@
 #!/bin/bash
 
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/lcm-loader/
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/ros-parser/
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/lcm-streamer/
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/dds-streamer/
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/mcap-loader/
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/toolbox-transform-editor/
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/toolbox-fft/
-rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/toolbox-quaternion/
+rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/*
 rm -rf ~/.config/PlotJuggler/PlotJuggler4.conf
 
 mkdir -p ~/.config/PlotJuggler/

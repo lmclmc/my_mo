@@ -39,6 +39,11 @@
     </widget>
    </item>
    <item>
+    <widget class="QTabWidget" name="settingsTabWidget">
+     <widget class="QWidget" name="ddsTopicsTab">
+      <attribute name="title"><string>DDS 话题与 QoS</string></attribute>
+      <layout class="QVBoxLayout" name="ddsTopicsLayout">
+   <item>
     <widget class="QGroupBox" name="qosGroup">
      <property name="title"><string>订阅 QoS</string></property>
      <layout class="QGridLayout" name="qosLayout">
@@ -52,23 +57,6 @@
       <item row="1" column="1"><widget class="QSpinBox" name="historyDepthSpinBox"><property name="minimum"><number>1</number></property><property name="maximum"><number>100000</number></property><property name="value"><number>1</number></property></widget></item>
       <item row="1" column="2"><widget class="QLabel" name="blockingTimeLabel"><property name="text"><string>最大阻塞时间</string></property></widget></item>
       <item row="1" column="3"><widget class="QSpinBox" name="blockingTimeSpinBox"><property name="suffix"><string> ms</string></property><property name="maximum"><number>60000</number></property><property name="value"><number>100</number></property></widget></item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="recordingGroup">
-     <property name="title"><string>MCAP / CDR 数据录制 · 滚动覆盖</string></property>
-     <layout class="QGridLayout" name="recordingLayout">
-      <item row="0" column="0"><widget class="QCheckBox" name="recordingEnabledCheckBox"><property name="text"><string>连接后录制</string></property><property name="toolTip"><string>保存选中话题的有效 CDR 样本及 IDL 类型描述。停止订阅时结束录制并写完缓存。</string></property></widget></item>
-      <item row="0" column="1"><widget class="QLabel" name="recordingDirectoryLabel"><property name="text"><string>录制目录</string></property><property name="buddy"><cstring>recordingDirectoryEdit</cstring></property></widget></item>
-      <item row="0" column="2" colspan="4"><widget class="QLineEdit" name="recordingDirectoryEdit"><property name="enabled"><bool>false</bool></property><property name="placeholderText"><string>输入目录或点击右侧选择；不存在的目录会自动创建</string></property><property name="toolTip"><string>同一目录中的 cyclonedds_record_XXXXXX.mcap 文件属于同一个滚动录制集合，旧文件可能被覆盖。</string></property></widget></item>
-      <item row="0" column="6"><widget class="QPushButton" name="recordingDirectoryButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>选择目录…</string></property></widget></item>
-      <item row="1" column="0"><widget class="QLabel" name="recordingFileSizeLabel"><property name="text"><string>单文件最大大小</string></property><property name="buddy"><cstring>recordingFileSizeSpinBox</cstring></property></widget></item>
-      <item row="1" column="1"><widget class="QSpinBox" name="recordingFileSizeSpinBox"><property name="enabled"><bool>false</bool></property><property name="minimum"><number>1</number></property><property name="maximum"><number>1048576</number></property><property name="value"><number>128</number></property><property name="suffix"><string> MB</string></property><property name="keyboardTracking"><bool>false</bool></property><property name="toolTip"><string>1 MB = 1024 × 1024 字节，包含 MCAP 文件头、消息、统计和文件尾。完整样本超出剩余容量时提前切换文件。</string></property></widget></item>
-      <item row="1" column="2"><widget class="QLabel" name="recordingFileCountLabel"><property name="text"><string>最多录制文件数</string></property><property name="buddy"><cstring>recordingFileCountSpinBox</cstring></property></widget></item>
-      <item row="1" column="3"><widget class="QSpinBox" name="recordingFileCountSpinBox"><property name="enabled"><bool>false</bool></property><property name="minimum"><number>1</number></property><property name="maximum"><number>10000</number></property><property name="value"><number>10</number></property><property name="suffix"><string> 个</string></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
-      <item row="1" column="4" colspan="3"><widget class="QLabel" name="recordingFormatLabel"><property name="text"><string>格式：MCAP / CDR · 包含 IDL 类型描述</string></property></widget></item>
-      <item row="2" column="0" colspan="7"><widget class="QLabel" name="recordingStatusLabel"><property name="text"><string>勾选后随连接开始录制。MCAP 保存所选话题的 CDR 数据、IDL 类型描述和上位机接收时间；1 MB = 1024 × 1024 字节。</string></property><property name="wordWrap"><bool>true</bool></property><property name="textFormat"><enum>Qt::PlainText</enum></property></widget></item>
      </layout>
     </widget>
    </item>
@@ -121,10 +109,89 @@
      </widget>
     </widget>
    </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="robotModelTab">
+      <attribute name="title"><string>3D 机器人 · URDF / MuJoCo</string></attribute>
+      <layout class="QVBoxLayout" name="robotModelLayout">
+       <item><widget class="QCheckBox" name="robotEnabledCheckBox"><property name="text"><string>使用 DDS 关节位置与四元数驱动 3D 机器人（自动选中关节 data 话题及 state_estimator）</string></property></widget></item>
+       <item>
+        <widget class="QGroupBox" name="robotFilesGroup">
+         <property name="title"><string>机器人模型文件</string></property>
+         <layout class="QGridLayout" name="robotFilesLayout">
+          <item row="0" column="0"><widget class="QLabel" name="robotUrdfLabel"><property name="text"><string>URDF · 外观与运动学</string></property><property name="buddy"><cstring>robotUrdfPathEdit</cstring></property></widget></item>
+          <item row="0" column="1"><widget class="QLineEdit" name="robotUrdfPathEdit"><property name="placeholderText"><string>选择 .urdf 文件，保留其引用的 meshes 文件</string></property></widget></item>
+          <item row="0" column="2"><widget class="QPushButton" name="importUrdfButton"><property name="text"><string>导入 URDF…</string></property></widget></item>
+          <item row="1" column="0"><widget class="QLabel" name="robotMujocoLabel"><property name="text"><string>MuJoCo XML · 关节顺序</string></property><property name="buddy"><cstring>robotMujocoPathEdit</cstring></property></widget></item>
+          <item row="1" column="1"><widget class="QLineEdit" name="robotMujocoPathEdit"><property name="placeholderText"><string>使用 actuator 中的 joint 引用顺序匹配 URDF 关节</string></property></widget></item>
+          <item row="1" column="2"><widget class="QPushButton" name="importMujocoButton"><property name="text"><string>导入 MuJoCo XML…</string></property></widget></item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="robotGroupsGroup">
+         <property name="title"><string>关节数据映射 · 默认 X1 配置</string></property>
+         <property name="minimumSize"><size><width>0</width><height>225</height></size></property>
+         <layout class="QGridLayout" name="robotGroupsLayout">
+          <item row="0" column="0"><widget class="QLabel" name="robotPartHeader"><property name="text"><string>部位</string></property></widget></item>
+          <item row="0" column="1"><widget class="QLabel" name="robotTopicHeader"><property name="text"><string>DDS data 话题</string></property></widget></item>
+          <item row="0" column="2"><widget class="QLabel" name="robotStartHeader"><property name="text"><string>XML 起始索引（从 0 开始）</string></property></widget></item>
+          <item row="0" column="3"><widget class="QLabel" name="robotCountHeader"><property name="text"><string>关节数（0 为禁用）</string></property></widget></item>
+          <item row="1" column="0"><widget class="QLabel" name="robotLegLabel"><property name="text"><string>腿 · leg</string></property></widget></item>
+          <item row="1" column="1"><widget class="QLineEdit" name="robot_legTopicEdit"/></item>
+          <item row="1" column="2"><widget class="QSpinBox" name="robot_legStartSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="1" column="3"><widget class="QSpinBox" name="robot_legCountSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="2" column="0"><widget class="QLabel" name="robotWaistLabel"><property name="text"><string>腰 · waist</string></property></widget></item>
+          <item row="2" column="1"><widget class="QLineEdit" name="robot_waistTopicEdit"/></item>
+          <item row="2" column="2"><widget class="QSpinBox" name="robot_waistStartSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="2" column="3"><widget class="QSpinBox" name="robot_waistCountSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="3" column="0"><widget class="QLabel" name="robotArmLabel"><property name="text"><string>臂 · arm</string></property></widget></item>
+          <item row="3" column="1"><widget class="QLineEdit" name="robot_armTopicEdit"/></item>
+          <item row="3" column="2"><widget class="QSpinBox" name="robot_armStartSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="3" column="3"><widget class="QSpinBox" name="robot_armCountSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="4" column="0"><widget class="QLabel" name="robotHeadLabel"><property name="text"><string>头 · head</string></property></widget></item>
+          <item row="4" column="1"><widget class="QLineEdit" name="robot_headTopicEdit"/></item>
+          <item row="4" column="2"><widget class="QSpinBox" name="robot_headStartSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="4" column="3"><widget class="QSpinBox" name="robot_headCountSpinBox"><property name="maximum"><number>8192</number></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+          <item row="5" column="0" colspan="4"><widget class="QLabel" name="robotMappingHintLabel"><property name="text"><string>每组位置数组从 q[0] 开始，按 MuJoCo actuator 顺序匹配 URDF 关节名；角度单位为弧度。手臂兼容 joint_curPos。</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+         </layout>
+        </widget>
+       </item>
+       <item><widget class="QLabel" name="robotOrientationHintLabel"><property name="text"><string>整体姿态：state_estimator.quat，顺序 [w, x, y, z]。连接后将 /robot_description 拖入 3D 窗口，Fixed frame 选择下方提示的世界坐标系（通常为 world）。</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+       <item><widget class="QTableWidget" name="robotMappingTableWidget"><property name="minimumSize"><size><width>0</width><height>120</height></size></property><property name="editTriggers"><set>QAbstractItemView::NoEditTriggers</set></property><property name="selectionMode"><enum>QAbstractItemView::NoSelection</enum></property><property name="alternatingRowColors"><bool>true</bool></property><attribute name="verticalHeaderVisible"><bool>false</bool></attribute><attribute name="horizontalHeaderStretchLastSection"><bool>true</bool></attribute></widget></item>
+       <item><widget class="QLabel" name="robotStatusLabel"><property name="minimumSize"><size><width>0</width><height>42</height></size></property><property name="text"><string>未启用 3D 机器人。</string></property><property name="wordWrap"><bool>true</bool></property><property name="textFormat"><enum>Qt::PlainText</enum></property></widget></item>
+       <item><widget class="QPushButton" name="robotReloadButton"><property name="text"><string>重新读取模型并校验映射</string></property><property name="toolTip"><string>修改文件内容后点击此按钮重新加载。映射不一致时不会启用错误的模型驱动。</string></property></widget></item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="recordingTab">
+      <attribute name="title"><string>MCAP 录制</string></attribute>
+      <layout class="QVBoxLayout" name="recordingTabLayout">
+   <item>
+    <widget class="QGroupBox" name="recordingGroup">
+     <property name="title"><string>MCAP / CDR 数据录制 · 滚动覆盖</string></property>
+     <layout class="QGridLayout" name="recordingLayout">
+      <item row="0" column="0"><widget class="QCheckBox" name="recordingEnabledCheckBox"><property name="text"><string>连接后录制</string></property><property name="toolTip"><string>保存选中话题的有效 CDR 样本及 IDL 类型描述。停止订阅时结束录制并写完缓存。</string></property></widget></item>
+      <item row="0" column="1"><widget class="QLabel" name="recordingDirectoryLabel"><property name="text"><string>录制目录</string></property><property name="buddy"><cstring>recordingDirectoryEdit</cstring></property></widget></item>
+      <item row="0" column="2" colspan="4"><widget class="QLineEdit" name="recordingDirectoryEdit"><property name="enabled"><bool>false</bool></property><property name="placeholderText"><string>输入目录或点击右侧选择；不存在的目录会自动创建</string></property><property name="toolTip"><string>同一目录中的 cyclonedds_record_XXXXXX.mcap 文件属于同一个滚动录制集合，旧文件可能被覆盖。</string></property></widget></item>
+      <item row="0" column="6"><widget class="QPushButton" name="recordingDirectoryButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>选择目录…</string></property></widget></item>
+      <item row="1" column="0"><widget class="QLabel" name="recordingFileSizeLabel"><property name="text"><string>单文件最大大小</string></property><property name="buddy"><cstring>recordingFileSizeSpinBox</cstring></property></widget></item>
+      <item row="1" column="1"><widget class="QSpinBox" name="recordingFileSizeSpinBox"><property name="enabled"><bool>false</bool></property><property name="minimum"><number>1</number></property><property name="maximum"><number>1048576</number></property><property name="value"><number>128</number></property><property name="suffix"><string> MB</string></property><property name="keyboardTracking"><bool>false</bool></property><property name="toolTip"><string>1 MB = 1024 × 1024 字节，包含 MCAP 文件头、消息、统计和文件尾。完整样本超出剩余容量时提前切换文件。</string></property></widget></item>
+      <item row="1" column="2"><widget class="QLabel" name="recordingFileCountLabel"><property name="text"><string>最多录制文件数</string></property><property name="buddy"><cstring>recordingFileCountSpinBox</cstring></property></widget></item>
+      <item row="1" column="3"><widget class="QSpinBox" name="recordingFileCountSpinBox"><property name="enabled"><bool>false</bool></property><property name="minimum"><number>1</number></property><property name="maximum"><number>10000</number></property><property name="value"><number>10</number></property><property name="suffix"><string> 个</string></property><property name="keyboardTracking"><bool>false</bool></property></widget></item>
+      <item row="1" column="4" colspan="3"><widget class="QLabel" name="recordingFormatLabel"><property name="text"><string>格式：MCAP / CDR · 包含 IDL 类型描述</string></property></widget></item>
+      <item row="2" column="0" colspan="7"><widget class="QLabel" name="recordingStatusLabel"><property name="text"><string>勾选后随连接开始录制。MCAP 保存所选话题的 CDR 数据、IDL 类型描述和上位机接收时间；1 MB = 1024 × 1024 字节。</string></property><property name="wordWrap"><bool>true</bool></property><property name="textFormat"><enum>Qt::PlainText</enum></property></widget></item>
+     </layout>
+    </widget>
+   </item>
+       <item><spacer name="recordingTabSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
    <item>
     <layout class="QHBoxLayout" name="actionLayout">
      <item><spacer name="actionSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
-     <item><widget class="QPushButton" name="connectButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>连接</string></property><property name="toolTip"><string>仅订阅列表中高亮选中的话题。</string></property><property name="default"><bool>true</bool></property></widget></item>
+     <item><widget class="QPushButton" name="connectButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>连接</string></property><property name="toolTip"><string>订阅选中的话题；启用机器人时同时订阅配置的关节 data 话题及姿态话题 state_estimator。</string></property><property name="default"><bool>true</bool></property></widget></item>
      <item><widget class="QDialogButtonBox" name="buttonBox"><property name="standardButtons"><set>QDialogButtonBox::Cancel</set></property></widget></item>
     </layout>
    </item>

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot name="unordered_robot">
+  <link name="base"><visual><geometry><mesh filename="meshes/base.stl"/></geometry></visual></link>
+  <link name="leg_link"/><link name="waist_link"/><link name="head_link"/>
+  <link name="arm_link"/><link name="tool_link"/><link name="mimic_link"/>
+  <!-- Deliberately unrelated to actuator order, including child before parent. -->
+  <joint name="tool_mount" type="fixed">
+    <parent link="arm_link"/><child link="tool_link"/><origin xyz="1 2 3"/>
+  </joint>
+  <joint name="head_joint" type="continuous">
+    <parent link="waist_link"/><child link="head_link"/><axis xyz="2 0 0"/>
+  </joint>
+  <joint name="arm_joint" type="revolute">
+    <parent link="waist_link"/><child link="arm_link"/>
+    <origin rpy="0 0 1.5707963267948966"/><axis xyz="0 1 0"/>
+  </joint>
+  <joint name="mimic_joint" type="revolute">
+    <parent link="leg_link"/><child link="mimic_link"/><axis xyz="0 0 1"/>
+    <mimic joint="leg_joint" multiplier="2" offset="0.1"/>
+  </joint>
+  <joint name="waist_joint" type="prismatic">
+    <parent link="base"/><child link="waist_link"/>
+    <origin xyz="1 0 0" rpy="0 0 1.5707963267948966"/><axis xyz="1 0 0"/>
+  </joint>
+  <joint name="leg_joint" type="revolute">
+    <parent link="base"/><child link="leg_link"/><axis xyz="0 0 1"/>
+  </joint>
+</robot>

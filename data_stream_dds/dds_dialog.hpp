@@ -17,6 +17,7 @@
 #include "dds_discovery.hpp"
 #include "dds_idl.hpp"
 #include "dds_settings.hpp"
+#include "dds_robot_model.hpp"
 #include "datastream_dds_ui.hpp"
 #include "dds_manifest.hpp"
 
@@ -30,6 +31,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
 
   std::string widget_data() override {
     pollIdlImports();
+    pollRobotImport();
+    settings_.robot.addTopics(settings_.selected_topics);
     if (restart_discovery_) {
       discovery_.start(settings_.domain_id);
       restart_discovery_ = false;
@@ -48,6 +51,28 @@ class DdsDialog : public PJ::DialogPluginTyped {
     wd.setRange("blockingTimeSpinBox", 0, 60000).setValue("blockingTimeSpinBox", settings_.max_blocking_time_ms);
     wd.setEnabled("blockingTimeSpinBox", settings_.reliable);
     wd.setText("partitionEdit", settings_.partition);
+    wd.setChecked("robotEnabledCheckBox", settings_.robot.enabled);
+    wd.setText("robotUrdfPathEdit", settings_.robot.urdf_path);
+    wd.setText("robotMujocoPathEdit", settings_.robot.mujoco_path);
+    wd.setFilePicker("importUrdfButton", "导入 URDF…", "URDF 文件 (*.urdf *.xml);;所有文件 (*)", "选择机器人 URDF");
+    wd.setFilePicker("importMujocoButton", "导入 MuJoCo XML…", "MuJoCo XML (*.xml);;所有文件 (*)", "选择 MuJoCo 模型 XML");
+    for (size_t g = 0; g < settings_.robot.groups.size(); ++g) {
+      const auto prefix = std::string("robot_") + DdsRobotSettings::kGroupNames[g];
+      const auto& group = settings_.robot.groups[g];
+      wd.setText(prefix + "TopicEdit", group.topic);
+      wd.setRange(prefix + "StartSpinBox", 0, DdsRobotSettings::kMaxJoints)
+        .setValue(prefix + "StartSpinBox", group.start);
+      wd.setRange(prefix + "CountSpinBox", 0, DdsRobotSettings::kMaxJoints)
+        .setValue(prefix + "CountSpinBox", group.count);
+    }
+    wd.setLabel("robotStatusLabel", robot_status_);
+    wd.setTableHeaders("robotMappingTableWidget", {"部位", "DDS 话题", "位置索引", "XML 索引", "URDF / XML 关节名"});
+    std::vector<std::vector<PJ::TableItem>> robot_rows;
+    if (imported_robot_)
+      for (const auto& entry : imported_robot_->mapping())
+        robot_rows.push_back({entry.group, entry.topic, "q/[" + std::to_string(entry.index) + "]",
+                             entry.xml_index, entry.joint});
+    wd.setTableRows("robotMappingTableWidget", robot_rows);
     wd.setFilePicker("importIdlButton", "导入 IDL…", "DDS IDL (*.idl);;所有文件 (*)", "导入 DDS 消息定义");
     const bool importing = idl_import_.valid() || !pending_idl_files_.empty();
     wd.setEnabled("importIdlButton", !importing);
@@ -170,7 +195,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
                                                                     settings_.selected_topics.end()));
     wd.setEnabled("selectAllTopicsButton", !discovered_topics_.empty());
     wd.setEnabled("clearTopicsButton", !settings_.selected_topics.empty());
-    wd.setEnabled("connectButton", !settings_.selected_topics.empty() && !importing && recording_error.empty());
+    wd.setEnabled("connectButton", !settings_.selected_topics.empty() && !importing &&
+                  recording_error.empty() && robotReady());
     wd.setLabel("partitionCountLabel", std::to_string(partitions.size()) + " 个分区");
     wd.setLabel("topicCountLabel", "当前分区发现 " + std::to_string(discovered_topics_.size()) +
                 " 个话题 · 已选 " + std::to_string(settings_.selected_topics.size()) + " 个" +
@@ -188,13 +214,26 @@ class DdsDialog : public PJ::DialogPluginTyped {
 
   bool onTick() override {
     const bool idl_changed = pollIdlImports();
+    const bool robot_changed = pollRobotImport();
     const auto now = std::chrono::steady_clock::now();
-    if (now - last_poll_ < std::chrono::milliseconds(250)) return idl_changed;
+    if (now - last_poll_ < std::chrono::milliseconds(250)) return idl_changed || robot_changed;
     last_poll_ = now;
-    return discovery_.poll() || idl_changed;
+    return discovery_.poll() || idl_changed || robot_changed;
   }
 
   bool onValueChanged(std::string_view widget, int value) override {
+    for (size_t g = 0; g < settings_.robot.groups.size(); ++g) {
+      const auto prefix = std::string("robot_") + DdsRobotSettings::kGroupNames[g];
+      auto& group = settings_.robot.groups[g];
+      int* target = widget == prefix + "StartSpinBox" ? &group.start
+          : widget == prefix + "CountSpinBox" ? &group.count : nullptr;
+      if (!target) continue;
+      value = std::clamp(value, 0, DdsRobotSettings::kMaxJoints);
+      if (*target == value) return false;
+      *target = value;
+      invalidateRobot();
+      return true;
+    }
     if (widget == "domainIdSpinBox") {
       const int domain = std::clamp(value, 0, 232);
       if (settings_.domain_id == domain) return false;
@@ -217,6 +256,12 @@ class DdsDialog : public PJ::DialogPluginTyped {
   }
 
   bool onToggled(std::string_view widget, bool checked) override {
+    if (widget == "robotEnabledCheckBox") {
+      if (settings_.robot.enabled == checked) return false;
+      settings_.robot.enabled = checked;
+      invalidateRobot();
+      return true;
+    }
     if (widget != "recordingEnabledCheckBox" || settings_.recording.enabled == checked) return false;
     settings_.recording.enabled = checked;
     return true;
@@ -232,6 +277,17 @@ class DdsDialog : public PJ::DialogPluginTyped {
   }
 
   bool onTextChanged(std::string_view widget, std::string_view text) override {
+    std::string* robot_target = widget == "robotUrdfPathEdit" ? &settings_.robot.urdf_path
+        : widget == "robotMujocoPathEdit" ? &settings_.robot.mujoco_path : nullptr;
+    for (size_t g = 0; g < settings_.robot.groups.size(); ++g)
+      if (widget == std::string("robot_") + DdsRobotSettings::kGroupNames[g] + "TopicEdit")
+        robot_target = &settings_.robot.groups[g].topic;
+    if (robot_target) {
+      if (*robot_target == text) return false;
+      *robot_target = std::string(text);
+      invalidateRobot();
+      return true;
+    }
     if (widget == "recordingDirectoryEdit") {
       if (settings_.recording.directory == text) return false;
       settings_.recording.directory = std::string(text);
@@ -250,6 +306,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
       for (const auto& topic : selected) {
         if (discovered_topics_.count(topic) || settings_.selected_topics.count(topic)) next.insert(topic);
       }
+      settings_.robot.addTopics(next);
       if (next == settings_.selected_topics) return false;
       settings_.selected_topics = std::move(next);
       return true;
@@ -270,6 +327,10 @@ class DdsDialog : public PJ::DialogPluginTyped {
   }
 
   bool onClicked(std::string_view widget) override {
+    if (widget == "robotReloadButton") {
+      invalidateRobot();
+      return true;
+    }
     if (widget == "clearIdlButton") {
       if (idl_import_.valid()) return false;
       settings_.idl_files.clear();
@@ -285,6 +346,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     }
     if (widget == "clearTopicsButton") {
       settings_.selected_topics.clear();
+      settings_.robot.addTopics(settings_.selected_topics);
       return true;
     }
     if (widget == "refreshDiscoveryButton") {
@@ -293,7 +355,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
     }
     if (widget == "connectButton") {
       if (settings_.selected_topics.empty() || idl_import_.valid() || !pending_idl_files_.empty() ||
-          !settings_.recording.validationError().empty()) return false;
+          !settings_.recording.validationError().empty() || !robotReady()) return false;
       request_accept_ = true;
       return true;
     }
@@ -301,6 +363,14 @@ class DdsDialog : public PJ::DialogPluginTyped {
   }
 
   bool onFileSelected(std::string_view widget, std::string_view path) override {
+    if (widget == "importUrdfButton" || widget == "importMujocoButton") {
+      if (path.empty()) return false;
+      if (widget == "importUrdfButton") settings_.robot.urdf_path = std::string(path);
+      else settings_.robot.mujoco_path = std::string(path);
+      settings_.robot.enabled = true;
+      invalidateRobot();
+      return true;
+    }
     if (widget != "importIdlButton" || path.empty() || idl_import_.valid()) return false;
     pending_idl_files_.emplace_back(path);
     pollIdlImports();
@@ -326,12 +396,23 @@ class DdsDialog : public PJ::DialogPluginTyped {
       {"history_depth", settings_.history_depth}, {"max_blocking_time_ms", settings_.max_blocking_time_ms},
       {"recording", {{"enabled", settings_.recording.enabled}, {"directory", settings_.recording.directory},
         {"max_file_size_mb", settings_.recording.max_file_size_mb}, {"max_files", settings_.recording.max_files}}}};
+    auto& robot = cfg["dds"]["robot"];
+    robot = {{"enabled", settings_.robot.enabled}, {"urdf_path", settings_.robot.urdf_path},
+             {"mujoco_path", settings_.robot.mujoco_path}};
+    for (size_t g = 0; g < settings_.robot.groups.size(); ++g) {
+      const auto& group = settings_.robot.groups[g];
+      robot["groups"][DdsRobotSettings::kGroupNames[g]] = {
+          {"topic", group.topic}, {"start", group.start}, {"count", group.count}};
+    }
     return cfg.dump();
   }
 
   bool loadConfig(std::string_view json) override {
     try {
-      auto cfg = nlohmann::json::parse(json);
+      // The streaming manager calls loadConfig with an empty string on first
+      // use. Treat absent settings as defaults while rejecting malformed JSON.
+      auto cfg = json.find_first_not_of(" \t\r\n") == std::string_view::npos
+          ? nlohmann::json::object() : nlohmann::json::parse(json);
       if (!cfg.is_object()) return false;
       const auto dds = cfg.value("dds", nlohmann::json::object());
       if (!dds.is_object()) return false;
@@ -367,6 +448,25 @@ class DdsDialog : public PJ::DialogPluginTyped {
         next.recording.max_files = it->value("max_files", 10);
         if (!next.recording.validationError().empty()) return false;
       }
+      if (const auto it = dds.find("robot"); it != dds.end()) {
+        if (!it->is_object()) return false;
+        next.robot.enabled = it->value("enabled", false);
+        next.robot.urdf_path = it->value("urdf_path", std::string{});
+        next.robot.mujoco_path = it->value("mujoco_path", std::string{});
+        const auto groups = it->value("groups", nlohmann::json::object());
+        if (!groups.is_object()) return false;
+        for (size_t g = 0; g < next.robot.groups.size(); ++g) {
+          const auto group = groups.find(DdsRobotSettings::kGroupNames[g]);
+          if (group == groups.end()) continue;
+          if (!group->is_object()) return false;
+          auto& target = next.robot.groups[g];
+          target.topic = group->value("topic", target.topic);
+          target.start = group->value("start", target.start);
+          target.count = group->value("count", target.count);
+          if (target.start < 0 || target.count < 0 || target.start > DdsRobotSettings::kMaxJoints - target.count)
+            return false;
+        }
+      }
       if (next.domain_id < 0 || next.domain_id > 232 || next.history_depth < 1 || next.history_depth > 100000 ||
           next.max_blocking_time_ms < 0 || next.max_blocking_time_ms > 60000 ||
           (reliability != "best_effort" && reliability != "reliable") ||
@@ -376,6 +476,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
       next.transient_local = durability == "transient_local";
       next.keep_all = history == "keep_all";
       settings_ = std::move(next);
+      invalidateRobot();
       ++idl_generation_;
       pending_idl_files_.assign(settings_.idl_files.begin(), settings_.idl_files.end());
       idl_status_.clear();
@@ -388,6 +489,53 @@ class DdsDialog : public PJ::DialogPluginTyped {
   }
 
  private:
+  void invalidateRobot() {
+    ++robot_generation_;
+    robot_import_requested_ = true;
+    imported_robot_.reset();
+    robot_status_.clear();
+    settings_.robot.addTopics(settings_.selected_topics);
+  }
+
+  bool robotReady() const { return !settings_.robot.enabled || imported_robot_ != nullptr; }
+
+  bool pollRobotImport() {
+    bool changed = false;
+    if (robot_import_.valid() && robot_import_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+      try {
+        auto model = robot_import_.get();
+        if (importing_robot_generation_ == robot_generation_) {
+          imported_robot_ = std::move(model);
+          robot_status_ = "模型与映射校验通过：" + std::to_string(imported_robot_->mapping().size()) +
+              " 个关节；根坐标系 " + imported_robot_->rootLink() +
+              "；整体姿态来自 state_estimator.quat。连接后将 /robot_description 拖入 3D 窗口，Fixed frame 选择 " +
+              imported_robot_->worldFrame() + "。";
+        }
+      } catch (const std::exception& error) {
+        if (importing_robot_generation_ == robot_generation_)
+          robot_status_ = "模型导入失败：" + std::string(error.what());
+      }
+      changed = true;
+    }
+    if (!robot_import_.valid() && robot_import_requested_) {
+      robot_import_requested_ = false;
+      imported_robot_.reset();
+      const auto error = settings_.robot.validationError();
+      if (!settings_.robot.enabled) robot_status_ = "未启用 3D 机器人。导入 URDF 和 MuJoCo XML 后可使用关节位置和 state_estimator.quat 驱动模型。";
+      else if (!error.empty()) robot_status_ = error;
+      else {
+        importing_robot_generation_ = robot_generation_;
+        const auto robot = settings_.robot;
+        robot_import_ = std::async(std::launch::async, [robot] {
+          return std::make_shared<const DdsRobotModel>(robot);
+        });
+        robot_status_ = "正在读取 URDF、MuJoCo XML 并校验关节映射…";
+      }
+      changed = true;
+    }
+    return changed;
+  }
+
   static std::string xtypesLabel(DdsDiscovery::Endpoint::XTypes support) {
     switch (support) {
       case DdsDiscovery::Endpoint::XTypes::Complete: return "支持（Complete）";
@@ -461,6 +609,11 @@ class DdsDialog : public PJ::DialogPluginTyped {
   std::map<std::string, std::string> idl_errors_;
   size_t idl_generation_ = 0, importing_idl_generation_ = 0;
   std::future<std::shared_ptr<const DdsIdlLibrary>> idl_import_;
+  std::shared_ptr<const DdsRobotModel> imported_robot_;
+  std::future<std::shared_ptr<const DdsRobotModel>> robot_import_;
+  std::string robot_status_;
+  size_t robot_generation_ = 0, importing_robot_generation_ = 0;
+  bool robot_import_requested_ = true;
   bool restart_discovery_ = true;
   bool request_accept_ = false;
   std::chrono::steady_clock::time_point last_poll_{};

@@ -17,7 +17,10 @@ class DataStreamDdsConan(ConanFile):
     requires = (
         f"plotjuggler_sdk/{_SDK_VERSION}",
         "nlohmann_json/3.12.0",
+        "tinyxml2/10.0.0",
     )
     # CycloneDDS (including idlc) is provided by the native installation.
     # Uncompressed MCAP recording uses the vendored writer headers in contrib/mcap.
+    # Bundle TinyXML2 statically so the build and installed plugin do not rely
+    # on a system libtinyxml2-dev package or a separate TinyXML2 shared library.
     default_options = {"*:shared": False}

@@ -7,6 +7,7 @@
 - **Partition**：输入订阅分区，或点击发现列表中的分区。留空使用默认分区。
 - **Topic**：展示当前订阅分区中的话题名称、原生类型、XTypes / IDL 匹配状态、IDL 文件路径、分区、发布/订阅端数量，以及端点声明的 Reliability / Durability。每个话题名称一行，同名端点的类型和分区合并展示，端点数量按端点统计。连接窗口默认宽度为 1540，右侧话题区最小宽度为 880；左侧分区区宽度为 240–320，扩大窗口时优先增加话题区宽度。
 - **MCAP 数据录制**：可启用连接后录制，选择或输入录制目录，设置单文件最大 MB 数和最多保留文件数，达到上限后滚动覆盖最早的文件。
+- **3D 机器人**：在独立页签导入 URDF 和 MuJoCo XML，预览关节映射，使用四组 DDS 位置数组和 `state_estimator.quat` 驱动关节及整体姿态。
 
 发现使用 `DCPSPublication` 和 `DCPSSubscription` 内置 Reader，持续收集当前域的端点信息；默认分区显示为“(默认分区)”。分区来自端点的 Partition QoS，不会扫描没有端点声明的分区。端点的分区表达式按声明原样展示。
 
@@ -14,7 +15,7 @@
 
 在话题表中单击一行即可选择或取消，可直接点击多行进行多选，高亮行表示选中；也可使用“全选”和“清空”。至少选中一个话题后才能点击“连接”。刷新发现、端点更新和表格排序会保留选择；切换 Domain ID 或订阅 Partition 会清空选择，需要在新域或分区重新选择。分区表达式的匹配方式与接收端一致。
 
-连接后，插件仅为选中的精确话题名称创建动态 Reader，Domain ID、Partition 和 Reader QoS 使用界面配置。未选话题不会触发类型解析或业务数据订阅；新上线的其他话题不会自动加入订阅。“全选”只选中点击时已发现的话题。最后一个发布端下线后释放相应订阅，已选话题重新上线后自动重新解析和订阅。已选的离线话题保留在表中并显示为等待发布端，可以取消选择。仅发现订阅端的话题也可以先选择，连接后等待发布端出现。
+连接后，插件仅为选中的精确话题名称创建动态 Reader，Domain ID、Partition 和 Reader QoS 使用界面配置。启用 3D 机器人时会自动选中配置的关节 data 话题和姿态话题 `state_estimator`；这些必需话题在启用期间保持选中。其他未选话题不会触发类型解析或业务数据订阅；新上线的其他话题不会自动加入订阅。“全选”只选中点击时已发现的话题。最后一个发布端下线后释放相应订阅，已选话题重新上线后自动重新解析和订阅。已选的离线话题保留在表中并显示为等待发布端，仅由用户选择的话题可以取消。仅发现订阅端的话题也可以先选择，连接后等待发布端出现。
 
 收到有效数据后，所选话题的实际字段出现在 PlotJuggler 左侧变量列表；将需要的数值字段拖入绘图区即可绘制曲线。如需更换订阅话题，停止数据流后重新打开连接窗口选择，再次连接。
 
@@ -54,6 +55,34 @@ PlotJuggler 左侧变量采用“原生 DDS 话题名 / 实际字段路径”，
 
 停止时唤醒并退出线程，先释放 Reader，再释放动态类型描述。队列最多缓存 2048 条记录、合计 100000 个字段；超出时丢弃最旧记录并提示，单个样本展开也限制为 100000 个字段。
 
+## URDF / MuJoCo 与实时 3D 机器人
+
+1. 打开“3D 机器人 · URDF / MuJoCo”页签，导入 URDF 和配套的 MuJoCo XML。文件选择后自动启用机器人；也可手动勾选或取消启用。
+2. 查看映射表中的“位置索引 → XML 索引 → 关节名”。MuJoCo `<actuator>` 下各执行器的 `joint` 引用顺序作为索引来源，再按名字匹配 URDF，URDF 的声明顺序不影响结果。支持 `motor`、`position`、`velocity`、`general` 等引用关节的执行器及相对路径 `<include>`。
+3. 使用当前 X1 的默认映射，或调整各组的精确 DDS 话题名、XML 起始索引和关节数。索引从 0 开始，每组位置数组也从 0 开始；关节数为 0 表示不驱动该组。
+4. 在 DDS 页签为缺少 Complete XTypes 的话题导入匹配的消息 IDL（包括 `state_estimator`），然后连接。将生成的 `/robot_description` 拖入 3D 窗口，Fixed frame 选择界面提示的世界坐标系，通常为 `world`。已有视图若固定为 `pelvis`，需切换到 `world` 才能看到整体姿态。
+
+默认映射如下，保留 MuJoCo XML 中“腿、腰、头、臂”的执行器顺序：
+
+| 部位 | DDS 话题 | 位置字段 | XML 起始索引 | 数量 |
+| --- | --- | --- | --- | --- |
+| 腿 | `leg_control_data` | `q` | 0 | 12 |
+| 腰 | `waist_control_data` | `q` | 12 | 3 |
+| 臂 | `arm_control_data` | `q`，没有 `q` 时兼容 `joint_curPos` | 17 | 14 |
+| 头 | `head_control_data` | `q` | 15 | 2 |
+
+例如腿话题的 `q/[0]` 驱动 XML 第 0 个执行器引用的 URDF 关节，手臂话题的 `q/[0]` 驱动 XML 第 17 个执行器引用的关节。旋转关节使用弧度，移动关节使用米。初始关节位置为 0；各组独立保留最近一次有效位置，无需等待四个话题同时到达。固定关节、URDF origin/axis 和 mimic 关系参与 TF 计算，根节点姿态由 `state_estimator.quat` 驱动。模型预览最多约 60 Hz，数值曲线保留原采样率。
+
+模型和映射在后台校验；范围重叠、文件无效、XML 关节未出现在 URDF、fixed/mimic 关节被执行器直接驱动等情况会显示原因并禁止连接。编辑映射后自动重新校验，修改外部文件内容后点击“重新读取模型并校验映射”。运行中位置数组长度不符、索引缺失或包含 NaN/Inf 时，保留该组上次有效姿态并报告原因，其他话题和曲线继续处理。URDF 支持 fixed、revolute、continuous、prismatic 及 mimic；xacro 需先展开。相对 mesh 路径转换为相对于 URDF 文件的绝对路径，邻近目录可找到的 `package://` 网格也会转换；其余 package URI 可使用 3D 窗口的包搜索路径解析。
+
+`state_estimator.quat[0..3]` 按 X1 的 `[w, x, y, z]` 顺序读取，归一化后驱动 `world → URDF 根 link`（X1 为 `pelvis`）的旋转，根节点平移保持为零。若 URDF 已含 `world` link，将使用不冲突的 `dds_world` 等名称，具体以界面提示为准。收到首个有效四元数前使用单位旋转；零四元数、缺失/重复/越界索引、非数值或 NaN/Inf 样本会被跳过并保留上次有效姿态。整体姿态与各组关节位置独立更新，`state_estimator` 暂未上线也可继续查看关节动作。
+
+沿用 LCM 插件的显示接口，在 PlotJuggler 数据集中生成 `/robot_description`（ROS 2 String）和 `/tf`（TFMessage），供现有 3D 场景读取。启用此功能需要安装支持 `ros2msg` 的 ROS 消息解析插件；插件自身不需要 ROS 节点、ROS 运行库或 MuJoCo 运行库。原始 DDS 订阅与 MCAP 录制保持各自的行为，MCAP 只包含所选 DDS 原始话题。
+
+若连接时报 `registered handler has no parse_scalars: std_msgs/msg/String`，需同时更新 ROS 解析插件：旧版 `robot_description` 只有对象解码，没有主程序实时接入所需的空标量入口。修复位于 `../pj-official-plugins/parser_ros/ros_parser.cpp`（相对于本仓库根目录）；仅重新编译 DDS 插件不能修复旧 ROS 插件。首次连接没有保存配置时使用默认设置，实际损坏的 JSON 仍会报告错误。
+
+模型配置保存在 `dds.robot` 中：`enabled`、`urdf_path`、`mujoco_path`，以及 `groups.leg/waist/arm/head` 下的 `topic`、`start`、`count`。恢复配置后重新读取模型文件；缺少 `robot` 配置的旧布局默认关闭 3D 功能。
+
 ## MCAP 数据录制
 
 在连接窗口勾选“连接后录制”，设置目录、单文件最大大小和最多文件数，再选择话题并连接。目录可手动输入，或点击“选择目录…”浏览；不存在的目录会自动创建。录制默认关闭，默认大小为每文件 128 MB、最多 10 个文件。1 MB 为 1024 × 1024 字节；允许设置 1–1048576 MB 和 1–10000 个文件。
@@ -86,7 +115,9 @@ IDL 从当前订阅使用的 Complete TypeObjects 重建，包括依赖类型、
 
 配置通过 PlotJuggler 原有的配置保存机制持久化，字段位于 `dds` 对象中，`selected_topics` 为所选话题名称数组，`idl_files` 为导入的 IDL 源文件路径数组；配置恢复时重新加载这些文件，因此需保留 IDL 及其包含的依赖。恢复配置后可等待所选话题上线。旧配置仍可读取，其中与 DDS 无关的字段会被忽略，再次保存时只写入 DDS 设置。缺失 DDS 配置时使用默认值：Domain 200、默认分区、Best effort、Volatile、Keep last、深度 1；缺失 `selected_topics` 时没有默认选中的话题，需要在连接窗口选择后才能启动。空选择不会回退为订阅全部话题。
 
-插件依赖 PlotJuggler SDK、nlohmann_json、CycloneDDS、系统线程库及动态加载库。MCAP 使用目录内 `contrib/mcap` 中的上游 libmcap 2.1.1 writer 头文件及 MIT 许可证，无需额外下载 MCAP 或依赖 ROS；无压缩录制无需 LZ4/Zstd。通过上级工程构建此插件，CMake 使用 `find_package(CycloneDDS REQUIRED)` 查找原生 CycloneDDS 安装。Conan 提供 SDK 和 JSON 依赖，CycloneDDS 及 `idlc` 由本机安装提供。
+插件依赖 PlotJuggler SDK、nlohmann_json、CycloneDDS、TinyXML2、系统线程库及动态加载库。MCAP 使用目录内 `contrib/mcap` 中的上游 libmcap 2.1.1 writer 头文件及 MIT 许可证，无需额外下载 MCAP 或依赖 ROS；无压缩录制无需 LZ4/Zstd。通过上级工程构建此插件，CMake 使用 `find_package(CycloneDDS REQUIRED)` 查找原生 CycloneDDS 安装，`find_package(tinyxml2 CONFIG REQUIRED)` 查找 XML 解析库。DDS 插件的 Conan 配方提供 SDK、JSON 和 TinyXML2 10.0.0；TinyXML2 默认静态链接，无需在构建容器或运行机器额外安装系统 TinyXML2。CycloneDDS 和 `idlc` 仍由本机安装提供。
+
+更新依赖后，在仓库根目录运行 `./build.sh data_stream_dds`（或 `./pack.sh`），让 Conan 重新生成依赖和工具链，再执行 CMake。不要仅重跑旧构建目录中的 `cmake --build`，旧工具链尚未包含新依赖。第一次构建需要从配置的 Conan 源下载 TinyXML2；后续可复用缓存。`pack.sh` 会在构建失败时立即退出，避免继续复制上次编译的插件。
 
 若 CycloneDDS 安装在非系统目录，将其安装前缀加入 `CMAKE_PREFIX_PATH`，或设置 `CycloneDDS_DIR` 指向其 CMake 配置目录。本机所用 CycloneDDS 位于 `/opt/ros/jazzy`，使用该路径只为查找 CycloneDDS，无需初始化 ROS 环境。
 
@@ -98,4 +129,6 @@ IDL 从当前订阅使用的 Complete TypeObjects 重建，包括依赖类型、
 /home/lmc/.cache/plotjuggler-dds-ui/native/build/data_stream_dds/libdds_stream_source_plugin.so
 ```
 
-当前改动完成了原生编译及插件导出检查，尚未连接实际 DDS 发布端进行运行验收。
+`dds_robot_settings.hpp` 定义模型配置，`dds_robot_model.cpp/.hpp` 负责 XML 顺序、URDF 关节运动学和显示消息生成。可用 `-DPJ_DDS_BUILD_TESTS=ON` 构建 `dds_robot_model_test`，然后在构建目录的 `data_stream_dds` 下运行 CTest；测试覆盖乱序 URDF、MJCF include、四组驱动、固定/mimic/移动关节及错误样本。该程序还可接收三个参数：真实 X1 URDF、MuJoCo XML、ROS 解析插件路径，额外验证 X1 的 31 个关节以及 CDR 与现有解析插件的兼容性。
+
+已通过原生编译、插件导出检查、真实 X1 模型的 31 关节映射测试和现有 ROS 解析插件的 CDR 解码测试。隔离 DDS 域中的实际发布/订阅测试确认四个 data 话题可经过新插件更新模型描述及 TF；另已验证界面导入回调、映射校验和配置保存恢复。

@@ -1,0 +1,7 @@
+<mujoco model="test">
+  <actuator>
+    <motor joint="leg_joint"/>
+    <include file="actuators.xml"/>
+    <velocity joint="arm_joint"/>
+  </actuator>
+</mujoco>

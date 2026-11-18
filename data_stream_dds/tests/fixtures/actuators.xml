@@ -1,0 +1,4 @@
+<mujocoinclude>
+  <position joint="waist_joint"/>
+  <general joint="head_joint"/>
+</mujocoinclude>
