@@ -15,6 +15,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedManifest.cmake)
 add_library(dds_stream_source_plugin SHARED
   dds_stream_source.cpp dds_dynamic.cpp dds_idl.cpp dds_type_schema.cpp dds_recorder.cpp dds_mcap_writer.cpp
   dds_robot_model.cpp)
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedGitHistory.cmake)
+pj_embed_git_history(dds_stream_source_plugin)
 target_compile_features(dds_stream_source_plugin PRIVATE cxx_std_20)
 # Only the upstream MCAP writer is vendored; uncompressed recording needs no
 # extra compression or ROS dependencies.

@@ -7,8 +7,10 @@ INCLUDE_DIRECTORIES(/usr/lib/x86_64-linux-gnu/glib-2.0/include/)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedUi.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedManifest.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedGitHistory.cmake)
 
 add_library(lcm_stream_source_plugin SHARED lcm_stream_source.cpp tokenize.c lcmgen.c robot_state_publisher.cpp)
+pj_embed_git_history(lcm_stream_source_plugin)
 target_compile_features(lcm_stream_source_plugin PRIVATE cxx_std_20)
 target_compile_options(lcm_stream_source_plugin PRIVATE ${PJ_WARNING_FLAGS})
 target_include_directories(lcm_stream_source_plugin SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/contrib

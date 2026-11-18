@@ -7,12 +7,14 @@ INCLUDE_DIRECTORIES(/usr/lib/x86_64-linux-gnu/glib-2.0/include/)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedUi.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedManifest.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedGitHistory.cmake)
 
 # --- Plugin shared library ---
 # mcap is header-only and vendored under contrib/mcap/ from the
 # parallel-reader fork. lz4 + zstd come from conan for chunk decompression.
 
 add_library(lcm_source_plugin SHARED lcm_source.cpp tokenize.c lcmgen.c robot_state_publisher.cpp)
+pj_embed_git_history(lcm_source_plugin)
 
 target_compile_features(lcm_source_plugin PRIVATE cxx_std_20)
 target_compile_options(lcm_source_plugin PRIVATE ${PJ_WARNING_FLAGS})

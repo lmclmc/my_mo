@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "mcap_helpers.hpp"
+#include "update_history.hpp"
 
 // Generated at configure time
 #include "dialog_lcm_ui.hpp"
@@ -203,6 +204,11 @@ class LcmDialog : public PJ::DialogPluginTyped {
     wd.setFilePicker("btnLoadCfg", "Load Config JSON",
                      "JSON 文件 (*.json)", "加载配置文件");
 
+    if (request_update_history_) {
+      wd.requestSubDialog(PjUpdateHistory::dialogUi());
+      request_update_history_ = false;
+    }
+
     // Confirm 按钮：请求关闭对话框
     if (request_accept_) {
       wd.requestAccept();
@@ -327,6 +333,10 @@ class LcmDialog : public PJ::DialogPluginTyped {
   }
 
   bool onClicked(std::string_view widget_name) override {
+    if (widget_name == "updateHistoryButton") {
+      request_update_history_ = true;
+      return true;
+    }
     if (widget_name == "btnSelectAll") {
       auto filtered = filteredChannels();
       for (const auto* ch : filtered) {
@@ -607,4 +617,5 @@ class LcmDialog : public PJ::DialogPluginTyped {
   std::vector<ChannelInfo> all_channels_;
 
   bool request_accept_ = false;
+  bool request_update_history_ = false;
 };

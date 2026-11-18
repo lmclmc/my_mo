@@ -38,20 +38,63 @@
 
    <!-- ===== Author Info (top) ===== -->
    <item>
-    <widget class="QLabel" name="authorLabel">
-     <property name="text">
-      <string>作者：&lt;font color='#42A5F5'&gt;&lt;b&gt;罗敏成&lt;/b&gt;&lt;/font&gt; | 邮箱：&lt;a href='mailto:luomincheng@dreame.tech'&gt;&lt;font color='#2935a1'&gt;&lt;b&gt;luomincheng@dreame.tech&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 手机：&lt;a href='tel:19168720030'&gt;&lt;font color='#a02fa0'&gt;&lt;b&gt;19168720030&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 文档：&lt;a href='https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO'&gt;&lt;font color='#FFB74D'&gt;&lt;b&gt;Wiki&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 仓库：&lt;a href='https://gitlab.magiclab.top/dreamebiped/controlsoftware/motionstudio'&gt;&lt;font color='#AED581'&gt;&lt;b&gt;GitLab&lt;/b&gt;&lt;/font&gt;&lt;/a&gt;</string>
+    <layout class="QHBoxLayout" name="authorLayout" stretch="1,0">
+     <property name="spacing">
+      <number>8</number>
      </property>
-     <property name="styleSheet">
-      <string notr="true">font-size: 12px; color: #888888; padding: 4px;</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeft</set>
-     </property>
-     <property name="openExternalLinks">
-      <bool>true</bool>
-     </property>
-    </widget>
+     <item>
+      <widget class="QLabel" name="authorLabel">
+       <property name="text">
+        <string>作者：&lt;font color='#42A5F5'&gt;&lt;b&gt;罗敏成&lt;/b&gt;&lt;/font&gt; | 邮箱：&lt;a href='mailto:luomincheng@dreame.tech'&gt;&lt;font color='#2935a1'&gt;&lt;b&gt;luomincheng@dreame.tech&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 手机：&lt;a href='tel:19168720030'&gt;&lt;font color='#a02fa0'&gt;&lt;b&gt;19168720030&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 文档：&lt;a href='https://dreametech.feishu.cn/wiki/GHqBwLFbgiaro7ke4EfczB4nnef'&gt;&lt;font color='#FFB74D'&gt;&lt;b&gt;Wiki&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 仓库：&lt;a href='https://gitlab.magiclab.top/a2506magicbotgen2/motionstudio_v2/-/tree/develop?ref_type=heads'&gt;&lt;font color='#AED581'&gt;&lt;b&gt;GitLab&lt;/b&gt;&lt;/font&gt;&lt;/a&gt;</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 12px; color: #888888; padding: 4px;</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeft</set>
+       </property>
+       <property name="openExternalLinks">
+        <bool>true</bool>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="updateHistoryButton">
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>28</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>80</width>
+         <height>28</height>
+        </size>
+       </property>
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
+       <property name="toolTip">
+        <string>查看 GitLab 提交与更新记录</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton { font-size: 12px; color: palette(window-text); background: rgba(102, 155, 151, 20); border: 1px solid rgba(122, 155, 155, 75); border-radius: 6px; padding: 3px 10px; }
+QPushButton:hover { background: rgba(102, 155, 151, 36); border-color: rgba(102, 155, 151, 115); }
+QPushButton:pressed { background: rgba(102, 155, 151, 50); }</string>
+       </property>
+       <property name="text">
+        <string>更新记录</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
 
    <!-- ===== URDF File Import ===== -->

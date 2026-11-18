@@ -12,9 +12,12 @@
    <property name="rightMargin"><number>16</number></property>
    <property name="bottomMargin"><number>16</number></property>
    <item>
+    <layout class="QHBoxLayout" name="authorInfoLayout" stretch="1,0">
+     <property name="spacing"><number>8</number></property>
+    <item>
     <widget class="QLabel" name="authorLabel">
      <property name="text">
-      <string>作者：&lt;font color='#42A5F5'&gt;&lt;b&gt;罗敏成&lt;/b&gt;&lt;/font&gt; | 邮箱：&lt;a href='mailto:luomincheng@dreame.tech'&gt;&lt;font color='#2935a1'&gt;&lt;b&gt;luomincheng@dreame.tech&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 手机：&lt;a href='tel:19168720030'&gt;&lt;font color='#a02fa0'&gt;&lt;b&gt;19168720030&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 文档：&lt;a href='https://dreametech.feishu.cn/wiki/DiyKw9y6mikuEykygWyc0AZvnSO'&gt;&lt;font color='#FFB74D'&gt;&lt;b&gt;Wiki&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 仓库：&lt;a href='https://gitlab.magiclab.top/dreamebiped/controlsoftware/motionstudio'&gt;&lt;font color='#AED581'&gt;&lt;b&gt;GitLab&lt;/b&gt;&lt;/font&gt;&lt;/a&gt;</string>
+      <string>作者：&lt;font color='#42A5F5'&gt;&lt;b&gt;罗敏成&lt;/b&gt;&lt;/font&gt; | 邮箱：&lt;a href='mailto:luomincheng@dreame.tech'&gt;&lt;font color='#2935a1'&gt;&lt;b&gt;luomincheng@dreame.tech&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 手机：&lt;a href='tel:19168720030'&gt;&lt;font color='#a02fa0'&gt;&lt;b&gt;19168720030&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 文档：&lt;a href='https://dreametech.feishu.cn/wiki/GHqBwLFbgiaro7ke4EfczB4nnef'&gt;&lt;font color='#FFB74D'&gt;&lt;b&gt;Wiki&lt;/b&gt;&lt;/font&gt;&lt;/a&gt; | 仓库：&lt;a href='https://gitlab.magiclab.top/a2506magicbotgen2/motionstudio_v2/-/tree/develop?ref_type=heads'&gt;&lt;font color='#AED581'&gt;&lt;b&gt;GitLab&lt;/b&gt;&lt;/font&gt;&lt;/a&gt;</string>
      </property>
      <property name="styleSheet">
       <string notr="true">font-size: 12px; color: #888888; padding: 4px;</string>
@@ -25,7 +28,23 @@
      <property name="openExternalLinks">
       <bool>true</bool>
      </property>
+     <property name="wordWrap"><bool>true</bool></property>
     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="updateHistoryButton">
+      <property name="minimumSize"><size><width>80</width><height>28</height></size></property>
+      <property name="maximumSize"><size><width>80</width><height>28</height></size></property>
+      <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+      <property name="text"><string>更新记录</string></property>
+      <property name="toolTip"><string>查看当前版本的 GitLab 提交记录。</string></property>
+      <property name="autoDefault"><bool>false</bool></property>
+      <property name="styleSheet"><string notr="true">QPushButton { font-size: 12px; color: palette(window-text); background: rgba(102, 155, 151, 20); border: 1px solid rgba(122, 155, 155, 75); border-radius: 6px; padding: 3px 10px; }
+QPushButton:hover { background: rgba(102, 155, 151, 36); border-color: rgba(102, 155, 151, 115); }
+QPushButton:pressed { background: rgba(102, 155, 151, 50); }</string></property>
+     </widget>
+    </item>
+    </layout>
    </item>
    <item>
     <widget class="QGroupBox" name="connectionGroup">
@@ -244,6 +263,9 @@ QTabWidget#settingsTabWidget &gt; QTabBar::tab:selected:focus {
    </item>
    <item>
     <layout class="QHBoxLayout" name="actionLayout">
+     <item><widget class="QPushButton" name="saveConfigButton"><property name="text"><string>保存配置…</string></property><property name="toolTip"><string>将当前 DDS、话题、IDL、3D 模型和录制设置保存为 JSON 文件。</string></property></widget></item>
+     <item><widget class="QPushButton" name="loadConfigButton"><property name="text"><string>加载配置…</string></property><property name="toolTip"><string>从 JSON 文件恢复 DDS 设置，加载后可检查并点击连接。</string></property></widget></item>
+     <item><widget class="QLabel" name="configStatusLabel"><property name="text"><string>配置可保存为 JSON 文件，下次直接加载。</string></property><property name="wordWrap"><bool>true</bool></property><property name="textFormat"><enum>Qt::PlainText</enum></property><property name="sizePolicy"><sizepolicy hsizetype="Expanding" vsizetype="Preferred"><horstretch>1</horstretch><verstretch>0</verstretch></sizepolicy></property></widget></item>
      <item><spacer name="actionSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
      <item><widget class="QPushButton" name="connectButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>连接</string></property><property name="toolTip"><string>订阅选中的话题；启用机器人时同时订阅配置的关节 data 话题及姿态话题 state_estimator。</string></property><property name="default"><bool>true</bool></property></widget></item>
      <item><widget class="QDialogButtonBox" name="buttonBox"><property name="standardButtons"><set>QDialogButtonBox::Cancel</set></property></widget></item>
