@@ -169,6 +169,54 @@ QPushButton:pressed { background: rgba(102, 155, 151, 50); }</string>
     </layout>
    </item>
 
+   <item>
+    <layout class="QHBoxLayout" name="tfIntervalLayout">
+     <item>
+      <widget class="QLabel" name="tfIntervalLabel">
+       <property name="text">
+        <string>TF 时间间隔</string>
+       </property>
+       <property name="buddy">
+        <cstring>tfIntervalSpinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="tfIntervalSpinBox">
+       <property name="suffix">
+        <string> ms</string>
+       </property>
+       <property name="toolTip">
+        <string>按 LCM 消息接收时间计算相邻两批 /tf 的最短间隔</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="tfIntervalHint">
+       <property name="text">
+        <string>间隔越大，实时处理负担越小，3D 模型动作越不流畅。</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font-size: 11px; color: palette(placeholder-text);</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="tfIntervalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+
    <!-- ===== Online mode: Log Save Settings Group ===== -->
    <item>
     <widget class="QGroupBox" name="logSettingsGroup">

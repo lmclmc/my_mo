@@ -6,7 +6,7 @@
 
 struct DdsCdrRecord;
 
-/// 写入一个独立可读的 MCAP 文件，包含 CDR 消息、OMG IDL 类型和文件摘要。
+/// 写入一个独立可读的 MCAP 文件，包含 CDR 消息、类型描述和文件摘要。
 class DdsMcapWriter {
  public:
   /// 独占创建文件并写入 MCAP 文件头。路径已存在或写入失败时抛出异常。

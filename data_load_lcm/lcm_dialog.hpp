@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <limits>
 #include <mcap/reader.hpp>
 #include <nlohmann/json.hpp>
 #include <pj_plugins/sdk/dialog_plugin_typed.hpp>
@@ -57,6 +58,7 @@ bool isAlwaysIncluded(const ChannelInfo& ch) {
 
 class LcmDialog : public PJ::DialogPluginTyped {
   using PJ::DialogPluginTyped::onValueChanged;
+  static constexpr int kDefaultTfIntervalMs = 10;
 
  public:
   // --- Accessors for McapSource ---
@@ -70,6 +72,10 @@ class LcmDialog : public PJ::DialogPluginTyped {
 
   const std::string& urdfpath() const {
     return urdf_file_path_;
+  }
+
+  int tfIntervalMs() const {
+    return tf_interval_ms_;
   }
 
   unsigned maxArraySize() const {
@@ -190,6 +196,8 @@ class LcmDialog : public PJ::DialogPluginTyped {
     wd.setText("xmlPathEdit", xml_file_path_);
     wd.setFilePicker("xmlBrowseBtn", "Browse",
                      "XML 文件 (*.xml);;所有文件 (*)", "选择 XML 文件");
+    wd.setRange("tfIntervalSpinBox", 1, std::numeric_limits<int>::max());
+    wd.setValue("tfIntervalSpinBox", tf_interval_ms_);
 
     // 内联编辑栏 — 显示当前选中行的数据
     wd.setText("topicNameEdit", editing_topic_name_);
@@ -225,6 +233,10 @@ class LcmDialog : public PJ::DialogPluginTyped {
     }
     if (widget_name == "portSpinBox") {
       editing_port_ = value;
+      return false;
+    }
+    if (widget_name == "tfIntervalSpinBox") {
+      tf_interval_ms_ = std::max(1, value);
       return false;
     }
     return false;
@@ -427,6 +439,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
     cfg["filepath"] = filepath_;
     cfg["urdf_file_path"] = urdf_file_path_;
     cfg["xml_file_path"] = xml_file_path_;
+    cfg["tf_interval_ms"] = tf_interval_ms_;
     cfg["max_array_size"] = max_array_size_;
     cfg["clamp_large_arrays"] = clamp_large_arrays_;
     cfg["use_log_time"] = use_log_time_;
@@ -453,6 +466,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
     filepath_ = cfg.value("filepath", std::string{});
     urdf_file_path_ = cfg.value("urdf_file_path", std::string{});
     xml_file_path_ = cfg.value("xml_file_path", std::string{});
+    readTfInterval(cfg);
     max_array_size_ = cfg.value("max_array_size", 500u);
     clamp_large_arrays_ = cfg.value("clamp_large_arrays", true);
     use_log_time_ = cfg.value("use_log_time", cfg.value("use_mcap_log_time", false));
@@ -491,6 +505,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
 
     urdf_file_path_ = cfg.value("urdf_file_path", std::string{});
     xml_file_path_ = cfg.value("xml_file_path", std::string{});
+    readTfInterval(cfg);
     max_array_size_ = cfg.value("max_array_size", 500u);
     clamp_large_arrays_ = cfg.value("clamp_large_arrays", true);
     use_log_time_ = cfg.value("use_log_time", cfg.value("use_mcap_log_time", false));
@@ -522,6 +537,14 @@ class LcmDialog : public PJ::DialogPluginTyped {
   }
 
  private:
+  void readTfInterval(const nlohmann::json& cfg) {
+    tf_interval_ms_ = kDefaultTfIntervalMs;
+    if (const auto it = cfg.find("tf_interval_ms"); it != cfg.end() && it->is_number_integer()) {
+      const double max_interval = std::numeric_limits<int>::max();
+      tf_interval_ms_ = static_cast<int>(std::clamp(it->get<double>(), 1.0, max_interval));
+    }
+  }
+
   /// Channels matching kAlwaysIncludeRules are always loaded: 3D rendering
   /// depends on them even when the user narrows their selection to a handful
   /// of unrelated topics. Idempotent -- safe to call after any mutation of
@@ -595,6 +618,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
   std::string filter_text_;
   std::string urdf_file_path_;
   std::string xml_file_path_;
+  int tf_interval_ms_ = kDefaultTfIntervalMs;
 
   struct TopicConfig {
     std::string topic_name;

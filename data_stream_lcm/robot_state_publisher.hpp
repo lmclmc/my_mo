@@ -234,12 +234,12 @@ private:
   std::map<std::string, DependentJoint> dependent_joints_;
 
   std::map<std::string, double> zeros_;
-  bool use_mimic_;
-  bool use_small_;
-  bool pub_def_positions_;
-  bool pub_def_vels_;
-  bool pub_def_efforts_;
-  double delta_;
+  bool use_mimic_ = false;
+  bool use_small_ = false;
+  bool pub_def_positions_ = false;
+  bool pub_def_vels_ = false;
+  bool pub_def_efforts_ = false;
+  double delta_ = 0.0;
 
   size_t leg_count_ = 0;
   size_t leg_start_index_ = 0;

@@ -2,6 +2,7 @@
 #include "dds_cdr_record.hpp"
 #include "dds_idl.hpp"
 #include "dds_recorder.hpp"
+#include "dds_robot_model.hpp"
 #include "dds_type_schema.hpp"
 
 #include <dds/ddsc/dds_opcodes.h>
@@ -31,6 +32,8 @@
 namespace {
 using Clock = std::chrono::steady_clock;
 constexpr size_t kMaxFields = 100000;
+// CycloneDDS 不接受带 # 的话题名，因此别名不会与原生话题冲突。
+constexpr std::string_view kNativeTfRecordingTopic = "dds#/tf";
 
 // 检查 DDS 调用结果 result。非负值原样返回，负值携带 operation 和 DDS 错误说明抛出异常。
 dds_entity_t checked(dds_entity_t result, const char* operation) {
@@ -707,6 +710,9 @@ struct DdsDynamicStream::Impl {
         const auto condition = checked(dds_create_readcondition(subscription->reader.value, DDS_ANY_STATE), "创建数据条件");
         checked(dds_waitset_attach(waitset, condition, 0), "挂接动态 Reader");
         const bool using_idl = static_cast<bool>(subscription->idl);
+        if (subscription->recording_type && settings.robot.enabled && candidate.topic == kDdsRobotTfTopic)
+          notice(false, "MCAP 将原生 DDS /tf 保存为 " + std::string(kNativeTfRecordingTopic) +
+                        "，/tf 保存 3D 模型生成的变换。");
         subscriptions.emplace(key, std::move(subscription));
         notice(false, "DDS 已建立动态订阅：" + candidate.topic + " (" + candidate.type + ")" +
                       (using_idl ? " · 本地 IDL" : ""));
@@ -748,6 +754,8 @@ struct DdsDynamicStream::Impl {
     }
     // 录制模式每批只调用一次 dds_takecdr。先将 CDR 字节复制到录制队列，再从同一样本解码绘图字段。
     if (recorder && subscription.recording_type) {
+      const std::string_view recording_topic = settings.robot.enabled && subscription.name == kDdsRobotTfTopic
+          ? kNativeTfRecordingTopic : std::string_view(subscription.name);
       std::array<ddsi_serdata*, 32> samples{};
       std::array<dds_sample_info_t, 32> infos{};
       const auto count = checked(dds_takecdr(subscription.reader.value, samples.data(), samples.size(),
@@ -762,7 +770,7 @@ struct DdsDynamicStream::Impl {
           if (ddsi_serdata_size(samples[i]) < 4) throw std::runtime_error("CDR 样本缺少封装头");
           CdrView view(samples[i]);
           if (!view.reference || !view.bytes.iov_base) throw std::runtime_error("无法取得 CDR 样本内容");
-          recorder->submit(subscription.recording_type, subscription.name, timestamp_ns,
+          recorder->submit(subscription.recording_type, recording_topic, timestamp_ns,
                            {static_cast<const std::byte*>(view.bytes.iov_base), view.bytes.iov_len});
         } catch (const std::exception& error) {
           reportSampleError(subscription, "CDR 录制缓存失败：" + std::string(error.what()));
@@ -874,6 +882,13 @@ DdsDynamicStream::DdsDynamicStream(const DdsSettings& settings) : impl_(std::mak
 DdsDynamicStream::~DdsDynamicStream() = default;
 // 停止当前接收实现，并等待剩余录制数据写入文件。
 void DdsDynamicStream::stop() { impl_->stop(); }
+
+void DdsDynamicStream::recordRobotTf(int64_t timestamp_ns, std::span<const uint8_t> payload) {
+  if (!impl_->recorder) return;
+  static const auto type = std::make_shared<const DdsRecordingType>(
+      DdsRecordingType{kDdsRobotTfType, kDdsRobotTfSchema, "ros2msg"});
+  impl_->recorder->submit(type, kDdsRobotTfTopic, timestamp_ns, std::as_bytes(payload));
+}
 
 // 在互斥锁保护下按入队顺序转移当前缓存的样本，重置绘图队列的字段统计和溢出提示状态。
 std::vector<DdsDynamicRecord> DdsDynamicStream::takeRecords() {

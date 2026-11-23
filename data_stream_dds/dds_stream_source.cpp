@@ -23,6 +23,7 @@ PJ::Status DdsStreamSource::onStart() {
     auto settings = dialog_.ddsSettings();
     if (settings.robot.enabled) {
       // 开启 3D 时先校验模型并补齐其 DDS 输入话题，再为 URDF 和 TF 建立 ROS 消息解析绑定。
+      tf_interval_ = std::chrono::milliseconds(settings.robot.tf_interval_ms);
       robot_model_ = std::make_unique<DdsRobotModel>(settings.robot);
       settings.robot.addTopics(settings.selected_topics);
       auto bind = [this](std::string_view topic, std::string_view type, std::string_view schema) {
@@ -34,7 +35,7 @@ PJ::Status DdsStreamSource::onStart() {
         return *result;
       };
       robot_description_handle_ = bind("/robot_description", "std_msgs/msg/String", "string data\n");
-      robot_tf_handle_ = bind("/tf", "tf2_msgs/msg/TFMessage", kDdsRobotTfSchema);
+      robot_tf_handle_ = bind(kDdsRobotTfTopic, kDdsRobotTfType, kDdsRobotTfSchema);
       robot_description_bytes_ = std::make_shared<const std::vector<uint8_t>>(
           ddsRobotDescriptionCdr(robot_model_->description()));
       runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kInfo,
@@ -110,7 +111,7 @@ PJ::Status DdsStreamSource::onPoll() {
 PJ::Status DdsStreamSource::publishRobot(bool force) {
   const auto now = std::chrono::steady_clock::now();
   // 模型描述每隔 5 秒重新提交，供稍后打开的 3D 视图在宿主实时保留窗口内取得 URDF。
-  // TF 至少间隔 16 毫秒且仅在姿态有更新时提交，此节流只影响 3D 发布。
+  // TF 仅在姿态有更新且达到配置的时间间隔时提交。
   if (force || now - last_description_publish_ >= std::chrono::seconds(5)) {
     const auto bytes = robot_description_bytes_;
     const auto description_timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -120,7 +121,7 @@ PJ::Status DdsStreamSource::publishRobot(bool force) {
     if (!status) return status;
     last_description_publish_ = now;
   }
-  if (!force && (!robot_dirty_ || now - last_robot_publish_ < std::chrono::milliseconds(16)))
+  if (!force && (!robot_dirty_ || now - last_robot_publish_ < tf_interval_))
     return PJ::okStatus();
   try {
     const auto bytes = std::make_shared<const std::vector<uint8_t>>(
@@ -128,6 +129,7 @@ PJ::Status DdsStreamSource::publishRobot(bool force) {
     const auto status = runtimeHost().pushMessage(robot_tf_handle_, robot_timestamp_ns_,
         [bytes] { return PJ::sdk::PayloadView{bytes}; });
     if (!status) return status;
+    dds_stream_->recordRobotTf(robot_timestamp_ns_, *bytes);
     last_robot_publish_ = now;
     robot_dirty_ = false;
     return PJ::okStatus();

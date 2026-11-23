@@ -51,6 +51,7 @@ class DdsStreamSource : public PJ::StreamSourceBase {
   PJ::ParserBindingHandle robot_description_handle_{}, robot_tf_handle_{};
   std::shared_ptr<const std::vector<uint8_t>> robot_description_bytes_;
   std::map<std::string, std::string> robot_errors_;
+  std::chrono::milliseconds tf_interval_{};
   std::chrono::steady_clock::time_point last_robot_publish_{}, last_description_publish_{};
   int64_t robot_timestamp_ns_ = 0;
   bool robot_dirty_ = false;

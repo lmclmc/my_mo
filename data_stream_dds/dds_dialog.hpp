@@ -72,6 +72,8 @@ class DdsDialog : public PJ::DialogPluginTyped {
     wd.setText("robotMujocoPathEdit", settings_.robot.mujoco_path);
     wd.setFilePicker("importUrdfButton", "导入 URDF…", "URDF 文件 (*.urdf *.xml);;所有文件 (*)", "选择机器人 URDF");
     wd.setFilePicker("importMujocoButton", "导入 MuJoCo XML…", "MuJoCo XML (*.xml);;所有文件 (*)", "选择 MuJoCo 模型 XML");
+    wd.setRange("tfIntervalSpinBox", DdsRobotSettings::kMinTfIntervalMs, DdsRobotSettings::kMaxTfIntervalMs)
+      .setValue("tfIntervalSpinBox", settings_.robot.tf_interval_ms);
     for (size_t g = 0; g < settings_.robot.groups.size(); ++g) {
       const auto prefix = std::string("robot_") + DdsRobotSettings::kGroupNames[g];
       const auto& group = settings_.robot.groups[g];
@@ -265,6 +267,10 @@ class DdsDialog : public PJ::DialogPluginTyped {
   /// 处理整数控件。widget 是控件名，value 是输入值，按对应范围截断。
   /// 映射、域或录制项需要刷新时返回 true，历史深度和阻塞时间只写入配置并返回 false。
   bool onValueChanged(std::string_view widget, int value) override {
+    if (widget == "tfIntervalSpinBox") {
+      settings_.robot.tf_interval_ms = std::max(DdsRobotSettings::kMinTfIntervalMs, value);
+      return false;
+    }
     for (size_t g = 0; g < settings_.robot.groups.size(); ++g) {
       const auto prefix = std::string("robot_") + DdsRobotSettings::kGroupNames[g];
       auto& group = settings_.robot.groups[g];
@@ -477,7 +483,7 @@ class DdsDialog : public PJ::DialogPluginTyped {
         {"max_file_size_mb", settings_.recording.max_file_size_mb}, {"max_files", settings_.recording.max_files}}}};
     auto& robot = cfg["dds"]["robot"];
     robot = {{"enabled", settings_.robot.enabled}, {"urdf_path", settings_.robot.urdf_path},
-             {"mujoco_path", settings_.robot.mujoco_path}};
+             {"mujoco_path", settings_.robot.mujoco_path}, {"tf_interval_ms", settings_.robot.tf_interval_ms}};
     for (size_t g = 0; g < settings_.robot.groups.size(); ++g) {
       const auto& group = settings_.robot.groups[g];
       robot["groups"][DdsRobotSettings::kGroupNames[g]] = {
@@ -542,6 +548,11 @@ class DdsDialog : public PJ::DialogPluginTyped {
         next.robot.enabled = it->value("enabled", false);
         next.robot.urdf_path = it->value("urdf_path", std::string{});
         next.robot.mujoco_path = it->value("mujoco_path", std::string{});
+        if (const auto interval = it->find("tf_interval_ms"); interval != it->end() && interval->is_number_integer()) {
+          const double min_ms = DdsRobotSettings::kMinTfIntervalMs;
+          const double max_ms = DdsRobotSettings::kMaxTfIntervalMs;
+          next.robot.tf_interval_ms = static_cast<int>(std::clamp(interval->get<double>(), min_ms, max_ms));
+        }
         const auto groups = it->value("groups", nlohmann::json::object());
         if (!groups.is_object()) return false;
         for (size_t g = 0; g < next.robot.groups.size(); ++g) {

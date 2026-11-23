@@ -9,7 +9,7 @@
 #include <string>
 #include <string_view>
 
-/// 将订阅侧交付的原始 CDR 样本放入有界队列，由独立线程写入滚动 MCAP 文件。
+/// 将 CDR 样本放入有界队列，由独立线程写入滚动 MCAP 文件。
 class DdsRecorder {
  public:
   /// 录制状态回调。warning 表示是否为警告，text 为可直接显示的中文消息。
@@ -31,9 +31,9 @@ class DdsRecorder {
   DdsRecorder& operator=(const DdsRecorder&) = delete;
 
   /// 校验队列容量并同步复制样本供后台写入。停止收录后忽略后续提交，无返回值。
-  /// @param type 与该样本对应的 DDS 类型描述，以共享所有权传入。
-  /// @param topic DDS 话题名，成功入队时复制。
-  /// @param timestamp_ns 订阅线程读取样本时的 Unix epoch 纳秒时间。
+  /// @param type 与该样本对应的类型描述，以共享所有权传入。
+  /// @param topic 话题名，成功入队时复制。
+  /// @param timestamp_ns 样本的 Unix epoch 纳秒时间。
   /// @param payload 完整 CDR 视图，包含四字节封装头，提交返回后即可释放原缓冲区。
   void submit(std::shared_ptr<const DdsRecordingType> type, std::string_view topic,
               int64_t timestamp_ns, std::span<const std::byte> payload);

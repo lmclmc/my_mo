@@ -66,7 +66,7 @@ std::string recordingName(int slot) {
 size_t recordBytes(const DdsRecordingType& type, std::string_view topic, std::span<const std::byte> payload) {
   // 每条样本都计入共享类型的容量，避免类型对象与字符串的额外占用导致预算低估。
   return sizeof(DdsCdrRecord) + topic.size() + payload.size() +
-         sizeof(type) + type.name.capacity() + type.idl.capacity();
+         sizeof(type) + type.name.capacity() + type.definition.capacity() + type.schema_encoding.capacity();
 }
 }  // namespace
 
@@ -206,8 +206,9 @@ struct DdsRecorder::Impl {
   // 校验并写入已拥有载荷的 record，按需要轮转。样本无效、文件容量不足或写盘失败时抛出异常。
   void writeRecord(const DdsCdrRecord& record) {
     if (record.timestamp_ns < 0) throw std::runtime_error("MCAP 接收时间不能早于 Unix epoch");
-    if (!record.type || record.type->name.empty() || record.type->idl.empty() || record.payload.size() < 4)
-      throw std::runtime_error("CDR 录制样本或 IDL 类型描述不完整");
+    if (!record.type || record.type->name.empty() || record.type->definition.empty() ||
+        record.type->schema_encoding.empty() || record.payload.size() < 4)
+      throw std::runtime_error("CDR 录制样本或类型描述不完整");
     if (!output || !output->fits(record, max_file_bytes)) {
       // 先确认单条样本与文件头、类型、通道、统计和文件尾一起能放进新文件，再执行会删除旧文件的轮转。
       if (DdsMcapWriter::minimumFileSize(record) > max_file_bytes)

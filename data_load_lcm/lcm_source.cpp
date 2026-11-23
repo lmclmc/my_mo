@@ -865,7 +865,7 @@ float64 w
 
   for (auto transform : tf_transforms) {
     transform.header.stamp.sec = event->timestamp / 1000000;
-    transform.header.stamp.nanosec = event->timestamp * 1000;
+    transform.header.stamp.nanosec = (event->timestamp % 1000000) * 1000;
     auto tf_bytes = std::make_shared<std::vector<uint8_t>>(serializeTransform(transform));
     // 5. 将消息载荷交给 PlotJuggler
     (void)runtimeHost().pushMessage(
@@ -880,8 +880,7 @@ float64 w
 
 void LcmSource::publishJointState(const lcm::LogEvent* event,
                                   const sensor_msgs::msg::JointState& joint_state) {
-  static PJ::ParserBindingHandle joint_state_handle = PJ::ParserBindingHandle();
-  if (joint_state_handle.id == 0) {
+  if (joint_state_handle_.id == 0) {
     // 处理 joint_state
     static constexpr char JOINT_STATE_SCHEMA[] = R"SCHEMA(
 std_msgs/Header header
@@ -919,7 +918,7 @@ uint32 nanosec
 
     // 注册或获取对应的解析器绑定
     auto joint_state_result = runtimeHost().ensureParserBinding(joint_state_request);
-    joint_state_handle = *joint_state_result;
+    joint_state_handle_ = *joint_state_result;
   }
 
   auto joint_state_tmp = joint_state;
@@ -928,7 +927,7 @@ uint32 nanosec
   auto joint_state_bytes = std::make_shared<std::vector<uint8_t>>(serializeJointState(joint_state_tmp));
   // 5. 将消息载荷交给 PlotJuggler
   (void)runtimeHost().pushMessage(
-      joint_state_handle,
+      joint_state_handle_,
       event->timestamp * 1000,
       [joint_state_bytes]() mutable
       {
@@ -1181,6 +1180,7 @@ void LcmSource::savePoint(const lcm::LogEvent* event, const std::string& topic_n
 PJ::Status LcmSource::importData() {
   m_image_handle_ = PJ::ParserBindingHandle();
   m_tf_handle_ = PJ::ParserBindingHandle();
+  joint_state_handle_ = PJ::ParserBindingHandle();
   m_marker_handle_ = PJ::ParserBindingHandle();
   m_marker_error_bar_handle_ = PJ::ParserBindingHandle();
 
@@ -1315,23 +1315,37 @@ PJ::Status LcmSource::importData() {
   long long max_size = get_file_size(lcm_log.getFilePtr());
   (void)runtimeHost().progressStart("Importing LCM", max_size, true);
   // 4. 核心快转主循环
-  int64_t last_TF_timestamp = 0;
+  const int64_t tf_interval_us = static_cast<int64_t>(dialog_.tfIntervalMs()) * 1000;
+  constexpr int64_t kJointStateIntervalUs = 10000;
+  std::optional<int64_t> last_tf_timestamp;
+  std::optional<int64_t> last_joint_state_timestamp;
 
   while (true) {
     const lcm::LogEvent* event = lcm_log.readNextEvent();
     // std::cout << "event->channel: " << event->channel << std::endl;
 
     if (!event) break; // 读完整个 log 文件，平稳退出
-    //每100ms发布一次TF
-    if (event->timestamp - last_TF_timestamp > 100000) {
+    const bool publish_tf = !last_tf_timestamp ||
+                            event->timestamp - *last_tf_timestamp >= tf_interval_us;
+    const bool publish_joint_state = !last_joint_state_timestamp ||
+                                     event->timestamp - *last_joint_state_timestamp > kJointStateIntervalUs;
+    if (publish_joint_state) {
       (void)runtimeHost().progressUpdate(ftell(lcm_log.getFilePtr()));
-      last_TF_timestamp = event->timestamp;
-      robot_state_publisher_.publishTransforms(
-        [this, event] (const std::vector<geometry_msgs::msg::TransformStamped>& tf_transforms) {
-          publishTF(event, tf_transforms);}, 
-        [this, event] (const sensor_msgs::msg::JointState& joint_state) {
-          publishJointState(event, joint_state);
-        });
+      last_joint_state_timestamp = event->timestamp;
+    }
+    if (publish_tf) {
+      last_tf_timestamp = event->timestamp;
+    }
+    if (publish_tf || publish_joint_state) {
+      std::function<void(const std::vector<geometry_msgs::msg::TransformStamped>&)> write_tf;
+      if (publish_tf) {
+        write_tf = [this, event](const auto& transforms) { publishTF(event, transforms); };
+      }
+      std::function<void(const sensor_msgs::msg::JointState&)> write_joint_state;
+      if (publish_joint_state) {
+        write_joint_state = [this, event](const auto& joint_state) { publishJointState(event, joint_state); };
+      }
+      robot_state_publisher_.publishTransforms(std::move(write_tf), std::move(write_joint_state));
       publishTfCount = 0;
     }
     

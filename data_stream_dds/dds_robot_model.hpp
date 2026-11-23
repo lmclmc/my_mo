@@ -63,7 +63,9 @@ std::vector<uint8_t> ddsRobotDescriptionCdr(const std::string& description);
 // 将 transforms 编码为 ROS 2 tf2_msgs/msg/TFMessage 的小端 CDR 字节。
 // 无法编码的秒数或过长的坐标系名称会引发异常。
 std::vector<uint8_t> ddsRobotTransformsCdr(const PJ::sdk::FrameTransforms& transforms);
-// 供 ros2msg 解析器解码 TF 消息的展开式 ROS 2 消息定义。
+// 实时发布和 MCAP 录制共用的 TF 话题与 ROS 2 消息定义。
+inline constexpr char kDdsRobotTfTopic[] = "/tf";
+inline constexpr char kDdsRobotTfType[] = "tf2_msgs/msg/TFMessage";
 inline constexpr char kDdsRobotTfSchema[] = R"(geometry_msgs/TransformStamped[] transforms
 ================================================================================
 MSG: geometry_msgs/TransformStamped

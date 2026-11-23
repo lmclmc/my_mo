@@ -292,7 +292,12 @@ msg->header.stamp.nanosec = 0;
   
 
 
-  callback3(*msg);
+  if (callback3) {
+    callback3(*msg);
+  }
+  if (!callback2) {
+    return;
+  }
 
 
 

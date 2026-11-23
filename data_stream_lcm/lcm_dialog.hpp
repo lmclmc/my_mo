@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <limits>
 #include <mcap/reader.hpp>
 #include <nlohmann/json.hpp>
 #include <pj_plugins/sdk/dialog_plugin_typed.hpp>
@@ -59,6 +60,7 @@ bool isAlwaysIncluded(const ChannelInfo& ch) {
 
 class LcmDialog : public PJ::DialogPluginTyped {
   using PJ::DialogPluginTyped::onValueChanged;
+  static constexpr int kDefaultTfIntervalMs = 10;
 
  public:
   // --- Accessors for McapSource ---
@@ -72,6 +74,10 @@ class LcmDialog : public PJ::DialogPluginTyped {
 
   const std::string& urdfpath() const {
     return urdf_file_path_;
+  }
+
+  int tfIntervalMs() const {
+    return tf_interval_ms_;
   }
 
   const std::string& log_save_path() const {
@@ -204,6 +210,8 @@ class LcmDialog : public PJ::DialogPluginTyped {
     wd.setText("xmlPathEdit", xml_file_path_);
     wd.setFilePicker("xmlBrowseBtn", "Browse",
                      "XML 文件 (*.xml);;所有文件 (*)", "选择 XML 文件");
+    wd.setRange("tfIntervalSpinBox", 1, std::numeric_limits<int>::max());
+    wd.setValue("tfIntervalSpinBox", tf_interval_ms_);
 
     // 日志保存设置
     wd.setText("logPathEdit", log_save_path_);
@@ -246,6 +254,10 @@ class LcmDialog : public PJ::DialogPluginTyped {
     }
     if (widget_name == "portSpinBox") {
       editing_port_ = value;
+      return false;
+    }
+    if (widget_name == "tfIntervalSpinBox") {
+      tf_interval_ms_ = std::max(1, value);
       return false;
     }
     return false;
@@ -464,6 +476,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
     cfg["filepath"] = filepath_;
     cfg["urdf_file_path"] = urdf_file_path_;
     cfg["xml_file_path"] = xml_file_path_;
+    cfg["tf_interval_ms"] = tf_interval_ms_;
     cfg["log_save_path"] = log_save_path_;
     cfg["log_max_size"] = log_max_size_;
     cfg["log_max_files_num"] = log_max_files_num_;
@@ -493,6 +506,11 @@ class LcmDialog : public PJ::DialogPluginTyped {
     filepath_ = cfg.value("filepath", std::string{});
     urdf_file_path_ = cfg.value("urdf_file_path", std::string{});
     xml_file_path_ = cfg.value("xml_file_path", std::string{});
+    tf_interval_ms_ = kDefaultTfIntervalMs;
+    if (const auto it = cfg.find("tf_interval_ms"); it != cfg.end() && it->is_number_integer()) {
+      const double max_interval = std::numeric_limits<int>::max();
+      tf_interval_ms_ = static_cast<int>(std::clamp(it->get<double>(), 1.0, max_interval));
+    }
     log_save_path_ = cfg.value("log_save_path", std::string{});
     log_max_size_ = cfg.value("log_max_size", 100);
     log_max_files_num_ = cfg.value("log_max_files_num", 10);
@@ -728,6 +746,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
   std::string filter_text_;
   std::string urdf_file_path_;
   std::string xml_file_path_;
+  int tf_interval_ms_ = kDefaultTfIntervalMs;
   std::string log_save_path_;
   int log_max_size_ = 100;
   int log_max_files_num_ = 10;

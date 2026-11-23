@@ -79,7 +79,7 @@ PlotJuggler 左侧变量采用“原生 DDS 话题名 / 实际字段路径”，
 
 `state_estimator.quat[0..3]` 按 X1 的 `[w, x, y, z]` 顺序读取，归一化后驱动 `world → URDF 根 link`（X1 为 `pelvis`）的旋转，根节点平移保持为零。若 URDF 已含 `world` link，将使用不冲突的 `dds_world` 等名称，具体以界面提示为准。收到首个有效四元数前使用单位旋转；零四元数、缺失/重复/越界索引、非数值或 NaN/Inf 样本会被跳过并保留上次有效姿态。整体姿态与各组关节位置独立更新，`state_estimator` 暂未上线也可继续查看关节动作。
 
-沿用 LCM 插件的显示接口，在 PlotJuggler 数据集中生成 `/robot_description`（ROS 2 String）和 `/tf`（TFMessage），供现有 3D 场景读取。启用此功能需要安装支持 `ros2msg` 的 ROS 消息解析插件；插件自身不需要 ROS 节点、ROS 运行库或 MuJoCo 运行库。原始 DDS 订阅与 MCAP 录制保持各自的行为，MCAP 只包含所选 DDS 原始话题。
+沿用 LCM 插件的显示接口，在 PlotJuggler 数据集中生成 `/robot_description`（ROS 2 String）和 `/tf`（TFMessage），供现有 3D 场景读取。启用此功能需要安装支持 `ros2msg` 的 ROS 消息解析插件。插件自身不需要 ROS 节点、ROS 运行库或 MuJoCo 运行库。
 
 若连接时报 `registered handler has no parse_scalars: std_msgs/msg/String`，需同时更新 ROS 解析插件：旧版 `robot_description` 只有对象解码，没有主程序实时接入所需的空标量入口。修复位于 `../pj-official-plugins/parser_ros/ros_parser.cpp`（相对于本仓库根目录）；仅重新编译 DDS 插件不能修复旧 ROS 插件。首次连接没有保存配置时使用默认设置，实际损坏的 JSON 仍会报告错误。
 
@@ -91,11 +91,13 @@ PlotJuggler 左侧变量采用“原生 DDS 话题名 / 实际字段路径”，
 
 录制生成标准 `.mcap` 文件。所选话题的 Channel 使用 `messageEncoding = "cdr"`，Schema 使用 `encoding = "omgidl"`，Schema 名称是原生 DDS 完整类型名。不同消息类型分别保存类型描述；相同订阅类型被多个话题使用时可共享 Schema。每个滚动文件独立携带其实际使用的 Schema、Channel 和统计摘要。MCAP Message 的 `logTime` 和 `publishTime` 均使用上位机接收时间（Unix epoch 纳秒），与实时曲线保持一致。
 
+同时启用 3D 机器人时，MCAP 还会保存生成的 `/tf`，使用 `cdr`、`ros2msg` 和 `tf2_msgs/msg/TFMessage`，采样间隔和时间戳与实时 3D 显示一致。若也订阅了名为 `/tf` 的原生 DDS 话题，其样本在 MCAP 中保存为 `dds#/tf`。回放时可在 3D 窗口加载对应的 URDF。
+
 录制通过 CycloneDDS `dds_takecdr` 获取序列化样本，保存包含四字节 DDS encapsulation header 的 CDR 数据，保留 CycloneDDS 提供的字节序与 XCDR1/XCDR2 表示。数值、字符串、数组、sequence 及其嵌套结构直接保留在 CDR 中；NaN/Infinity、64 位整数、空 sequence 不经过 JSON 转换，也不受绘图字段数量上限影响。这里保存的是 Reader 提供的 CDR 表示；CycloneDDS 可能进行字节序规范化或类型转换，文件不包含 RTPS 网络包。
 
 IDL 从当前订阅使用的 Complete TypeObjects 重建，包括依赖类型、module、结构成员顺序、成员 ID、key/optional/external/must_understand、extensibility、数组维度、sequence/string 的界限、枚举值和 bitmask 位位置。在线 XTypes 及本地 IDL 两条订阅路径均使用同一套导出逻辑；本地 IDL 已展开的依赖也会进入类型图，读取录制文件不依赖原 IDL 文件路径。类型描述针对插件当前支持的类型生成，不保留源文件注释、常量及所有用户自定义注解。无法导出类型描述的话题会明确提示并继续订阅绘图，该话题暂不录制。
 
-只保存选中话题的有效数据样本，DDS dispose/unregister 等生命周期通知不写入 MCAP。录制发生在反序列化和字段展开之前，空字段样本、绘图队列淘汰及字段展开失败不会丢弃已经进入录制队列的 CDR 样本。Channel 元数据标明来源为 CycloneDDS、序列化为 DDS CDR、时间来自本机接收、Schema 来自 Complete TypeObjects。
+原生 DDS 话题只保存选中话题的有效数据样本，DDS dispose/unregister 等生命周期通知不写入 MCAP。原生样本在反序列化和字段展开之前入队，空字段样本、绘图队列淘汰及字段展开失败不会丢弃已经进入录制队列的 CDR 样本。其 Channel 元数据标明来源为 CycloneDDS、序列化为 DDS CDR、时间来自本机接收、Schema 来自 Complete TypeObjects。
 
 加载文件需要消费端提供支持该类型及 XCDR 表示的 `cdr` / `omgidl` 解析能力。PlotJuggler 的 MCAP 加载器会根据 `omgidl` 选择相应消息解析插件（当前官方插件为 ROS Parser）；DDS 订阅插件本身不依赖 ROS。MCAP 容器格式可读取不代表任意第三方解析器都支持全部 DDS 类型、注解或 XCDR2。
 

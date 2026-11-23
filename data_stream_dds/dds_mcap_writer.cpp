@@ -21,11 +21,12 @@
 
 namespace {
 struct RecordingTypeLess {
-  // 以类型名和完整 IDL 文本比较 lhs 与 rhs。lhs 排在前面时返回 true，相同定义归并到同一个 Schema。
+  // 只有类型名、编码和定义都相同的类型才共享一个 Schema。
   bool operator()(const DdsRecordingType* lhs, const DdsRecordingType* rhs) const {
     if (lhs == rhs) return false;
     if (lhs->name != rhs->name) return lhs->name < rhs->name;
-    return lhs->idl < rhs->idl;
+    if (lhs->schema_encoding != rhs->schema_encoding) return lhs->schema_encoding < rhs->schema_encoding;
+    return lhs->definition < rhs->definition;
   }
 };
 
@@ -39,18 +40,23 @@ mcap::McapWriterOptions writerOptions() {
   return options;
 }
 
-// 将 type 的名称和 IDL 转为 MCAP Schema，并赋予调用方指定的 id。
+// 将类型描述转为 MCAP Schema，并赋予调用方指定的 id。
 mcap::Schema makeSchema(const DdsRecordingType& type, mcap::SchemaId id) {
-  mcap::Schema schema(type.name, "omgidl", type.idl);
+  mcap::Schema schema(type.name, type.schema_encoding, type.definition);
   schema.id = id;
   return schema;
 }
 
 // 用 topic 创建 CDR 通道，返回编号为 id 并关联 schema_id 的记录。元数据记录编码和时间来源。
-mcap::Channel makeChannel(std::string_view topic, mcap::ChannelId id, mcap::SchemaId schema_id) {
-  mcap::Channel channel(topic, "cdr", schema_id,
-      {{"source", "CycloneDDS"}, {"timestamp_source", "host_receive_time"},
-       {"serialization", "DDS_CDR"}, {"schema_source", "Complete_TypeObjects"}});
+mcap::Channel makeChannel(std::string_view topic, const DdsRecordingType& type,
+                          mcap::ChannelId id, mcap::SchemaId schema_id) {
+  mcap::Channel channel(topic, "cdr", schema_id);
+  if (type.schema_encoding == "omgidl") {
+    channel.metadata = {{"source", "CycloneDDS"}, {"timestamp_source", "host_receive_time"},
+                        {"serialization", "DDS_CDR"}, {"schema_source", "Complete_TypeObjects"}};
+  } else {
+    channel.metadata = {{"source", "PlotJuggler"}, {"timestamp_source", "tf_header_time"}};
+  }
   channel.id = id;
   return channel;
 }
@@ -218,7 +224,8 @@ struct DdsMcapWriter::Impl {
     if (channels.find({record.topic, schema_id}) == channels.end()) {
       if (channels.size() >= std::numeric_limits<mcap::ChannelId>::max()) return false;
       const uint64_t added_schema_bytes = new_schema ? recordSize(makeSchema(*record.type, schema_id)) : 0;
-      const auto channel = makeChannel(record.topic, static_cast<mcap::ChannelId>(channels.size() + 1), schema_id);
+      const auto channel = makeChannel(record.topic, *record.type,
+                                       static_cast<mcap::ChannelId>(channels.size() + 1), schema_id);
       extra += recordSize(channel);
       extra += added_schema_bytes;
       tail = tailWith(channel, added_schema_bytes);
@@ -248,15 +255,15 @@ struct DdsMcapWriter::Impl {
         writer.addSchema(definition);
         schema = schemas.emplace(record.type.get(), SchemaEntry{record.type, definition.id}).first;
       }
-      auto channel = makeChannel(record.topic, static_cast<mcap::ChannelId>(channels.size() + 1), schema->second.id);
+      auto channel = makeChannel(record.topic, *record.type,
+                                 static_cast<mcap::ChannelId>(channels.size() + 1), schema->second.id);
       tail_bytes = tailWith(channel, added_schema_bytes);
       schema_bytes += added_schema_bytes;
       writer.addChannel(channel);
       channel_bytes += recordSize(channel);
       found = channels.emplace(key, channel.id).first;
     }
-    // 两个 MCAP 时间字段统一使用上位机订阅读取时刻，便于录制回放与实时曲线对齐。
-    // 样本中的业务时间和序号仍保留在原始 CDR 数据中，MCAP Message 的 sequence 字段保持默认值。
+    // 两个 MCAP 时间字段均使用对应的实时数据时间，便于回放对齐。
     mcap::Message message{};
     message.channelId = found->second;
     message.logTime = static_cast<uint64_t>(record.timestamp_ns);
@@ -305,7 +312,7 @@ DdsMcapWriter::~DdsMcapWriter() = default;
 // 返回只写入 record 时的完整文件字节数。类型编号和通道编号取首个有效值 1。
 uint64_t DdsMcapWriter::minimumFileSize(const DdsCdrRecord& record) {
   const auto schema = makeSchema(*record.type, 1);
-  const auto channel = makeChannel(record.topic, 1, 1);
+  const auto channel = makeChannel(record.topic, *record.type, 1, 1);
   mcap::Statistics statistics{};
   statistics.channelMessageCounts.emplace(1, 1);
   const auto channel_bytes = recordSize(channel);

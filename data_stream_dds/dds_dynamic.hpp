@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <variant>
 #include <vector>
@@ -42,6 +43,8 @@ class DdsDynamicStream {
   std::vector<DdsDynamicRecord> takeRecords();
   // 取走当前缓存的通知，返回的文本由调用方拥有。
   std::vector<DdsDynamicNotice> takeNotices();
+  // 将实时模型已发布的 TF 交给录制队列。录制关闭时直接返回。
+  void recordRobotTf(int64_t timestamp_ns, std::span<const uint8_t> payload);
   // 唤醒并等待接收线程退出，再清空录制队列并关闭文件。可在同一控制线程上重复调用。
   void stop();
 

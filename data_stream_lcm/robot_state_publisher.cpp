@@ -168,6 +168,15 @@ RobotStatePublisher::RobotStatePublisher()
 }
 
 void RobotStatePublisher::init(const std::string& urdf_file_path, const std::string& xml_file_path, std::function<void(const std::string&)> callback){
+  joint_list_.clear();
+  free_joints_.clear();
+  dependent_joints_.clear();
+  mimic_.clear();
+  segments_.clear();
+  segments_fixed_.clear();
+  last_publish_time_.clear();
+  imu_quaternion_ = geometry_msgs::msg::Quaternion{};
+  root_link_name_ = "pelvis";
 
   std::string urdf_xml = readTextFileToString(urdf_file_path);
   tinyxml2::XMLDocument doc;
@@ -292,7 +301,9 @@ msg->header.stamp.nanosec = 0;
   
 
 
-  callback3(*msg);
+  if (callback3) {
+    callback3(*msg);
+  }
 
 
 
@@ -400,16 +411,24 @@ msg->header.stamp.nanosec = 0;
 // }
 
 void RobotStatePublisher::setArmPos(int idx, double pos) {
-  free_joints_[joint_list_[idx + arm_start_index_]].position = pos;
-  //free_joints_[joint_list_[27]].position = 0.9;
+  const size_t joint_index = idx + arm_start_index_;
+  if (joint_index < joint_list_.size()) {
+    free_joints_[joint_list_[joint_index]].position = pos;
+  }
 }
 
 void RobotStatePublisher::setLegPos(int idx, double pos) {
-  free_joints_[joint_list_[idx]].position = pos;
+  const size_t joint_index = idx;
+  if (joint_index < joint_list_.size()) {
+    free_joints_[joint_list_[joint_index]].position = pos;
+  }
 }
 
 void RobotStatePublisher::setWaistPos(int idx, double pos) {
-  free_joints_[joint_list_[idx + waist_start_index_]].position = pos;
+  const size_t joint_index = idx + waist_start_index_;
+  if (joint_index < joint_list_.size()) {
+    free_joints_[joint_list_[joint_index]].position = pos;
+  }
 }
 
 void RobotStatePublisher::setStateEstimator(int idx, double pos) {

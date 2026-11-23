@@ -8,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <pj_base/sdk/data_source_patterns.hpp>
 #include <pj_plugins/sdk/encoding_utils.hpp>
 #include <pj_plugins/sdk/endpoint.hpp>
@@ -133,7 +134,7 @@ public:
     return dialog_.saveConfig();
   }
 
-  PJ::Status loadConfig(std::string_view config_json);
+  PJ::Status loadConfig(std::string_view config_json) override;
   
   PJ::Status onStart() override;
 
@@ -192,8 +193,8 @@ private:
   int log_max_size;
   int log_max_files_num;
 
-  uint32_t publishTfCount = 0;
-  int64_t last_TF_timestamp = 0;
+  int64_t tf_interval_us_ = 0;
+  std::optional<int64_t> last_tf_timestamp_;
   RobotStatePublisher robot_state_publisher_;
 
   PJ::ParserBindingHandle m_image_handle_;

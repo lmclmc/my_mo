@@ -219,6 +219,7 @@ private:
   std::vector<mcap::MessageByteStore> byte_stores_;
 
   RobotStatePublisher robot_state_publisher_;
+  PJ::ParserBindingHandle joint_state_handle_{};
 
   PJ::ParserBindingHandle m_image_handle_;
   PJ::ParserBindingHandle m_tf_handle_;

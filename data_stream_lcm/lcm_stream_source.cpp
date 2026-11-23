@@ -2,6 +2,8 @@
 
 #include "lidar_subscriber.hpp"
 
+#include <charconv>
+
 static std::vector<uint8_t> serializeVisualization(
     visualization_msgs::msg::Marker& msg) {
     rclcpp::Serialization<visualization_msgs::msg::Marker> serializer;
@@ -416,6 +418,8 @@ void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std
 }
 
 PJ::Status LcmStreamSource::onStart() {
+  tf_interval_us_ = static_cast<int64_t>(dialog_.tfIntervalMs()) * 1000;
+  last_tf_timestamp_.reset();
   m_image_handle_ = PJ::ParserBindingHandle();
   m_tf_handle_ = PJ::ParserBindingHandle();
   m_marker_handle_ = PJ::ParserBindingHandle();
@@ -777,7 +781,7 @@ float64 w
   std::vector<geometry_msgs::msg::TransformStamped> stamped_transforms = tf_transforms;
   for (auto& transform : stamped_transforms) {
     transform.header.stamp.sec = timestamp / 1000000;
-    transform.header.stamp.nanosec = timestamp * 1000;
+    transform.header.stamp.nanosec = (timestamp % 1000000) * 1000;
   }
 
   auto tf_bytes = std::make_shared<std::vector<uint8_t>>(serializeTFMessage(stamped_transforms));
@@ -1312,42 +1316,24 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
       PJ::Span<const PJ::sdk::NamedFieldValue>(fields, 1)       // Span
   );
 
-  if (publishTfCount < 34) {
-    for (int leg_idx = 0; leg_idx < 12; leg_idx++) {
-      std::string str_q = std::string("leg_control_data/q/");
-      if (str_q == topic_name && field == std::to_string(leg_idx)) {
-        robot_state_publisher_.setLegPos(leg_idx, std::get<float>(value));
-        publishTfCount++;
-        return;
-      }
-    }
-
-    for (int arm_idx = 0; arm_idx < 14; arm_idx++) {
-      std::string str_q = std::string("arm_control_data/joint_curPos/");
-      if (str_q == topic_name && field == std::to_string(arm_idx)) {
-        robot_state_publisher_.setArmPos(arm_idx, std::get<float>(value));
-        publishTfCount++;
-        return;
-      }
-    }
-
-    for (int waist_idx = 0; waist_idx < 3; waist_idx++) {
-      std::string str_q = std::string("waist_control_data/q/");
-      if (str_q == topic_name && field == std::to_string(waist_idx)) {
-        robot_state_publisher_.setWaistPos(waist_idx, std::get<float>(value));
-        publishTfCount++;
-        return;
-      }
-    }
-
-    for (int quat_idx = 0; quat_idx < 4; quat_idx++) {
-      std::string str_q = std::string("state_estimator/quat/");
-      if (str_q == topic_name && field == std::to_string(quat_idx)) {
-        robot_state_publisher_.setStateEstimator(quat_idx, std::get<float>(value));
-        publishTfCount++;
-        return;
-      }
-    }
+  const auto* sample = std::get_if<float>(&value);
+  if (!sample) {
+    return;
+  }
+  int index = -1;
+  const auto* end = field.data() + field.size();
+  const auto [next, error] = std::from_chars(field.data(), end, index);
+  if (error != std::errc{} || next != end || index < 0) {
+    return;
+  }
+  if (topic_name == "leg_control_data/q/" && index < 12) {
+    robot_state_publisher_.setLegPos(index, *sample);
+  } else if (topic_name == "arm_control_data/joint_curPos/" && index < 14) {
+    robot_state_publisher_.setArmPos(index, *sample);
+  } else if (topic_name == "waist_control_data/q/" && index < 3) {
+    robot_state_publisher_.setWaistPos(index, *sample);
+  } else if (topic_name == "state_estimator/quat/" && index < 4) {
+    robot_state_publisher_.setStateEstimator(index, *sample);
   }
 }
 
@@ -1360,20 +1346,6 @@ PJ::Status LcmStreamSource::onPoll() {
 
   for (size_t i = 0; i < queue_size; i++) {
     LcmMessage msg = message_queue.pop();
-    //每100ms发布一次TF
-    if (msg.timestamp - last_TF_timestamp > 100000) {
-      last_TF_timestamp = msg.timestamp;
-      robot_state_publisher_.publishTransforms(
-        [this, &msg] (const std::vector<geometry_msgs::msg::TransformStamped>& tf_transforms) {
-          publishTF(msg.data.data(), msg.data.size(), msg.timestamp, tf_transforms);}, 
-        [this, &msg] (const sensor_msgs::msg::JointState& joint_state) {
-          return;
-          publishJointState(msg.data.data(), msg.data.size(), msg.timestamp, joint_state);
-        });
-      publishTfCount = 0;
-    }
-
-    
     if (auto it = topic_map.find(msg.channel); it != topic_map.end()) {
       bool channel_match = false;
       for (auto topic_lcmgen : it->second.lcmgen_table) {
@@ -1398,6 +1370,14 @@ PJ::Status LcmStreamSource::onPoll() {
         runtimeHost().showError("LCM import failed", std::string("Warning: Hash mismatch for channel ") + msg.channel);
         return PJ::unexpected(std::string("channel_match: ") + msg.channel);
       }
+    }
+    if (!last_tf_timestamp_ || msg.timestamp - *last_tf_timestamp_ >= tf_interval_us_) {
+      last_tf_timestamp_ = msg.timestamp;
+      robot_state_publisher_.publishTransforms(
+          [this, &msg](const auto& transforms) {
+            publishTF(msg.data.data(), msg.data.size(), msg.timestamp, transforms);
+          },
+          {});
     }
   }
   

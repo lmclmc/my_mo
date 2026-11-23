@@ -198,6 +198,29 @@ QTabWidget#settingsTabWidget &gt; QTabBar::tab:selected:focus {
           <item row="1" column="0"><widget class="QLabel" name="robotMujocoLabel"><property name="text"><string>MuJoCo XML · 关节顺序</string></property><property name="buddy"><cstring>robotMujocoPathEdit</cstring></property></widget></item>
           <item row="1" column="1"><widget class="QLineEdit" name="robotMujocoPathEdit"><property name="placeholderText"><string>使用 actuator 中的 joint 引用顺序匹配 URDF 关节</string></property></widget></item>
           <item row="1" column="2"><widget class="QPushButton" name="importMujocoButton"><property name="text"><string>导入 MuJoCo XML…</string></property></widget></item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="tfIntervalLabel">
+            <property name="text"><string>TF 时间间隔</string></property>
+            <property name="buddy"><cstring>tfIntervalSpinBox</cstring></property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">
+           <layout class="QHBoxLayout" name="tfIntervalLayout">
+            <item>
+             <widget class="QSpinBox" name="tfIntervalSpinBox">
+              <property name="suffix"><string> ms</string></property>
+              <property name="toolTip"><string>设定实时 3D 视图相邻两次 /tf 更新的最短间隔</string></property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="tfIntervalHint">
+              <property name="text"><string>间隔越大，实时处理负担越小，3D 模型动作越不流畅。</string></property>
+              <property name="styleSheet"><string notr="true">font-size: 11px; color: palette(placeholder-text);</string></property>
+              <property name="wordWrap"><bool>true</bool></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
          </layout>
         </widget>
        </item>
@@ -243,7 +266,7 @@ QTabWidget#settingsTabWidget &gt; QTabBar::tab:selected:focus {
     <widget class="QGroupBox" name="recordingGroup">
      <property name="title"><string>MCAP / CDR 数据录制 · 滚动覆盖</string></property>
      <layout class="QGridLayout" name="recordingLayout">
-      <item row="0" column="0"><widget class="QCheckBox" name="recordingEnabledCheckBox"><property name="text"><string>连接后录制</string></property><property name="toolTip"><string>保存选中话题的有效 CDR 样本及 IDL 类型描述。停止订阅时结束录制并写完缓存。</string></property></widget></item>
+      <item row="0" column="0"><widget class="QCheckBox" name="recordingEnabledCheckBox"><property name="text"><string>连接后录制</string></property><property name="toolTip"><string>保存选中话题的 CDR 样本及类型描述。启用 3D 机器人时，也录制生成的 /tf。</string></property></widget></item>
       <item row="0" column="1"><widget class="QLabel" name="recordingDirectoryLabel"><property name="text"><string>录制目录</string></property><property name="buddy"><cstring>recordingDirectoryEdit</cstring></property></widget></item>
       <item row="0" column="2" colspan="4"><widget class="QLineEdit" name="recordingDirectoryEdit"><property name="enabled"><bool>false</bool></property><property name="placeholderText"><string>输入目录或点击右侧选择；不存在的目录会自动创建</string></property><property name="toolTip"><string>同一目录中的 cyclonedds_record_XXXXXX.mcap 文件属于同一个滚动录制集合，旧文件可能被覆盖。</string></property></widget></item>
       <item row="0" column="6"><widget class="QPushButton" name="recordingDirectoryButton"><property name="enabled"><bool>false</bool></property><property name="text"><string>选择目录…</string></property></widget></item>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <limits>
 #include <set>
 #include <string>
 
@@ -14,11 +15,14 @@ struct DdsRobotGroup {
 // 保存 3D 模型资源路径以及 DDS 话题到执行器区间的映射。
 struct DdsRobotSettings {
   static constexpr int kMaxJoints = 8192;
+  static constexpr int kMinTfIntervalMs = 1;
+  static constexpr int kMaxTfIntervalMs = std::numeric_limits<int>::max();
   static constexpr char kStateEstimatorTopic[] = "state_estimator";
   static constexpr std::array<const char*, 4> kGroupNames{"leg", "waist", "arm", "head"};
   bool enabled = false;
   std::string urdf_path;
   std::string mujoco_path;
+  int tf_interval_ms = 10;
   // X1 的执行器依次为腿、腰、头和臂。每个话题中的位置数组从索引 0 开始。
   std::array<DdsRobotGroup, 4> groups{{
       {"leg_control_data", 0, 12}, {"waist_control_data", 12, 3},
