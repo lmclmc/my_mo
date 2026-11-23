@@ -1,9 +1,9 @@
 find_package(nlohmann_json REQUIRED)
 find_package(lz4 REQUIRED)
 find_package(zstd REQUIRED)
-
-INCLUDE_DIRECTORIES(/usr/include/glib-2.0/)
-INCLUDE_DIRECTORIES(/usr/lib/x86_64-linux-gnu/glib-2.0/include/)
+find_package(orocos_kdl REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedUi.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedManifest.cmake)
@@ -19,6 +19,7 @@ pj_embed_git_history(lcm_source_plugin)
 target_compile_features(lcm_source_plugin PRIVATE cxx_std_20)
 target_compile_options(lcm_source_plugin PRIVATE ${PJ_WARNING_FLAGS})
 target_include_directories(lcm_source_plugin SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/contrib
+  ${orocos_kdl_INCLUDE_DIRS}
   /opt/ros/humble/include/builtin_interfaces/
   /opt/ros/humble/include/rosidl_runtime_cpp/
   /opt/ros/humble/include/rosidl_runtime_c/
@@ -55,11 +56,14 @@ target_link_libraries(lcm_source_plugin PRIVATE
   nlohmann_json::nlohmann_json
   LZ4::lz4_static
   zstd::libzstd_static
+  PkgConfig::GLIB
+  ${orocos_kdl_LIBRARIES}
   lcm
   tinyxml2
   /opt/ros/humble/lib/liburdf.so
   /opt/ros/humble/lib/libkdl_parser.so
   /opt/ros/humble/lib/librclcpp.so
+  /opt/ros/humble/lib/librcutils.so
   /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_cpp.so
   /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
   /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_cpp.so
