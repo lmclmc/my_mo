@@ -2,6 +2,7 @@
 
 #include <pj_git_history.hpp>
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -26,7 +27,9 @@ inline std::string xmlText(std::string_view text) {
 // This child dialog has no plugin-side events or inputs to apply. Its Close
 // button is bound by the host to the child dialog, leaving the caller open.
 inline std::string dialogUi() {
-  return R"PJ_HISTORY(<?xml version="1.0" encoding="UTF-8"?>
+  static std::uint64_t request_serial = 0;
+  const auto serial = ++request_serial;
+  std::string ui = R"PJ_HISTORY(<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>MotionStudioUpdateHistory</class>
  <widget class="QWidget" name="MotionStudioUpdateHistory">
@@ -66,6 +69,11 @@ inline std::string dialogUi() {
  <resources/>
  <connections/>
 </ui>)PJ_HISTORY";
+  // DialogEngine de-duplicates identical one-shot requests. A fresh inert XML
+  // comment lets the same button open the history window again after it closes.
+  const auto closing_tag = ui.rfind("</ui>");
+  ui.insert(closing_tag, "<!-- update-history-request-" + std::to_string(serial) + " -->");
+  return ui;
 }
 
 }  // namespace PjUpdateHistory
