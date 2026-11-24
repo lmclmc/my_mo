@@ -1,5 +1,5 @@
 #!/bin/bash
-
+pkill -9 -f plotjuggler4
 rm -rf ~/.local/share/PlotJuggler/PlotJuggler4/extensions/*
 rm -rf ~/.config/PlotJuggler/PlotJuggler4.conf
 
@@ -27,5 +27,5 @@ export AMENT_PREFIX_PATH=$(pwd)/lcm_plugin/
 export LD_LIBRARY_PATH=$(pwd)/lcm_plugin/
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/ros/humble/lib/x86_64-linux-gnu/
 
-#nohup ./plotjuggler4 & > plot.log
-./plotjuggler4
+nohup ./plotjuggler4 & > plot.log
+#./plotjuggler4

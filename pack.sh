@@ -24,6 +24,7 @@ export PJ_PACK_GIT_HISTORY="$history_file"
 ./build.sh data_load_lcm
 ./build.sh data_stream_lcm
 ./build.sh data_stream_dds
+./build.sh data_load_mcap
 
 copy_plugin() {
   local plugin_dir="$1" target="$2" destination="pack/lcm_plugin/$3"
@@ -33,6 +34,7 @@ copy_plugin() {
 }
 
 copy_plugin data_load_lcm lcm_source_plugin lcm-loader
+copy_plugin data_load_mcap mcap_source_plugin mcap-loader
 copy_plugin data_stream_lcm lcm_stream_source_plugin lcm-streamer
 copy_plugin data_stream_dds dds_stream_source_plugin dds-streamer
 
