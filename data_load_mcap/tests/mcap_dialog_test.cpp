@@ -19,6 +19,19 @@ TEST(McapDialogTest, DefaultConstructs) {
   EXPECT_TRUE(dialog.analyzeError().empty());
 }
 
+TEST(McapDialogTest, SavesAndRestoresRobotModelControls) {
+  McapDialog dialog;
+  EXPECT_TRUE(dialog.onFileSelected("importUrdfButton", "/tmp/robot.urdf"));
+  EXPECT_TRUE(dialog.onFileSelected("importMujocoButton", "/tmp/robot.xml"));
+  EXPECT_FALSE(dialog.onValueChanged("tfIntervalSpinBox", 25));
+
+  McapDialog restored;
+  ASSERT_TRUE(restored.loadConfig(dialog.saveConfig()));
+  EXPECT_EQ(restored.urdfPath(), "/tmp/robot.urdf");
+  EXPECT_EQ(restored.mujocoPath(), "/tmp/robot.xml");
+  EXPECT_EQ(restored.tfIntervalMs(), 25);
+}
+
 TEST(McapDialogTest, WidgetDataSelectsRowsByTextNotIndex) {
   McapDialog dialog;
   nlohmann::json cfg;

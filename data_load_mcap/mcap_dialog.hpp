@@ -1,7 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <limits>
 #include <mcap/reader.hpp>
 #include <nlohmann/json.hpp>
 #include <pj_plugins/sdk/dialog_plugin_typed.hpp>
@@ -45,6 +47,9 @@ const std::vector<AlwaysIncludeRule> kAlwaysIncludeRules = {
     {"foxglove.FrameTransform", "protobuf"},
 };
 
+const std::array<std::string_view, 5> kRobotModelTopics = {
+    "leg_control_data", "waist_control_data", "arm_control_data", "head_control_data", "state_estimator"};
+
 bool isAlwaysIncluded(const ChannelInfo& ch) {
   for (const auto& rule : kAlwaysIncludeRules) {
     if (ch.schema == rule.schema_name && ch.encoding == rule.encoding) {
@@ -76,6 +81,15 @@ class McapDialog : public PJ::DialogPluginTyped {
   /// payload (e.g. ROS Header.stamp) via use_embedded_timestamp in parser config.
   bool useHeaderTimestamp() const {
     return use_header_timestamp_;
+  }
+  const std::string& urdfPath() const {
+    return urdf_path_;
+  }
+  int tfIntervalMs() const {
+    return tf_interval_ms_;
+  }
+  const std::string& mujocoPath() const {
+    return mujoco_path_;
   }
   const std::unordered_set<std::string>& selectedTopics() const {
     return selected_topics_;
@@ -110,6 +124,12 @@ class McapDialog : public PJ::DialogPluginTyped {
     wd.setChecked("radioPublishTime", !use_log_time_);
     wd.setChecked("radioLogTime", use_log_time_);
     wd.setChecked("checkBoxUseTimestamp", use_header_timestamp_);
+    wd.setText("robotUrdfPathEdit", urdf_path_);
+    wd.setFilePicker("importUrdfButton", "导入 URDF…", "URDF 文件 (*.urdf *.xml);;所有文件 (*)", "选择机器人 URDF");
+    wd.setText("robotMujocoPathEdit", mujoco_path_);
+    wd.setFilePicker("importMujocoButton", "导入 MuJoCo XML…", "MuJoCo XML (*.xml);;所有文件 (*)", "选择 MuJoCo XML");
+    wd.setRange("tfIntervalSpinBox", 1, std::numeric_limits<int>::max())
+        .setValue("tfIntervalSpinBox", tf_interval_ms_);
 
     // Filter
     wd.setText("lineEditFilter", filter_text_);
@@ -166,6 +186,12 @@ class McapDialog : public PJ::DialogPluginTyped {
   bool onValueChanged(std::string_view widget_name, int value) override {
     if (widget_name == "spinBox") {
       max_array_size_ = static_cast<unsigned>(std::max(0, value));
+      return false;
+    }
+    if (widget_name == "tfIntervalSpinBox") {
+      const int interval = std::max(1, value);
+      if (tf_interval_ms_ == interval) return false;
+      tf_interval_ms_ = interval;
       return false;
     }
     return false;
@@ -253,6 +279,19 @@ class McapDialog : public PJ::DialogPluginTyped {
   void onAccepted(std::string_view /*json*/) override {}
   void onRejected() override {}
 
+  bool onFileSelected(std::string_view widget_name, std::string_view path) override {
+    if (path.empty()) return false;
+    if (widget_name == "importUrdfButton") {
+      urdf_path_ = std::string(path);
+    } else if (widget_name == "importMujocoButton") {
+      mujoco_path_ = std::string(path);
+    } else {
+      return false;
+    }
+    reassertAlwaysIncluded();
+    return true;
+  }
+
   std::string saveConfig() const override {
     nlohmann::json cfg;
     cfg["filepath"] = filepath_;
@@ -260,6 +299,9 @@ class McapDialog : public PJ::DialogPluginTyped {
     cfg["clamp_large_arrays"] = clamp_large_arrays_;
     cfg["use_log_time"] = use_log_time_;
     cfg["use_header_timestamp"] = use_header_timestamp_;
+    cfg["urdf_path"] = urdf_path_;
+    cfg["mujoco_path"] = mujoco_path_;
+    cfg["tf_interval_ms"] = tf_interval_ms_;
     cfg["selected_topics"] = std::vector<std::string>(selected_topics_.begin(), selected_topics_.end());
     return cfg.dump();
   }
@@ -277,6 +319,9 @@ class McapDialog : public PJ::DialogPluginTyped {
     // Backward compatibility: old MCAP configs used "use_timestamp" for the
     // parser-level embedded timestamp option before the controls were split.
     use_header_timestamp_ = cfg.value("use_header_timestamp", cfg.value("use_timestamp", false));
+    urdf_path_ = cfg.value("urdf_path", std::string{});
+    mujoco_path_ = cfg.value("mujoco_path", std::string{});
+    tf_interval_ms_ = std::clamp(cfg.value("tf_interval_ms", 10), 1, std::numeric_limits<int>::max());
 
     selected_topics_.clear();
     if (auto it = cfg.find("selected_topics"); it != cfg.end() && it->is_array()) {
@@ -428,6 +473,18 @@ class McapDialog : public PJ::DialogPluginTyped {
         selected_topics_.insert(ch.topic);
       }
     }
+    // 模型输入是由 MCAP loader 消费后重新生成 /tf 的必要数据，即使用户
+    // 没有手动勾选这些控制话题，也必须随模型配置一起加载。
+    if (!urdf_path_.empty() && !mujoco_path_.empty()) {
+      for (const auto& ch : all_channels_) {
+        if (ch.msg_count == 0) continue;
+        if (std::find(kRobotModelTopics.begin(), kRobotModelTopics.end(), ch.topic) != kRobotModelTopics.end() ||
+            (ch.topic.size() > 1 && std::find(kRobotModelTopics.begin(), kRobotModelTopics.end(),
+                                               std::string_view(ch.topic).substr(1)) != kRobotModelTopics.end())) {
+          selected_topics_.insert(ch.topic);
+        }
+      }
+    }
   }
 
   std::vector<const ChannelInfo*> filteredChannels() const {
@@ -487,6 +544,9 @@ class McapDialog : public PJ::DialogPluginTyped {
   bool clamp_large_arrays_ = true;
   bool use_log_time_ = false;
   bool use_header_timestamp_ = false;
+  std::string urdf_path_;
+  std::string mujoco_path_;
+  int tf_interval_ms_ = 10;
   std::unordered_set<std::string> selected_topics_;
   std::string filter_text_;
 

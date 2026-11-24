@@ -74,6 +74,21 @@ so the user can select which topics to import. Per-import options:
 - **Timestamp source** — publish time vs. log time.
 - **Embedded timestamp** — extract from message headers when supported
   by the parser (e.g. ROS `header.stamp`).
+- **URDF import** — selecting a URDF file adds it as a ROS 2
+  `std_msgs/msg/String` `/robot_description` message so the Scene3D view can
+  use the model even when the MCAP does not contain that latched topic.
+- **MuJoCo XML import** — when both URDF and MuJoCo XML are selected, the
+  loader reads the XML actuator order and maps X1 `leg_control_data`,
+  `waist_control_data`, `arm_control_data`, `head_control_data`, and
+  `state_estimator` CDR messages to the URDF joint tree. It generates one
+  ROS 2 `tf2_msgs/msg/TFMessage` `/tf` stream with the same DDS schema used by
+  the DDS data source. An existing recorded `/tf` stream is skipped in this
+  mode to avoid duplicate transforms.
+- **TF interval** — `/tf`, `tf`, and `transforms` messages are imported at the
+  configured minimum interval in milliseconds; other channels are unchanged.
+  Generated model TF uses this same interval. The MuJoCo actuator order is
+  currently expected to contain the standard X1 ranges: legs 12, waist 3,
+  head 2, and arms 14.
 
 ## Split ROS 2 bags (`metadata.yaml`)
 

@@ -1,6 +1,7 @@
 find_package(nlohmann_json REQUIRED)
 find_package(lz4 REQUIRED)
 find_package(zstd REQUIRED)
+find_package(tinyxml2 CONFIG REQUIRED)
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedUi.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedManifest.cmake)
@@ -8,12 +9,13 @@ include(${CMAKE_CURRENT_LIST_DIR}/../cmake/EmbedManifest.cmake)
 # --- Plugin shared library ---
 # mcap is header-only and vendored under contrib/mcap/ from the
 # parallel-reader fork. lz4 + zstd come from conan for chunk decompression.
-add_library(mcap_source_plugin SHARED mcap_source.cpp)
+add_library(mcap_source_plugin SHARED mcap_source.cpp mcap_robot_model.cpp)
 target_compile_features(mcap_source_plugin PRIVATE cxx_std_20)
 target_compile_options(mcap_source_plugin PRIVATE ${PJ_WARNING_FLAGS})
 target_include_directories(mcap_source_plugin SYSTEM PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/contrib)
 target_link_libraries(mcap_source_plugin PRIVATE
   plotjuggler_sdk::plugin_sdk nlohmann_json::nlohmann_json LZ4::lz4_static zstd::libzstd_static
+  tinyxml2::tinyxml2
 )
 
 pj_embed_ui(mcap_source_plugin

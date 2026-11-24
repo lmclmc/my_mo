@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <functional>
+#include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -21,6 +22,7 @@
 #include "mcap_dialog.hpp"
 #include "mcap_helpers.hpp"
 #include "mcap_manifest.hpp"
+#include "mcap_robot_model.hpp"
 
 // Vendored parallel-reader fork (contrib/mcap/). Pulled in after reader.hpp
 // with MCAP_IMPLEMENTATION already defined, so parallel_reader.hpp's trailing
@@ -46,6 +48,36 @@ struct TransparentStringHash {
 };
 
 using SelectedTopicSet = std::unordered_set<std::string, TransparentStringHash, std::equal_to<>>;
+
+constexpr uint64_t kMaxUrdfBytes = 32ULL * 1024 * 1024;
+
+bool isTfTopic(std::string_view topic) {
+  return topic == "/tf" || topic == "tf" || topic == "transforms";
+}
+
+std::shared_ptr<const std::vector<uint8_t>> readUrdfAsRosString(const std::string& path) {
+  std::ifstream file(path, std::ios::binary);
+  if (!file) throw std::runtime_error("无法打开 URDF 文件：" + path);
+  file.seekg(0, std::ios::end);
+  const auto length = file.tellg();
+  if (length <= 0 || static_cast<uint64_t>(length) > kMaxUrdfBytes)
+    throw std::runtime_error("URDF 文件不存在、为空或超过 32 MB：" + path);
+  file.seekg(0, std::ios::beg);
+  std::string xml(static_cast<size_t>(length), '\0');
+  if (!xml.empty() && !file.read(xml.data(), static_cast<std::streamsize>(xml.size())))
+    throw std::runtime_error("读取 URDF 文件失败：" + path);
+
+  // ROS 2 std_msgs/msg/String CDR: encapsulation, uint32 length, UTF-8 bytes, NUL.
+  auto payload = std::make_shared<std::vector<uint8_t>>();
+  payload->reserve(8 + xml.size());
+  payload->insert(payload->end(), {0, 1, 0, 0});
+  const uint32_t length_with_nul = static_cast<uint32_t>(xml.size() + 1);
+  for (unsigned shift = 0; shift < 32; shift += 8)
+    payload->push_back(static_cast<uint8_t>(length_with_nul >> shift));
+  payload->insert(payload->end(), xml.begin(), xml.end());
+  payload->push_back(0);
+  return payload;
+}
 
 // Hardware-derived worker count. Floor at 2 so we still get parallelism on
 // virtualized hosts that report 1 core; cap at 8 to avoid oversubscription on
@@ -225,6 +257,7 @@ class McapSource : public PJ::FileSourceBase {
       }
     }
     PJ::sdk::arrayLimitToJson(parser_config, static_cast<uint32_t>(dialog_.maxArraySize()), dialog_.clampLargeArrays());
+    parser_config["group_array_indices"] = true;
     parser_config["use_embedded_timestamp"] = dialog_.useHeaderTimestamp();
 
     // --- Ensure parser bindings for selected channels ---
@@ -236,6 +269,33 @@ class McapSource : public PJ::FileSourceBase {
     std::unordered_map<std::string, std::optional<PJ::ParserBindingHandle>> binding_by_topic;
     std::vector<std::string> binding_errors;
     bool any_binding = false;
+    std::optional<PJ::ParserBindingHandle> robot_description_binding;
+    std::shared_ptr<const std::vector<uint8_t>> robot_description_payload;
+    std::optional<PJ::ParserBindingHandle> robot_tf_binding;
+    std::unique_ptr<McapRobotModel> robot_model;
+
+    // MuJoCo actuator 顺序决定控制数组如何对应到 URDF 关节。模型输入
+    // 由下面的消息循环消费，生成的 /tf 使用与 DDS 录制相同的 ROS 2 CDR。
+    if (!dialog_.urdfPath().empty() && !dialog_.mujocoPath().empty()) {
+      try {
+        robot_model = std::make_unique<McapRobotModel>(dialog_.urdfPath(), dialog_.mujocoPath());
+        nlohmann::json config = {{"serialization", "cdr"}, {"schema_encoding", "ros2msg"},
+                                 {"topic_name", kMcapRobotTfTopic}};
+        auto handle = runtimeHost().ensureParserBinding({
+            kMcapRobotTfTopic, "ros2msg", kMcapRobotTfType,
+            {reinterpret_cast<const uint8_t*>(kMcapRobotTfSchema), sizeof(kMcapRobotTfSchema) - 1},
+            config.dump()});
+        if (!handle) throw std::runtime_error("无法绑定生成的 /tf：" + handle.error());
+        robot_tf_binding = *handle;
+        any_binding = true;
+        runtimeHost().reportMessage(
+            PJ::DataSourceMessageLevel::kInfo,
+            "MCAP 机器人模型已加载：按 MuJoCo actuator 顺序从控制话题生成 /tf。");
+      } catch (const std::exception& error) {
+        runtimeHost().showError("机器人模型导入失败", error.what());
+        return PJ::unexpected(std::string("robot model import failed: ") + error.what());
+      }
+    }
 
     for (size_t file_index = 0; file_index < readers.size(); ++file_index) {
       const auto& channels = channels_per_file[file_index];
@@ -319,6 +379,44 @@ class McapSource : public PJ::FileSourceBase {
         binding_by_topic.emplace(channel_ptr->topic, *handle);
         bindings.emplace(channel_id, *handle);
         any_binding = true;
+      }
+    }
+
+    // An externally selected URDF is exposed through the same ROS 2 String
+    // topic used by live sources, so Scene3D can consume it without a second
+    // model-loading path. It is intentionally published once per import.
+    if (!dialog_.urdfPath().empty()) {
+      try {
+        if (robot_model) {
+          robot_description_payload = std::make_shared<const std::vector<uint8_t>>(
+              mcapRobotDescriptionCdr(robot_model->description()));
+        } else {
+          robot_description_payload = readUrdfAsRosString(dialog_.urdfPath());
+        }
+        const std::string topic = "/robot_description";
+        const std::string schema = "string data";
+        nlohmann::json config = nlohmann::json::object();
+        config["serialization"] = "cdr";
+        config["schema_encoding"] = "ros2msg";
+        config["topic_name"] = topic;
+        PJ::ParserBindingRequest request{
+            .topic_name = topic,
+            .parser_encoding = "ros2msg",
+            .type_name = "std_msgs/msg/String",
+            .schema = PJ::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(schema.data()), schema.size()),
+            .parser_config_json = config.dump(),
+        };
+        auto handle = runtimeHost().ensureParserBinding(request);
+        if (!handle) {
+          binding_errors.push_back(topic + " (encoding: ros2msg): " + handle.error());
+          robot_description_payload.reset();
+        } else {
+          robot_description_binding = *handle;
+          any_binding = true;
+        }
+      } catch (const std::exception& error) {
+        runtimeHost().showError("URDF 导入失败", error.what());
+        return PJ::unexpected(std::string("URDF import failed: ") + error.what());
       }
     }
 
@@ -413,6 +511,18 @@ class McapSource : public PJ::FileSourceBase {
       }
     }
 
+    if (robot_description_binding && robot_description_payload) {
+      const PJ::Timestamp timestamp = static_cast<PJ::Timestamp>(log_window_min);
+      const auto status = runtimeHost().pushMessage(
+          *robot_description_binding, timestamp,
+          [payload = robot_description_payload]() { return PJ::sdk::PayloadView{payload}; });
+      if (!status) {
+        const std::string message = "无法导入 /robot_description：" + status.error();
+        runtimeHost().showError("URDF 导入失败", message);
+        return PJ::unexpected(message);
+      }
+    }
+
     mcap::ParallelReadOptions parallel_opts;
     parallel_opts.maxBytesInFlight = kParallelImportBudgetBytes;
     parallel_opts.threadCount = parallelImportThreadCount();
@@ -444,6 +554,8 @@ class McapSource : public PJ::FileSourceBase {
     // Set when a push returns false (cancel or push-failure abort): stops the
     // whole recording, not just the current file.
     bool stopped = false;
+    std::optional<PJ::Timestamp> last_tf_timestamp;
+    const uint64_t tf_interval_ns = static_cast<uint64_t>(dialog_.tfIntervalMs()) * 1000000ULL;
 
     auto push_message = [&](const mcap::MessageView& mv, auto fetch_payload) {
       if (mv.channel == nullptr || mv.message.data == nullptr) {
@@ -464,7 +576,64 @@ class McapSource : public PJ::FileSourceBase {
           use_log_time ? static_cast<PJ::Timestamp>(mv.message.logTime)
                        : static_cast<PJ::Timestamp>(header_in_window ? pub_time : mv.message.logTime);
 
-      auto push_status = runtimeHost().pushMessage(binding_it->second, timestamp_ns, std::move(fetch_payload));
+      // 有完整模型配置时，原始 /tf 由录制器提供的版本可能与当前 URDF
+      // 或 actuator 映射不一致。保留模型生成的单一 /tf 数据流，避免重复边。
+      if (robot_model && isTfTopic(mv.channel->topic)) {
+        ++msg_count;
+        if (msg_count % kProgressUpdateInterval == 0 &&
+            (!runtimeHost().progressUpdate(msg_count) || runtimeHost().isStopRequested())) return false;
+        return true;
+      }
+
+      std::shared_ptr<const std::vector<uint8_t>> original_payload;
+      if (robot_model && !isTfTopic(mv.channel->topic)) {
+        auto model_payload = fetch_payload();
+        const auto* bytes = model_payload.bytes.data();
+        const size_t size = model_payload.bytes.size();
+        original_payload = std::make_shared<const std::vector<uint8_t>>(bytes, bytes + size);
+        std::vector<double> values;
+        std::array<double, 4> quat{};
+        bool has_quat = false;
+        try {
+          if (decodeMcapRobotMessage(mv.channel->topic, bytes, size, values, quat, has_quat) &&
+              robot_model->update(mv.channel->topic,
+                                  std::vector<uint8_t>(bytes, bytes + size))) {
+            if (robot_tf_binding && (!last_tf_timestamp || timestamp_ns < *last_tf_timestamp ||
+                                     static_cast<uint64_t>(timestamp_ns - *last_tf_timestamp) >= tf_interval_ns)) {
+              last_tf_timestamp = timestamp_ns;
+              auto tf_payload = std::make_shared<const std::vector<uint8_t>>(
+                  mcapRobotTransformsCdr(robot_model->transforms(timestamp_ns)));
+              auto tf_status = runtimeHost().pushMessage(
+                  *robot_tf_binding, timestamp_ns,
+                  [tf_payload]() { return PJ::sdk::PayloadView{tf_payload}; });
+              if (!tf_status) return false;
+              ++accepted_count;
+              ++msg_count;
+            }
+          }
+        } catch (const std::exception& error) {
+          runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kWarning,
+                                      "跳过无效机器人模型消息：" + std::string(error.what()));
+        }
+      }
+
+      if (isTfTopic(mv.channel->topic)) {
+        if (last_tf_timestamp && timestamp_ns >= *last_tf_timestamp &&
+            static_cast<uint64_t>(timestamp_ns - *last_tf_timestamp) < tf_interval_ns) {
+          ++msg_count;
+          if (msg_count % kProgressUpdateInterval == 0 &&
+              (!runtimeHost().progressUpdate(msg_count) || runtimeHost().isStopRequested())) {
+            return false;
+          }
+          return true;
+        }
+        last_tf_timestamp = timestamp_ns;
+      }
+
+      auto push_status = original_payload
+          ? runtimeHost().pushMessage(binding_it->second, timestamp_ns,
+                                      [original_payload]() { return PJ::sdk::PayloadView{original_payload}; })
+          : runtimeHost().pushMessage(binding_it->second, timestamp_ns, std::move(fetch_payload));
       if (!push_status) {
         ++consecutive_push_failures;
         if (consecutive_push_failures % kPushFailureLogInterval == 1) {
