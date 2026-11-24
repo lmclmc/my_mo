@@ -268,6 +268,35 @@ QPushButton:pressed { background: rgba(102, 155, 151, 50); }</string>
 
    <!-- ===== Topic Table ===== -->
    <item>
+    <layout class="QHBoxLayout" name="channelFilterLayout">
+     <item>
+      <widget class="QLabel" name="channelFilterLabel">
+       <property name="text">
+        <string>日志话题:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lineEditFilter">
+       <property name="placeholderText">
+        <string>筛选话题</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelAnalyzeError">
+       <property name="styleSheet">
+        <string notr="true">color: #d32f2f;</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+   <item>
     <widget class="QTableWidget" name="topicTableWidget">
      <property name="columnCount">
       <number>3</number>
@@ -285,12 +314,12 @@ QPushButton:pressed { background: rgba(102, 155, 151, 50); }</string>
      </column>
      <column>
       <property name="text">
-       <string>Port</string>
+       <string>Messages</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>LCM Log File</string>
+       <string>LCM Skeleton File</string>
       </property>
      </column>
     </widget>

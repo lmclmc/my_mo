@@ -4,6 +4,7 @@
 #include <cctype>
 #include <fstream>
 #include <limits>
+#include <lcm/lcm-cpp.hpp>
 #include <mcap/reader.hpp>
 #include <nlohmann/json.hpp>
 #include <pj_plugins/sdk/dialog_plugin_typed.hpp>
@@ -116,97 +117,73 @@ class LcmDialog : public PJ::DialogPluginTyped {
   std::string widget_data() override {
     PJ::WidgetData wd;
 
-    // Array size row
     wd.setRange("spinBox", 0, 9999);
     wd.setValue("spinBox", static_cast<int>(max_array_size_));
     wd.setChecked("radioClamp", clamp_large_arrays_);
     wd.setChecked("radioSkip", !clamp_large_arrays_);
-
-    // Timestamp row
     wd.setChecked("radioPublishTime", !use_log_time_);
     wd.setChecked("radioLogTime", use_log_time_);
     wd.setChecked("checkBoxUseTimestamp", use_header_timestamp_);
-
-    // Filter
     wd.setText("lineEditFilter", filter_text_);
 
-    // Channel table — apply filter and build rows
-    auto filtered = filteredChannels();
-    std::vector<std::string> headers = {"Channel name", "Schema", "Encoding", "Msg Count"};
-    wd.setTableHeaders("tableWidget", headers);
-
+    // Every channel discovered in the selected lcmlog gets a row.  A row may
+    // have no skeleton yet.  Such rows remain visible so users can configure
+    // only the channels they need.
+    const auto filtered = filteredChannels();
+    wd.setTableHeaders("topicTableWidget", {"Topic Name", "Messages", "LCM Skeleton File"});
     std::vector<std::vector<PJ::TableItem>> rows;
-    std::vector<std::string> selected_topic_names;
-    std::vector<int> disabled_row_indices;
     rows.reserve(filtered.size());
-
-    for (size_t i = 0; i < filtered.size(); ++i) {
-      const auto& ch = *filtered[i];
-      // Msg Count carries its native uint64 so the column sorts numerically;
-      // without it the host could only compare the rendered digits.
-      rows.push_back({ch.topic, ch.schema, ch.encoding, PJ::TableItem(ch.msg_count)});
-      if (selected_topics_.count(ch.topic) > 0) {
-        selected_topic_names.push_back(ch.topic);
-      }
-      bool locked_always_included = ch.msg_count > 0 && isAlwaysIncluded(ch);
-      if (ch.msg_count == 0 || locked_always_included) {
-        disabled_row_indices.push_back(static_cast<int>(i));
-      }
-      if (locked_always_included) {
-        wd.setCellTooltip(
-            "tableWidget", static_cast<int>(i), 0, "Always loaded — required for 3D transform rendering.");
+    std::vector<std::string> selected;
+    for (const auto* channel : filtered) {
+      const auto mapping = mappingFor(channel->topic);
+      const std::string skeleton = mapping && !mapping->lcm_file_path.empty()
+                                       ? mapping->lcm_file_path
+                                       : std::string{"未设置"};
+      rows.push_back({channel->topic, PJ::TableItem(channel->msg_count), skeleton});
+      if (channel->topic == selected_topic_name_) {
+        selected.push_back(channel->topic);
       }
     }
-    wd.setTableRows("tableWidget", rows);
-    wd.setDisabledRows("tableWidget", disabled_row_indices);
-    // Restore selection by first-column text (the topic name), not row index:
-    // the host matches items by text, which is sort-agnostic, so the selection
-    // survives the table's built-in column sorting (sortingEnabled=true).
-    wd.setSelectedItems("tableWidget", selected_topic_names);
 
-    // Explain an empty table rather than leaving it looking like a recording
-    // with no topics.
+    // Preserve legacy mappings if a config was loaded before the file could
+    // be scanned, or if a hand-written config contains a topic absent in this
+    // recording.
+    for (const auto& mapping : topic_config_) {
+      if (findChannel(mapping.topic_name) != nullptr) {
+        continue;
+      }
+      rows.push_back({mapping.topic_name, PJ::TableItem(uint64_t{0}),
+                      mapping.lcm_file_path.empty() ? std::string{"未设置"} : mapping.lcm_file_path});
+      if (mapping.topic_name == selected_topic_name_) {
+        selected.push_back(mapping.topic_name);
+      }
+    }
+    wd.setTableRows("topicTableWidget", rows);
+    wd.setSelectedItems("topicTableWidget", selected);
+
     wd.setVisible("labelAnalyzeError", !analyze_error_.empty());
     if (!analyze_error_.empty()) {
       wd.setLabel("labelAnalyzeError", analyze_error_);
     }
 
-    // LCM Topic Table — populate with user-added rows
-    {
-      std::vector<std::string> lcm_headers = {"Topic Name", "Port", "LCM Log File"};
-      wd.setTableHeaders("topicTableWidget", lcm_headers);
-      std::vector<std::vector<PJ::TableItem>> lcm_rows;
-      for (const auto& cfg : topic_config_) {
-        lcm_rows.push_back({cfg.topic_name, cfg.port, cfg.lcm_file_path});
-      }
-      wd.setTableRows("topicTableWidget", lcm_rows);
-
-      // 高亮当前编辑行
-      if (selected_row_ >= 0 && selected_row_ < static_cast<int>(topic_config_.size())) {
-        wd.setSelectedRows("topicTableWidget", {selected_row_});
-      }
-    }
-
-    // URDF 文件导入
     wd.setText("urdfPathEdit", urdf_file_path_);
     wd.setFilePicker("urdfBrowseBtn", "Browse",
                      "URDF 文件 (*.urdf);;所有文件 (*)", "选择 URDF 文件");
-
-    // XML 文件导入
     wd.setText("xmlPathEdit", xml_file_path_);
     wd.setFilePicker("xmlBrowseBtn", "Browse",
                      "XML 文件 (*.xml);;所有文件 (*)", "选择 XML 文件");
     wd.setRange("tfIntervalSpinBox", 1, std::numeric_limits<int>::max());
     wd.setValue("tfIntervalSpinBox", tf_interval_ms_);
 
-    // 内联编辑栏 — 显示当前选中行的数据
     wd.setText("topicNameEdit", editing_topic_name_);
     wd.setValue("portSpinBox", editing_port_);
     wd.setText("lcmFileEdit", editing_lcm_file_);
-    wd.setFilePicker("lcmFileBrowseBtn", "Browse",
+    wd.setFilePicker("lcmFileBrowseBtn", "选择骨架…",
                      "LCM 骨架文件 (*.lcm);;所有文件 (*)", "选择 LCM 骨架文件");
+    wd.setEnabled("lcmFileBrowseBtn", !selected_topic_name_.empty());
+    wd.setEnabled("btnDel", !selected_topic_name_.empty() && mappingFor(selected_topic_name_) != nullptr);
+    wd.setEnabled("btnClear", !topic_config_.empty());
 
-    // 配置文件的保存和加载按钮
     wd.setSaveFilePicker("btnSaveCfg", "Save Config JSON",
                          "JSON 文件 (*.json)", "保存配置文件", ".json");
     wd.setFilePicker("btnLoadCfg", "Load Config JSON",
@@ -216,13 +193,10 @@ class LcmDialog : public PJ::DialogPluginTyped {
       wd.requestSubDialog(PjUpdateHistory::dialogUi());
       request_update_history_ = false;
     }
-
-    // Confirm 按钮：请求关闭对话框
     if (request_accept_) {
       wd.requestAccept();
       request_accept_ = false;
     }
-
     return wd.toJson();
   }
 
@@ -293,55 +267,36 @@ class LcmDialog : public PJ::DialogPluginTyped {
     return false;
   }
 
-  bool onSelectionChanged(std::string_view widget_name, const std::vector<std::string>& selected) override {
-    if (widget_name == "tableWidget") {
-      // The table only reports the rows currently visible under the filter, so a
-      // plain clear()+re-add would drop any selection the filter is hiding.
-      // Reconcile only the visible topics: forget the visible ones that are no
-      // longer selected, and leave everything the filter hides untouched.
-      std::unordered_set<std::string> visible;
-      for (const auto* ch : filteredChannels()) {
-        visible.insert(ch->topic);
-      }
-      for (auto it = selected_topics_.begin(); it != selected_topics_.end();) {
-        if (visible.count(*it) > 0) {
-          it = selected_topics_.erase(it);
-        } else {
-          ++it;
-        }
-      }
-      for (const auto& topic : selected) {
-        selected_topics_.insert(topic);
-      }
-      reassertAlwaysIncluded();
-      return true;  // update OK button state
+  bool onSelectionChanged(std::string_view widget_name,
+                          const std::vector<std::string>& selected) override {
+    if (widget_name != "topicTableWidget") {
+      return false;
     }
 
-    if (widget_name == "topicTableWidget") {
-      if (!selected.empty()) {
-        // 查找选中行的 index
-        for (size_t i = 0; i < topic_config_.size(); ++i) {
-          if (topic_config_[i].topic_name == selected.front() ||
-              (topic_config_[i].topic_name.empty() && i == topic_config_.size() - 1)) {
-            selected_row_ = static_cast<int>(i);
-            editing_topic_name_ = topic_config_[i].topic_name;
-            editing_port_ = topic_config_[i].port.empty() ? 7667 : std::stoi(topic_config_[i].port);
-            editing_lcm_file_ = topic_config_[i].lcm_file_path;
-            return true;
-          }
-        }
-        // 如果没精确匹配到，默认选第一行
-        selected_row_ = 0;
-        editing_topic_name_ = topic_config_[0].topic_name;
-        editing_port_ = topic_config_[0].port.empty() ? 7667 : std::stoi(topic_config_[0].port);
-        editing_lcm_file_ = topic_config_[0].lcm_file_path;
-      } else {
-        selected_row_ = -1;
-      }
+    selected_topic_name_ = selected.empty() ? std::string{} : selected.front();
+    selected_row_ = -1;
+    if (selected_topic_name_.empty()) {
+      editing_topic_name_.clear();
+      editing_lcm_file_.clear();
+      editing_port_ = 7667;
       return true;
     }
 
-    return false;
+    for (size_t i = 0; i < topic_config_.size(); ++i) {
+      if (topic_config_[i].topic_name == selected_topic_name_) {
+        selected_row_ = static_cast<int>(i);
+        break;
+      }
+    }
+    editing_topic_name_ = selected_topic_name_;
+    if (const auto mapping = mappingFor(selected_topic_name_)) {
+      editing_lcm_file_ = mapping->lcm_file_path;
+      editing_port_ = parsePort(mapping->port);
+    } else {
+      editing_lcm_file_.clear();
+      editing_port_ = 7667;
+    }
+    return true;
   }
 
   bool onClicked(std::string_view widget_name) override {
@@ -350,41 +305,39 @@ class LcmDialog : public PJ::DialogPluginTyped {
       return true;
     }
     if (widget_name == "btnSelectAll") {
-      auto filtered = filteredChannels();
-      for (const auto* ch : filtered) {
-        if (ch->msg_count > 0) {
-          selected_topics_.insert(ch->topic);
+      for (const auto& channel : all_channels_) {
+        if (channel.msg_count > 0) {
+          selected_topics_.insert(channel.topic);
         }
       }
       return true;
     }
     if (widget_name == "btnDeselectAll") {
       selected_topics_.clear();
-      reassertAlwaysIncluded();
       return true;
     }
 
     if (widget_name == "btnAdd") {
-      addRow(editing_topic_name_, editing_port_, editing_lcm_file_);
-      // 自动选中新行
-      selected_row_ = static_cast<int>(topic_config_.size()) - 1;
+      // Keep the legacy manual-add entry point useful for recordings whose
+      // channel list could not be scanned. A mapping without a skeleton is
+      // deliberately not stored and therefore cannot be parsed.
+      if (!editing_topic_name_.empty() && !editing_lcm_file_.empty()) {
+        assignMapping(editing_topic_name_, editing_port_, editing_lcm_file_);
+      }
+      selected_topic_name_ = editing_topic_name_;
       return true;
     }
     if (widget_name == "btnDel") {
-      if (selected_row_ >= 0 && selected_row_ < static_cast<int>(topic_config_.size())) {
-        topic_config_.erase(topic_config_.begin() + selected_row_);
-        if (topic_config_.empty()) {
-          selected_row_ = -1;
-        } else if (selected_row_ >= static_cast<int>(topic_config_.size())) {
-          selected_row_ = static_cast<int>(topic_config_.size()) - 1;
-        }
+      if (!selected_topic_name_.empty()) {
+        clearMapping(selected_topic_name_);
+        editing_lcm_file_.clear();
       }
       return true;
     }
-
     if (widget_name == "btnClear") {
       topic_config_.clear();
       selected_row_ = -1;
+      editing_lcm_file_.clear();
       return true;
     }
     if (widget_name == "btnConfirm") {
@@ -395,6 +348,9 @@ class LcmDialog : public PJ::DialogPluginTyped {
   }
 
   bool onFileSelected(std::string_view widget_name, std::string_view path) override {
+    if (path.empty()) {
+      return false;
+    }
     if (widget_name == "urdfBrowseBtn") {
       urdf_file_path_ = std::string(path);
       return true;
@@ -404,25 +360,29 @@ class LcmDialog : public PJ::DialogPluginTyped {
       return true;
     }
     if (widget_name == "lcmFileBrowseBtn") {
+      if (selected_topic_name_.empty()) {
+        return false;
+      }
       editing_lcm_file_ = std::string(path);
+      editing_topic_name_ = selected_topic_name_;
+      assignMapping(selected_topic_name_, editing_port_, editing_lcm_file_);
       return true;
     }
     if (widget_name == "btnSaveCfg") {
-      std::string json = saveConfig();
       std::ofstream file{std::string(path)};
-      if (file) {
-        file << json;
+      if (!file) {
+        return false;
       }
-      return true;
+      file << saveConfig();
+      return file.good();
     }
     if (widget_name == "btnLoadCfg") {
       std::ifstream file{std::string(path)};
-      if (file) {
-        std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        loadUserConfig(json);
-        return true;  // rebuild entire widget data
+      if (!file) {
+        return false;
       }
-      return false;
+      std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+      return loadUserConfig(json);
     }
     return false;
   }
@@ -494,6 +454,12 @@ class LcmDialog : public PJ::DialogPluginTyped {
       }
     }
 
+    selected_topic_name_.clear();
+    editing_topic_name_.clear();
+    editing_lcm_file_.clear();
+    editing_port_ = 7667;
+    analyzeFile();
+
     return true;
   }
 
@@ -533,10 +499,107 @@ class LcmDialog : public PJ::DialogPluginTyped {
       }
     }
 
+    selected_topic_name_.clear();
+    editing_topic_name_.clear();
+    editing_lcm_file_.clear();
+    editing_port_ = 7667;
+    analyzeFile();
+
     return true;
   }
 
  private:
+  struct TopicConfig {
+    std::string topic_name;
+    std::string port;
+    std::string lcm_file_path;
+  };
+
+  static int parsePort(const std::string& value) {
+    if (value.empty()) {
+      return 7667;
+    }
+    try {
+      const int port = std::stoi(value);
+      return std::clamp(port, 1, 65535);
+    } catch (...) {
+      return 7667;
+    }
+  }
+
+  const ChannelInfo* findChannel(std::string_view topic) const {
+    for (const auto& channel : all_channels_) {
+      if (channel.topic == topic) {
+        return &channel;
+      }
+    }
+    return nullptr;
+  }
+
+  const TopicConfig* mappingFor(std::string_view topic) const {
+    for (const auto& mapping : topic_config_) {
+      if (mapping.topic_name == topic) {
+        return &mapping;
+      }
+    }
+    return nullptr;
+  }
+
+  void assignMapping(std::string_view topic, int port, std::string_view path) {
+    if (topic.empty() || path.empty()) {
+      return;
+    }
+    for (auto& mapping : topic_config_) {
+      if (mapping.topic_name == topic) {
+        mapping.port = std::to_string(std::clamp(port, 1, 65535));
+        mapping.lcm_file_path = path;
+        selected_row_ = static_cast<int>(&mapping - topic_config_.data());
+        return;
+      }
+    }
+    topic_config_.push_back({std::string(topic), std::to_string(std::clamp(port, 1, 65535)),
+                             std::string(path)});
+    selected_row_ = static_cast<int>(topic_config_.size()) - 1;
+  }
+
+  void clearMapping(std::string_view topic) {
+    topic_config_.erase(std::remove_if(topic_config_.begin(), topic_config_.end(),
+                                       [topic](const TopicConfig& mapping) {
+                                         return mapping.topic_name == topic;
+                                       }),
+                       topic_config_.end());
+    selected_row_ = -1;
+  }
+
+  void analyzeFile() {
+    all_channels_.clear();
+    analyze_error_.clear();
+    if (filepath_.empty()) {
+      return;
+    }
+
+    lcm::LogFile log(filepath_, "r");
+    if (!log.good()) {
+      analyze_error_ = "无法打开 LCM 日志文件：" + filepath_;
+      return;
+    }
+
+    std::unordered_map<std::string, size_t> channel_indexes;
+    while (const auto* event = log.readNextEvent()) {
+      auto [it, inserted] = channel_indexes.emplace(event->channel, all_channels_.size());
+      if (inserted) {
+        all_channels_.push_back({event->channel, {}, "lcm", 0});
+      }
+      ++all_channels_[it->second].msg_count;
+    }
+
+    std::sort(all_channels_.begin(), all_channels_.end(),
+              [](const ChannelInfo& lhs, const ChannelInfo& rhs) { return lhs.topic < rhs.topic; });
+    if (all_channels_.empty()) {
+      analyze_error_ = "LCM 日志中没有找到话题，或日志已损坏。";
+    }
+  }
+
   void readTfInterval(const nlohmann::json& cfg) {
     tf_interval_ms_ = kDefaultTfIntervalMs;
     if (const auto it = cfg.find("tf_interval_ms"); it != cfg.end() && it->is_number_integer()) {
@@ -620,11 +683,6 @@ class LcmDialog : public PJ::DialogPluginTyped {
   std::string xml_file_path_;
   int tf_interval_ms_ = kDefaultTfIntervalMs;
 
-  struct TopicConfig {
-    std::string topic_name;
-    std::string port;
-    std::string lcm_file_path;
-  };
   std::vector<TopicConfig> topic_config_;
 
   void addRow(std::string& topic_name, int port, std::string& lcm_file_path) {
@@ -633,6 +691,7 @@ class LcmDialog : public PJ::DialogPluginTyped {
 
   // Row editor state
   int selected_row_ = -1;
+  std::string selected_topic_name_;
   std::string editing_topic_name_;
   int editing_port_ = 7667;
   std::string editing_lcm_file_;
