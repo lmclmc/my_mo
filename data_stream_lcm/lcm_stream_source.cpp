@@ -1,8 +1,15 @@
 #include "lcm_stream_source.hpp"
 
-#include "lidar_subscriber.hpp"
+#include "lcm_endpoint.hpp"
 
+#include <bit>
+#include <cerrno>
 #include <charconv>
+#include <cstdlib>
+#include <limits>
+#include <poll.h>
+#include <stdexcept>
+#include <type_traits>
 
 static std::vector<uint8_t> serializeVisualization(
     visualization_msgs::msg::Marker& msg) {
@@ -402,185 +409,175 @@ LcmStreamSource::LcmStreamSource() {
   m_marker_error_bar_handle_ = PJ::ParserBindingHandle();
 }
 
-void LcmStreamSource::handleMessage(const lcm::ReceiveBuffer* recvbuf, const std::string& topic_name) {
-  if (recvbuf->data_size < 8) return; // 所有的 LCM 消息头至少 8 字节
+LcmStreamSource::~LcmStreamSource() {
+  onStop();
+}
 
-  if (lcm_log)
-    lcm_log->write(topic_name, recvbuf);
+namespace {
 
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  LcmMessage msg;
-  msg.channel = topic_name;
-  msg.timestamp = recvbuf->recv_utime;
-  msg.data.assign(reinterpret_cast<const uint8_t*>(recvbuf->data), reinterpret_cast<const uint8_t*>(recvbuf->data) + recvbuf->data_size);
-  message_queue.push(msg);
+// LCM fingerprints include the rotated fingerprints of nested types.
+// The field decoder requires a finite, non-recursive schema.
+uint64_t typeFingerprint(const lcm_struct_t& type,
+                         const std::map<std::string, const lcm_struct_t*>& types,
+                         std::set<const lcm_struct_t*>& active) {
+  if (!active.insert(&type).second) {
+    throw std::runtime_error("暂不支持递归 LCM 类型");
+  }
+  auto hash = static_cast<uint64_t>(type.hash);
+  for (guint i = 0; i < type.members->len; ++i) {
+    const auto* member = static_cast<const lcm_member_t*>(g_ptr_array_index(type.members, i));
+    const auto* name = member->type->lctypename;
+    if (!lcm_is_primitive_type(name)) {
+      const auto nested = types.find(name);
+      if (nested == types.end()) {
+        throw std::runtime_error(std::string("未定义的 LCM 类型 ") + name);
+      }
+      hash += typeFingerprint(*nested->second, types, active);
+    }
+  }
+  active.erase(&type);
+  return std::rotl(hash, 1);
+}
+
+}  // namespace
+
+PJ::Status LcmStreamSource::loadTopicSchemas() {
+  TypeTable shared_types;
+  for (const auto& item : dialog_.getTopicConfig()) {
+    if (item.topic_name.empty() || item.lcm_file_path.empty() || schema_files_.contains(item.lcm_file_path)) {
+      continue;
+    }
+    SchemaFile file(lcmgen_create(), lcmgen_destroy);
+    if (lcmgen_handle_file(file.get(), item.lcm_file_path.c_str()) != 0 || file->structs->len == 0) {
+      return PJ::unexpected("无法读取 LCM 骨架文件 " + item.lcm_file_path);
+    }
+    for (guint i = 0; i < file->structs->len; ++i) {
+      const auto* type = static_cast<const lcm_struct_t*>(g_ptr_array_index(file->structs, i));
+      shared_types.try_emplace(type->structname->lctypename, type);
+    }
+    schema_files_.emplace(item.lcm_file_path, std::move(file));
+  }
+
+  std::map<TopicKey, std::vector<const lcmgen_t*>> files_by_topic;
+  std::map<std::string, size_t> port_counts;
+  for (const auto& item : dialog_.getTopicConfig()) {
+    if (item.topic_name.empty() || item.lcm_file_path.empty()) {
+      continue;
+    }
+    const auto port = lcm_stream::parseLcmPort(item.port);
+    if (!port) {
+      return PJ::unexpected("LCM 话题 " + item.topic_name + " 的端口无效 " + item.port);
+    }
+    auto [entry, inserted] = files_by_topic.try_emplace({*port, item.topic_name});
+    if (inserted) {
+      ++port_counts[item.topic_name];
+    }
+    entry->second.push_back(schema_files_.at(item.lcm_file_path).get());
+  }
+  for (const auto& [key, files] : files_by_topic) {
+    const auto& [port, topic] = key;
+    auto& schema = topic_map_[key];
+    schema.types = shared_types;
+    schema.curve_prefix = topic;
+    if (port_counts.at(topic) > 1) {
+      schema.curve_prefix = std::to_string(port) + "/" + topic;
+    }
+    for (const auto* file : files) {
+      for (guint i = 0; i < file->structs->len; ++i) {
+        const auto* type = static_cast<const lcm_struct_t*>(g_ptr_array_index(file->structs, i));
+        schema.types.insert_or_assign(type->structname->lctypename, type);
+      }
+    }
+    try {
+      for (const auto* file : files) {
+        for (guint i = 0; i < file->structs->len; ++i) {
+          const auto* type = static_cast<const lcm_struct_t*>(g_ptr_array_index(file->structs, i));
+          std::set<const lcm_struct_t*> active;
+          schema.types_by_hash.try_emplace(typeFingerprint(*type, schema.types, active), type);
+        }
+      }
+    } catch (const std::exception& error) {
+      return PJ::unexpected("LCM 话题 " + topic + " 的骨架无法解析：" + error.what());
+    }
+  }
+  return PJ::okStatus();
+}
+
+void LcmStreamSource::handleMessage(int port, const lcm::ReceiveBuffer* buffer, const std::string& topic) {
+  if (lcm_log) {
+    lcm_log->write(topic, buffer);
+  }
+  const TopicKey key{port, topic};
+  if (buffer->data_size < sizeof(int64_t) || buffer->data_size > std::numeric_limits<int>::max() ||
+      !topic_map_.contains(key)) {
+    return;
+  }
+
+  const auto* begin = static_cast<const uint8_t*>(buffer->data);
+  message_queue.push({key, buffer->recv_utime, {begin, begin + buffer->data_size}});
 }
 
 PJ::Status LcmStreamSource::onStart() {
+  onStop();
   tf_interval_us_ = static_cast<int64_t>(dialog_.tfIntervalMs()) * 1000;
   last_tf_timestamp_.reset();
   m_image_handle_ = PJ::ParserBindingHandle();
   m_tf_handle_ = PJ::ParserBindingHandle();
   m_marker_handle_ = PJ::ParserBindingHandle();
   m_marker_error_bar_handle_ = PJ::ParserBindingHandle();
-  //   rclcpp::init(0, nullptr);
 
-  // auto node = std::make_shared<LidarSubscriber>();
+  const auto fail = [this](std::string error) {
+    onStop();
+    runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, error);
+    runtimeHost().showError("LCM 连接失败", error);
+    return PJ::unexpected(std::move(error));
+  };
+  if (auto status = loadTopicSchemas(); !status) {
+    return fail(status.error());
+  }
 
-  // std::thread([node] () {
-  //   rclcpp::spin(node);
-  // }).detach();
-
-  robot_state_publisher_.init(dialog_.urdfpath(), dialog_.xmlpath(),
-                              [this] (const std::string& urdf_xml) {
-                                  publishRobotState(urdf_xml);
-                              });
-
-  topic_map.clear();
-  lcm_table.clear();
-  auto _config = dialog_.getTopicConfig();
-
-  lcm_type_table.clear();
-  lcm_type_table["int8_t"] = nullptr;
-  lcm_type_table["int16_t"] = nullptr;
-  lcm_type_table["int32_t"] = nullptr;
-  lcm_type_table["int64_t"] = nullptr;
-  lcm_type_table["float"] = nullptr;
-  lcm_type_table["double"] = nullptr;
-  lcm_type_table["string"] = nullptr;
-  lcm_type_table["boolean"] = nullptr;
-  
-  for (const auto& item : _config) {
-    // 检查文件是否存在
-    std::ifstream file_check(item.lcm_file_path);
-    if (!file_check.good()) {
-      // QMessageBox::warning(nullptr, tr("Error"), "文件不存在: " + item.lcmFilePath + "，跳过加载。");
-      // std::cerr << "Warning: File does not exist: " << item.lcm_file_path << std::endl;
-      runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: File does not exist: ") + item.lcm_file_path);
-      runtimeHost().showError("LCM import failed", std::string("Warning: File does not exist: ") + item.lcm_file_path);
-      return PJ::unexpected(std::string("Warning: File does not exist: ") + item.lcm_file_path);
+  std::vector<pollfd> descriptors;
+  for (const int port : dialog_.listeningPorts()) {
+    auto receiver = std::make_unique<Receiver>(this, port, lcm_stream::lcmUrl(port));
+    auto& connection = receiver->connection;
+    const int fd = connection.good() ? connection.getFileno() : -1;
+    if (fd < 0 || !connection.subscribe(".*", &Receiver::receive, receiver.get())) {
+      return fail("无法监听 LCM 端口 " + std::to_string(port));
     }
-
-    lcmgen_t* lcmgen = lcmgen_create();
-    tokenize_t* t = tokenize_create(item.lcm_file_path.c_str());
-    int res;
-    do {
-        res = parse_entity(lcmgen, item.lcm_file_path.c_str(), t);
-        if (res == -10) {
-//          QMessageBox::warning(nullptr, tr("Error"), "文件  " + item.lcm_file_path + "格式错误. 退出加载...........");
-          runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: File format error: ") + item.lcm_file_path);
-          runtimeHost().showError("LCM import failed", std::string("Warning: File format error: ") + item.lcm_file_path);
-          return PJ::unexpected(std::string("Warning: File format error: ") + item.lcm_file_path);
-        }
-    } while (res == 0);
-
-    for (int struct_idx = 0; struct_idx < lcmgen->structs->len; struct_idx++) {
-      lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, struct_idx);
-      lcm_type_table[struct_item->structname->lctypename] = struct_item;
-    }
-
-    int64_t hash = 0;
-    if (lcmgen->structs->len > 0) {
-        lcm_struct_t* last_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, lcmgen->structs->len - 1);
-        hash = last_item->hash;
-    }
-
-    tokenize_destroy(t);
-
-    if (auto it = topic_map.find(item.topic_name); it == topic_map.end()) {
-      topic_map[item.topic_name] = {hash, {lcmgen}, item.lcm_file_path};
-    } else {
-      it->second.lcmgen_table.push_back(lcmgen);
-    }
-
-    std::cout << "item.topic: " << item.topic_name << std::endl;
-    std::cout << "item.lcm_file_path: " << item.lcm_file_path << std::endl;
-    std::cout << "item.port: " << item.port << std::endl;
-
-    if (auto l = lcm_table.find(std::stoi(item.port)); l == lcm_table.end()) {
-      std::string lcm_url = std::string("udpm://239.255.76.67:") + item.port;
-      auto lcm_ptr = std::make_shared<lcm::LCM>(lcm_url); // 使用全局变量
-      lcm_ptr->subscribe(".*", &LcmStreamSource::handleMessage, this);
-      lcm_table[std::stoi(item.port)] = lcm_ptr;
-    }
+    descriptors.push_back({fd, POLLIN, 0});
+    receivers_.push_back(std::move(receiver));
   }
 
   log_save_path = dialog_.log_save_path();
   log_max_size = dialog_.log_max_size();
   log_max_files_num = dialog_.log_max_files_num();
-
   if (!log_save_path.empty()) {
     lcm_log = std::make_shared<rotating_file_sink>(log_save_path, log_max_size, log_max_files_num);
   }
 
-  for (auto& pair : topic_map) {
-    for (auto lcmgen : pair.second.lcmgen_table) {
-      for (int struct_idx = 0; struct_idx < lcmgen->structs->len; struct_idx++) {
-        lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(lcmgen->structs, struct_idx);
-        if (g_ptr_array_size(struct_item->members)) {
-          for (unsigned int mind = 0; mind < g_ptr_array_size(struct_item->members); mind++) {
-            lcm_member_t *member = (lcm_member_t *) g_ptr_array_index(struct_item->members, mind);
-            if (auto it = lcm_type_table.find(member->type->lctypename); it != lcm_type_table.end()) {
-              if (it->second) {
-                uint64_t hash = struct_item->hash + (it->second->hash<<1) + ((it->second->hash>>63)&1);
-                struct_item->hash = hash;
-                pair.second.hash = hash;
-              }
-            } else {
-        //      QMessageBox::warning(nullptr, tr("Error"), "类型  " + QString::fromStdString(member->type->lctypename) + " 未定义. 退出加载...........");
-               runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: Type not defined: ") + member->type->lctypename);
-               runtimeHost().showError("LCM import failed", std::string("Warning: Type not defined: ") + member->type->lctypename);
-               return PJ::unexpected(std::string("Warning: Type not defined: ") + member->type->lctypename);
-            }
-          }
-        }
-      }
-    }
+  robot_state_publisher_ = RobotStatePublisher{};
+  if (!dialog_.urdfpath().empty() || !dialog_.xmlpath().empty()) {
+    robot_state_publisher_.init(dialog_.urdfpath(), dialog_.xmlpath(),
+                                [this](const std::string& urdf_xml) { publishRobotState(urdf_xml); });
   }
 
-  _running = true;
-  lcm_runner_ = std::thread([this] {
-    struct timeval timeout;
-    timeout.tv_sec  = 0;
-    timeout.tv_usec = 0;
-
-    while (_running) {
-      //提高select的超时等待时间，优化数据实时性的抖动率，从4%降低到3.2%，并解决cpu占用过高的问题
-      timeout.tv_usec = 300 * 1000;  // 300ms = 300000us
-      fd_set fds;
-      FD_ZERO(&fds);
-      int max_fd = 0;
-      for (auto [port, lcm_ptr] : lcm_table) {
-        int fd = lcm_ptr->getFileno();
-        FD_SET(fd, &fds);
-        if (fd > max_fd) {
-          max_fd = fd;
-        }
+  running_ = true;
+  lcm_runner_ = std::thread([this, descriptors = std::move(descriptors)]() mutable {
+    while (running_) {
+      const int ready = ::poll(descriptors.data(), descriptors.size(), 300);
+      if (ready < 0 && errno != EINTR) {
+        break;
       }
-
-      int status = select(max_fd + 1, &fds, 0, 0, &timeout);
-      if (status) {
-        for (auto [port, lcm_ptr] : lcm_table) {
-          int fd = lcm_ptr->getFileno();
-          if (FD_ISSET(fd, &fds)) {
-            if (lcm_ptr) {
-              lcm_ptr->handle();
-            }
-          }
+      if (ready <= 0) {
+        continue;
+      }
+      for (size_t i = 0; i < descriptors.size(); ++i) {
+        if (descriptors[i].revents & POLLIN) {
+          receivers_[i]->connection.handle();
         }
       }
     }
   });
-
-  // render_runner_ = std::thread([this] {
-  //   while (_running) {
-  //     //添加延时，避免cpu空转，占用过多的cpu资源
-  //     usleep(1);
-      
-  //   }
-  // });
-
   return PJ::okStatus();
 }
 
@@ -854,103 +851,52 @@ uint32 nanosec
 int LcmStreamSource::decode_type_2(void* recvbuf, int data_size, int64_t timestamp, int offset, const std::string& type,
                              const std::string& base, const std::string& memberName,
                              std::unordered_map<std::string, int>& memberMap,
-                             std::map<std::string, lcm_struct_t*>& lcmTypeTable,
+                             const TypeTable& lcmTypeTable,
                              const WriteCB& writeCb) {
-  int pos_offset = offset;
-  int decode_len = 0;
-  
-  if (type == "int8_t") {
-    int8_t value;
-    int tlen = __int8_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
+  const int remaining = data_size - offset;
+  const auto read = [&](auto decoder, auto value) -> int {
+    const int length = decoder(recvbuf, offset, remaining, &value, 1);
+    if (length < 0) {
+      return length;
     }
     writeCb(base, memberName, value);
-    memberMap[memberName] = value;
-  } else if (type == "int16_t") {
-    int16_t value;
-    int tlen = __int16_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
+    if constexpr (std::is_integral_v<decltype(value)>) {
+      if (std::in_range<int>(value)) {
+        memberMap[memberName] = static_cast<int>(value);
+      }
     }
-    writeCb(base, memberName, value);
-    memberMap[memberName] = value;
-  } else if (type == "int32_t") {
-    int32_t value;
-    int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
-    }
-    writeCb(base, memberName, value);
-    memberMap[memberName] = value;
-  } else if (type == "int64_t") {
-    int64_t value;
-    int tlen = __int64_t_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
-    }
-    writeCb(base, memberName, value);
-    memberMap[memberName] = value;
-  } else if (type == "float") {
-    float value;
-    int tlen = __float_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
-    }
-    writeCb(base, memberName, value);
-  } else if (type == "double") {
-    double value;
-    int tlen = __double_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
-    }
-    writeCb(base, memberName, value);
-  } else if (type == "string") {
-    int32_t __d_len__;
-    int tlen = __int32_t_decode_array(recvbuf, pos_offset, data_size, &__d_len__, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
-    }
-    if(__d_len__ > data_size - pos_offset || __d_len__ <= 0) return 0;
-    std::string lcm_str(static_cast<const char*>(recvbuf) + pos_offset,  __d_len__ - 1);
-    pos_offset += __d_len__;
-    decode_len += __d_len__;
+    return length;
+  };
 
-    writeCb(base, memberName, lcm_str);
-  } else if (type == "boolean") {
-    int8_t value;
-    int tlen = __boolean_decode_array(recvbuf, pos_offset, data_size, &value, 1);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
+  if (type == "int8_t") return read(__int8_t_decode_array, int8_t{});
+  if (type == "int16_t") return read(__int16_t_decode_array, int16_t{});
+  if (type == "int32_t") return read(__int32_t_decode_array, int32_t{});
+  if (type == "int64_t") return read(__int64_t_decode_array, int64_t{});
+  if (type == "byte") return read(__byte_decode_array, uint8_t{});
+  if (type == "float") return read(__float_decode_array, float{});
+  if (type == "double") return read(__double_decode_array, double{});
+  if (type == "boolean") return read(__boolean_decode_array, int8_t{});
+  if (type == "string") {
+    int32_t size = 0;
+    const int header = __int32_t_decode_array(recvbuf, offset, remaining, &size, 1);
+    if (header < 0 || size <= 0 || size > remaining - header) {
+      return -1;
     }
-    writeCb(base, memberName, value);
-  } else {
-    int tlen = decode_type_1(recvbuf, data_size, timestamp, pos_offset, type, base + memberName + "/", lcmTypeTable, writeCb);
-    if(tlen > 0) {
-      pos_offset += tlen;
-      decode_len += tlen;
-    }
+    const auto* text = static_cast<const char*>(recvbuf) + offset + header;
+    writeCb(base, memberName, std::string_view(text, size - 1));
+    return header + size;
   }
-
-  return decode_len;
+  return decode_type_1(recvbuf, data_size, timestamp, offset, type, base + memberName + "/", lcmTypeTable, writeCb);
 }
 
 int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timestamp, int offset, const std::string& type, 
-                             const std::string& base, std::map<std::string, lcm_struct_t*>& lcmTypeTable,
+                             const std::string& base, const TypeTable& lcmTypeTable,
                              const WriteCB& writeCb) {
   int pos_offset = offset;
   int decode_len = 0;
   std::unordered_map<std::string, int> memberMap;
   if (auto lcmStructType = lcmTypeTable.find(type); lcmStructType != lcmTypeTable.end()) {
-    lcm_struct_t* structType = lcmStructType->second;
+    const lcm_struct_t* structType = lcmStructType->second;
     for (unsigned int mind = 0; mind < g_ptr_array_size(structType->members); mind++) {
       lcm_member_t* member = (lcm_member_t*) g_ptr_array_index(structType->members, mind);
 
@@ -958,7 +904,7 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
         int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, 
                                 base + "/", member->membername,
                                 memberMap, lcmTypeTable, writeCb);
-        if(tlen < 0) break; else {
+        if (tlen < 0) return -1; else {
           pos_offset += tlen;
           decode_len += tlen;
         }
@@ -970,18 +916,24 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
 
           if (!lcm_is_constant_size_array(member)) { //判断是否是变长大小数组
             if (lcmStructType->first == "depth_data") {  //判断是否为深度图数据,该数据结构特殊处理
-              int height = memberMap.find("height")->second;
-              int width = memberMap.find("width")->second;
-
-              std::vector<uint8_t> image_data(height * width);
-              for (size_t e = 0; e < height * width; e++) {
+              const auto h = memberMap.find("height");
+              const auto w = memberMap.find("width");
+              if (h == memberMap.end() || w == memberMap.end() || h->second <= 0 || w->second <= 0 ||
+                  h->second > (data_size - pos_offset) / w->second) {
+                return -1;
+              }
+              const int height = h->second;
+              const int width = w->second;
+              const size_t pixels = static_cast<size_t>(height) * width;
+              std::vector<uint8_t> image_data(pixels);
+              for (size_t e = 0; e < pixels; e++) {
                 int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, "",
                                         member->membername, memberMap, lcmTypeTable,
                                         [&image_data, e] (const std::string&, const std::string&,
                                                           PJ::sdk::ValueRef value) {
                                           image_data[e] = std::get<float>(value) * 255.0f + 127;
                                         });
-                if(tlen < 0) break; else {
+                if (tlen < 0) return -1; else {
                   pos_offset += tlen;
                   decode_len += tlen;
                 }
@@ -1000,7 +952,7 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
               if (auto it = memberMap.find("ny"); it != memberMap.end()) {
                 ny = it->second;
               }
-              if (nx <= 0 || ny <= 0) break;
+              if (nx <= 0 || ny <= 0 || nx > (data_size - pos_offset) / ny) return -1;
 
               float center_x = 0.0f;
               float center_y = 0.0f;
@@ -1024,7 +976,7 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
                                                      PJ::sdk::ValueRef value) {
                                             height_data[e] = std::get<float>(value);
                                           });
-                  if(tlen < 0) break; else {
+                  if (tlen < 0) return -1; else {
                     pos_offset += tlen;
                     decode_len += tlen;
                   }
@@ -1044,12 +996,13 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
                                                      PJ::sdk::ValueRef value) {
                                             std_data[e] = std::get<float>(value);
                                           });
-                  if(tlen < 0) break; else {
+                  if (tlen < 0) return -1; else {
                     pos_offset += tlen;
                     decode_len += tlen;
                   }
                 }
 
+                if (height_data.size() != std_data.size()) return -1;
                 auto elevation_marker_error_bar = makeElevationErrorBarMap(
                   "base",            // frame_id
                   "elevation_std",      // ns
@@ -1083,24 +1036,26 @@ int LcmStreamSource::decode_type_1(void* recvbuf, int data_size, int64_t timesta
             }
 
             if (auto it = memberMap.find(ld->size); it != memberMap.end()) {
-              for (size_t i = 0; i < it->second; i++) {
+              if (it->second < 0 || it->second > data_size - pos_offset) return -1;
+              for (int i = 0; i < it->second; i++) {
                 int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, 
                                         base + member->membername + "/",
                                         std::to_string(i), memberMap, lcmTypeTable, writeCb);
-                if(tlen < 0) break; else {
+                if (tlen < 0) return -1; else {
                   pos_offset += tlen;
                   decode_len += tlen;
                 }
               }
-              continue;;
+              continue;
             }
           }
-          
-          for (size_t i = 0; i < atoi(ld->size); i++) {
+
+          const long count = std::strtol(ld->size, nullptr, 0);
+          for (long i = 0; i < count; i++) {
             int tlen = decode_type_2(recvbuf, data_size, timestamp, pos_offset, member->type->lctypename, 
                                     base + member->membername + "/",
                                     std::to_string(i), memberMap, lcmTypeTable, writeCb);
-            if(tlen < 0) break; else {
+            if (tlen < 0) return -1; else {
               pos_offset += tlen;
               decode_len += tlen;
             }
@@ -1301,10 +1256,12 @@ uint32 nanosec
       });
 }
 
-void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp, const std::string& topic_name,
+void LcmStreamSource::savePoint(int64_t timestamp, const std::string& curve_path, std::string_view robot_path,
                                 const std::string& field, PJ::sdk::ValueRef value) {
-  auto topic_handle = writeHost().ensureTopic(topic_name);
-                            
+  auto topic_handle = writeHost().ensureTopic(curve_path);
+  if (!topic_handle) {
+    return;
+  }
   const PJ::sdk::NamedFieldValue fields[] = {
       {.name = field, .value = value}
   };
@@ -1326,103 +1283,70 @@ void LcmStreamSource::savePoint(void* recvbuf, int data_size, int64_t timestamp,
   if (error != std::errc{} || next != end || index < 0) {
     return;
   }
-  if (topic_name == "leg_control_data/q/" && index < 12) {
+  if (robot_path == "leg_control_data/q/" && index < 12) {
     robot_state_publisher_.setLegPos(index, *sample);
-  } else if (topic_name == "arm_control_data/joint_curPos/" && index < 14) {
+  } else if (robot_path == "arm_control_data/joint_curPos/" && index < 14) {
     robot_state_publisher_.setArmPos(index, *sample);
-  } else if (topic_name == "waist_control_data/q/" && index < 3) {
+  } else if (robot_path == "waist_control_data/q/" && index < 3) {
     robot_state_publisher_.setWaistPos(index, *sample);
-  } else if (topic_name == "state_estimator/quat/" && index < 4) {
+  } else if (robot_path == "state_estimator/quat/" && index < 4) {
     robot_state_publisher_.setStateEstimator(index, *sample);
   }
 }
 
 // onPoll() drains this stream's own inbox — never touches the network.
 PJ::Status LcmStreamSource::onPoll() {
-  if (message_queue.empty())
-        return PJ::okStatus();;
-  
-  int queue_size = message_queue.size();
-
-  for (size_t i = 0; i < queue_size; i++) {
-    LcmMessage msg = message_queue.pop();
-    if (auto it = topic_map.find(msg.channel); it != topic_map.end()) {
-      bool channel_match = false;
-      for (auto topic_lcmgen : it->second.lcmgen_table) {
-        int64_t msg_hash;
-        int thislen = __int64_t_decode_array(msg.data.data(), 0, msg.data.size(), &msg_hash, 1);
-        for (int struct_idx = 0; struct_idx < topic_lcmgen->structs->len; struct_idx++) {
-          lcm_struct_t* struct_item = (lcm_struct_t*)g_ptr_array_index(topic_lcmgen->structs, struct_idx);
-          if (msg_hash == ((struct_item->hash<<1) + ((struct_item->hash>>63)&1))) {
-            decode_type_1(msg.data.data(), msg.data.size(), msg.timestamp, 8, struct_item->structname->lctypename, msg.channel + "/", lcm_type_table,
-                      [&msg, this] (const std::string& topic_name, const std::string& field, PJ::sdk::ValueRef value) {
-                        savePoint(msg.data.data(), msg.data.size(), msg.timestamp, topic_name, field, value);
-                      });
-            channel_match = true;
-            break;
-          }
-        }
+  const int queue_size = message_queue.size();
+  for (int i = 0; i < queue_size; ++i) {
+    auto msg = message_queue.pop();
+    const auto& schema = topic_map_.at(msg.topic);
+    const auto bytes = static_cast<int>(msg.data.size());
+    int64_t fingerprint = 0;
+    __int64_t_decode_array(msg.data.data(), 0, bytes, &fingerprint, 1);
+    const auto matched = schema.types_by_hash.find(static_cast<uint64_t>(fingerprint));
+    if (matched == schema.types_by_hash.end()) {
+      if (reported_mismatches_.insert(msg.topic).second) {
+        const auto& [port, topic] = msg.topic;
+        runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kWarning,
+                                    "LCM 话题 " + topic + "（端口 " + std::to_string(port) +
+                                        "）的消息类型与所选骨架不匹配");
       }
+      continue;
+    }
 
-      if (!channel_match) {
-        std::cout << "channel_match: " << msg.channel << std::endl;
-        runtimeHost().reportMessage(PJ::DataSourceMessageLevel::kError, std::string("Warning: Hash mismatch for channel ") + msg.channel);
-        runtimeHost().showError("LCM import failed", std::string("Warning: Hash mismatch for channel ") + msg.channel);
-        return PJ::unexpected(std::string("channel_match: ") + msg.channel);
-      }
+    const size_t port_prefix_size = schema.curve_prefix.size() - msg.topic.second.size();
+    const int decoded = decode_type_1(
+        msg.data.data(), bytes, msg.timestamp, sizeof(int64_t), matched->second->structname->lctypename,
+        schema.curve_prefix + "/", schema.types,
+        [this, &msg, port_prefix_size](const std::string& topic, const std::string& field, PJ::sdk::ValueRef value) {
+          savePoint(msg.timestamp, topic, std::string_view(topic).substr(port_prefix_size), field, value);
+        });
+    if (decoded < 0) {
+      continue;
     }
     if (!last_tf_timestamp_ || msg.timestamp - *last_tf_timestamp_ >= tf_interval_us_) {
       last_tf_timestamp_ = msg.timestamp;
       robot_state_publisher_.publishTransforms(
-          [this, &msg](const auto& transforms) {
-            publishTF(msg.data.data(), msg.data.size(), msg.timestamp, transforms);
+          [this, &msg, bytes](const auto& transforms) {
+            publishTF(msg.data.data(), bytes, msg.timestamp, transforms);
           },
           {});
     }
   }
-  
-  // auto batch = subscriber_->queue.drain();
-
-  // while (!batch.empty()) {
-  //   auto& dgram = batch.front();
-
-  //   auto status = ingest_.push(
-  //       runtimeHost(), "udp/data",
-  //       {
-  //           .topic_name = "udp/data",
-  //           .parser_encoding = default_encoding_,
-  //           .type_name = {},
-  //           .schema = {},
-  //           .parser_config_json = parser_config_override_,
-  //       },
-  //       PJ::Timestamp{dgram.timestamp_ns}, std::move(dgram.data));
-  //   if (!status) {
-  //     runtimeHost().reportMessage(
-  //         PJ::DataSourceMessageLevel::kError, "Parse error — stopping stream: " + status.error());
-  //     return PJ::unexpected(status.error());
-  //   }
-
-  //   batch.pop();
-  // }
-
   return PJ::okStatus();
 }
 
 void LcmStreamSource::onStop() {
-  std::cout << "DataStreamLCM::shutdown" << std::endl;
-  _running = false;
-  
+  running_ = false;
   if (lcm_runner_.joinable()) {
     lcm_runner_.join();
   }
-  std::cout << "DataStreamLCM::shutdown lcm_runner_ joined" << std::endl;
-  if (render_runner_.joinable()) {
-    render_runner_.join();
-  }
-  std::cout << "DataStreamLCM::shutdown render_runner_ joined" << std::endl;
-  lcm_table.clear();
+  receivers_.clear();
   lcm_log.reset();
   message_queue.clear();
+  reported_mismatches_.clear();
+  topic_map_.clear();
+  schema_files_.clear();
 }
 
 PJ_DATA_SOURCE_PLUGIN(LcmStreamSource, kMcapManifest)

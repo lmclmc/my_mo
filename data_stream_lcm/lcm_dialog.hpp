@@ -1,73 +1,46 @@
 #pragma once
 
-#define MCAP_IMPLEMENTATION 
-
 #include <algorithm>
-#include <cctype>
+#include <chrono>
+#include <cstdint>
+#include <charconv>
+#include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <limits>
-#include <mcap/reader.hpp>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <utility>
+#include <vector>
+
+#include <lcm/lcm-cpp.hpp>
 #include <nlohmann/json.hpp>
 #include <pj_plugins/sdk/dialog_plugin_typed.hpp>
 #include <pj_plugins/sdk/widget_data.hpp>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
 
-#include "mcap_helpers.hpp"
-#include "update_history.hpp"
-
-// Generated at configure time
 #include "datastream_lcm_ui.hpp"
+#include "lcm_endpoint.hpp"
 #include "mcap_manifest.hpp"
-
-struct ChannelInfo {
-  std::string topic;
-  std::string schema;
-  std::string encoding;
-  uint64_t msg_count = 0;
-};
-
-struct AlwaysIncludeRule {
-  std::string schema_name;
-  std::string encoding;
-};
-
-/// Channels whose (schema, encoding) match a rule here are always loaded,
-/// regardless of user selection -- 3D rendering (Scene3D's transform tree)
-/// silently breaks without them. Keyed on message type rather than topic
-/// name because topic naming isn't consistent across producers: Foxglove's
-/// own foxglove.FrameTransform has no fixed topic-name convention the way
-/// ROS fixes /tf (real Foxglove-recorded files use topic names like plain
-/// "tf", no leading slash, or something else entirely). The mechanism here
-/// is generic -- this table is just its (currently two-entry) data.
-const std::vector<AlwaysIncludeRule> kAlwaysIncludeRules = {
-    {"tf2_msgs/msg/TFMessage", "cdr"},
-    {"foxglove.FrameTransform", "protobuf"},
-};
-
-bool isAlwaysIncluded(const ChannelInfo& ch) {
-  for (const auto& rule : kAlwaysIncludeRules) {
-    if (ch.schema == rule.schema_name && ch.encoding == rule.encoding) {
-      return true;
-    }
-  }
-  return false;
-}
-
+#include "update_history.hpp"
 
 class LcmDialog : public PJ::DialogPluginTyped {
   using PJ::DialogPluginTyped::onValueChanged;
+  using TopicKey = std::pair<int, std::string>;
+
+  struct TopicConfig {
+    std::string topic_name;
+    std::string port;
+    std::string lcm_file_path;
+  };
+
   static constexpr int kDefaultTfIntervalMs = 10;
 
  public:
-  // --- Accessors for McapSource ---
-  const std::string& filepath() const {
-    return filepath_;
-  }
-
   const std::string& xmlpath() const {
     return xml_file_path_;
   }
@@ -92,32 +65,20 @@ class LcmDialog : public PJ::DialogPluginTyped {
     return log_max_files_num_;
   }
 
-  unsigned maxArraySize() const {
-    return max_array_size_;
-  }
-  bool clampLargeArrays() const {
-    return clamp_large_arrays_;
-  }
-  /// When true, use logTime from the MCAP envelope; otherwise use publishTime.
-  bool useLogTime() const {
-    return use_log_time_;
-  }
-  /// When true, the parser should extract the timestamp from inside the message
-  /// payload (e.g. ROS Header.stamp) via use_embedded_timestamp in parser config.
-  bool useHeaderTimestamp() const {
-    return use_header_timestamp_;
-  }
-  const std::unordered_set<std::string>& selectedTopics() const {
-    return selected_topics_;
-  }
-  /// Non-empty when the file could not be analyzed (unreadable, damaged
-  /// beyond the reader's fallback scan). Surfaced in the dialog so an empty
-  /// channel table is never mistaken for a recording without topics.
-  const std::string& analyzeError() const {
-    return analyze_error_;
+  const auto& getTopicConfig() const {
+    return topic_config_;
   }
 
-  // --- Dialog protocol ---
+  std::set<int> listeningPorts() const {
+    auto ports = discovery_ports_;
+    ports.insert(lcm_stream::kDefaultLcmPort);
+    for (const auto& topic : topic_config_) {
+      if (const auto port = lcm_stream::parseLcmPort(topic.port)) {
+        ports.insert(*port);
+      }
+    }
+    return ports;
+  }
 
   std::string manifest() const override {
     return kMcapManifest;
@@ -128,649 +89,428 @@ class LcmDialog : public PJ::DialogPluginTyped {
   }
 
   std::string widget_data() override {
+    discovery_active_ = true;
+    updateDiscoveryPorts();
     PJ::WidgetData wd;
-
-    // Array size row
-    wd.setRange("spinBox", 0, 9999);
-    wd.setValue("spinBox", static_cast<int>(max_array_size_));
-    wd.setChecked("radioClamp", clamp_large_arrays_);
-    wd.setChecked("radioSkip", !clamp_large_arrays_);
-
-    // Timestamp row
-    wd.setChecked("radioPublishTime", !use_log_time_);
-    wd.setChecked("radioLogTime", use_log_time_);
-    wd.setChecked("checkBoxUseTimestamp", use_header_timestamp_);
-
-    // Filter
-    wd.setText("lineEditFilter", filter_text_);
-
-    // Channel table — apply filter and build rows
-    auto filtered = filteredChannels();
-    std::vector<std::string> headers = {"Channel name", "Schema", "Encoding", "Msg Count"};
-    wd.setTableHeaders("tableWidget", headers);
-
-    std::vector<std::vector<PJ::TableItem>> rows;
-    std::vector<std::string> selected_topic_names;
-    std::vector<int> disabled_row_indices;
-    rows.reserve(filtered.size());
-
-    for (size_t i = 0; i < filtered.size(); ++i) {
-      const auto& ch = *filtered[i];
-      // Msg Count carries its native uint64 so the column sorts numerically;
-      // without it the host could only compare the rendered digits.
-      rows.push_back({ch.topic, ch.schema, ch.encoding, PJ::TableItem(ch.msg_count)});
-      if (selected_topics_.count(ch.topic) > 0) {
-        selected_topic_names.push_back(ch.topic);
-      }
-      bool locked_always_included = ch.msg_count > 0 && isAlwaysIncluded(ch);
-      if (ch.msg_count == 0 || locked_always_included) {
-        disabled_row_indices.push_back(static_cast<int>(i));
-      }
-      if (locked_always_included) {
-        wd.setCellTooltip(
-            "tableWidget", static_cast<int>(i), 0, "Always loaded — required for 3D transform rendering.");
-      }
-    }
-    wd.setTableRows("tableWidget", rows);
-    wd.setDisabledRows("tableWidget", disabled_row_indices);
-    // Restore selection by first-column text (the topic name), not row index:
-    // the host matches items by text, which is sort-agnostic, so the selection
-    // survives the table's built-in column sorting (sortingEnabled=true).
-    wd.setSelectedItems("tableWidget", selected_topic_names);
-
-    // Explain an empty table rather than leaving it looking like a recording
-    // with no topics.
-    wd.setVisible("labelAnalyzeError", !analyze_error_.empty());
-    if (!analyze_error_.empty()) {
-      wd.setLabel("labelAnalyzeError", analyze_error_);
-    }
-
-    // LCM Topic Table — populate with user-added rows
-    {
-      std::vector<std::string> lcm_headers = {"Topic Name", "Port", "LCM Log File"};
-      wd.setTableHeaders("topicTableWidget", lcm_headers);
-      std::vector<std::vector<PJ::TableItem>> lcm_rows;
-      for (const auto& cfg : topic_config_) {
-        lcm_rows.push_back({cfg.topic_name, cfg.port, cfg.lcm_file_path});
-      }
-      wd.setTableRows("topicTableWidget", lcm_rows);
-
-      // 高亮当前编辑行
-      if (selected_row_ >= 0 && selected_row_ < static_cast<int>(topic_config_.size())) {
-        wd.setSelectedRows("topicTableWidget", {selected_row_});
-      }
-    }
-
-    // URDF 文件导入
     wd.setText("urdfPathEdit", urdf_file_path_);
-    wd.setFilePicker("urdfBrowseBtn", "Browse",
-                     "URDF 文件 (*.urdf);;所有文件 (*)", "选择 URDF 文件");
-
-    // XML 文件导入
+    wd.setFilePicker("urdfBrowseBtn", "Browse", "URDF 文件 (*.urdf);;所有文件 (*)", "选择 URDF 文件");
     wd.setText("xmlPathEdit", xml_file_path_);
-    wd.setFilePicker("xmlBrowseBtn", "Browse",
-                     "XML 文件 (*.xml);;所有文件 (*)", "选择 XML 文件");
+    wd.setFilePicker("xmlBrowseBtn", "Browse", "XML 文件 (*.xml);;所有文件 (*)", "选择 XML 文件");
     wd.setRange("tfIntervalSpinBox", 1, std::numeric_limits<int>::max());
     wd.setValue("tfIntervalSpinBox", tf_interval_ms_);
 
-    // 日志保存设置
     wd.setText("logPathEdit", log_save_path_);
-    wd.setSaveFilePicker("logPathBrowseBtn", "Browse",
-                     "所有文件 (*)", "选择日志保存路径", ".lcmlog");
+    wd.setSaveFilePicker("logPathBrowseBtn", "Browse", "所有文件 (*)", "选择日志保存路径", ".lcmlog");
     wd.setText("logMaxSizeEdit", std::to_string(log_max_size_));
     wd.setText("logMaxFilesEdit", std::to_string(log_max_files_num_));
 
-    // 内联编辑栏 — 显示当前选中行的数据
-    wd.setText("topicNameEdit", editing_topic_name_);
+    std::set<TopicKey> topics = discovered_topics_;
+    topics.insert(manual_topics_.begin(), manual_topics_.end());
+    std::map<TopicKey, std::string> schema_paths;
+    for (const auto& config : topic_config_) {
+      if (const auto port = lcm_stream::parseLcmPort(config.port)) {
+        const TopicKey key{*port, config.topic_name};
+        topics.insert(key);
+        auto& paths = schema_paths[key];
+        if (!paths.empty()) {
+          paths += " | ";
+        }
+        paths += config.lcm_file_path;
+      }
+    }
+
+    wd.setTableHeaders("topicTableWidget", {"LCM 话题", "端口", "LCM 骨架文件"});
+    std::vector<std::vector<PJ::TableItem>> rows;
+    rows.reserve(topics.size());
+    std::vector<std::string> selected;
+    std::string selected_path;
+    topic_keys_.clear();
+    for (const auto& key : topics) {
+      const auto& [port, topic] = key;
+      const std::string label = topic + " [" + std::to_string(port) + "]";
+      topic_keys_.emplace(label, key);
+      const auto schema = schema_paths.find(key);
+      const std::string file = schema == schema_paths.end() ? "未设置" : schema->second;
+      rows.push_back({label, std::to_string(port), file});
+      if (selected_topic_ == key) {
+        selected.push_back(label);
+        if (schema != schema_paths.end()) {
+          selected_path = file;
+        }
+      }
+    }
+    wd.setTableRows("topicTableWidget", rows);
+    wd.setSelectedItems("topicTableWidget", selected);
+    wd.setLabel("discoveryStatusLabel", discoveryStatus());
+
+    wd.setText("topicNameEdit", manual_topic_name_);
     wd.setValue("portSpinBox", editing_port_);
-    wd.setText("lcmFileEdit", editing_lcm_file_);
-    wd.setFilePicker("lcmFileBrowseBtn", "Browse",
-                     "LCM 骨架文件 (*.lcm);;所有文件 (*)", "选择 LCM 骨架文件");
+    wd.setText("lcmFileEdit", selected_path);
+    wd.setFilePicker("lcmFileBrowseBtn", "选择骨架…", "LCM 骨架文件 (*.lcm);;所有文件 (*)", "选择 LCM 骨架文件");
+    wd.setEnabled("lcmFileBrowseBtn", !selected.empty());
+    wd.setEnabled("btnDel", !selected_path.empty());
+    wd.setEnabled("btnClear", !topic_config_.empty());
+    wd.setEnabled("btnClearTopics", !topics.empty());
 
-    // 配置文件的保存和加载按钮
-    wd.setSaveFilePicker("btnSaveCfg", "Save Config JSON",
-                         "JSON 文件 (*.json)", "保存配置文件", ".json");
-    wd.setFilePicker("btnLoadCfg", "Load Config JSON",
-                     "JSON 文件 (*.json)", "加载配置文件");
-
+    wd.setSaveFilePicker("btnSaveCfg", "Save Config JSON", "JSON 文件 (*.json)", "保存配置文件", ".json");
+    wd.setFilePicker("btnLoadCfg", "Load Config JSON", "JSON 文件 (*.json)", "加载配置文件");
     if (request_update_history_) {
       wd.requestSubDialog(PjUpdateHistory::dialogUi());
       request_update_history_ = false;
     }
-
-    // Confirm 按钮：请求关闭对话框
     if (request_accept_) {
       wd.requestAccept();
       request_accept_ = false;
     }
-
     return wd.toJson();
   }
 
-  bool onValueChanged(std::string_view widget_name, int value) override {
-    if (widget_name == "spinBox") {
-      max_array_size_ = static_cast<unsigned>(std::max(0, value));
+  bool onTick() override {
+    if (!discovery_active_) {
       return false;
     }
-    if (widget_name == "portSpinBox") {
-      editing_port_ = value;
-      return false;
+    const auto previous_topic_count = discovered_topics_.size();
+    bool listener_failed = false;
+    for (auto it = listeners_.begin(); it != listeners_.end();) {
+      int handled = 0;
+      // Limit the messages drained on each UI tick even on a busy bus.
+      for (int message = 0; message < 128; ++message) {
+        handled = it->second->transport.handleTimeout(0);
+        if (handled <= 0) {
+          break;
+        }
+      }
+      if (handled < 0) {
+        failed_ports_.insert(it->first);
+        it = listeners_.erase(it);
+        listener_failed = true;
+      } else {
+        ++it;
+      }
     }
-    if (widget_name == "tfIntervalSpinBox") {
-      tf_interval_ms_ = std::max(1, value);
-      return false;
-    }
-    return false;
+    return listener_failed || discovered_topics_.size() != previous_topic_count;
   }
 
-  bool onToggled(std::string_view widget_name, bool checked) override {
-    if (widget_name == "checkBoxUseTimestamp") {
-      use_header_timestamp_ = checked;
-      return false;
-    }
-    if (!checked) {
-      return false;
-    }
-    if (widget_name == "radioClamp") {
-      clamp_large_arrays_ = true;
-      return true;
-    }
-    if (widget_name == "radioSkip") {
-      clamp_large_arrays_ = false;
-      return true;
-    }
-    if (widget_name == "radioPublishTime") {
-      use_log_time_ = false;
-      return false;
-    }
-    if (widget_name == "radioLogTime") {
-      use_log_time_ = true;
-      return false;
+  bool onValueChanged(std::string_view widget_name, int value) override {
+    if (widget_name == "portSpinBox") {
+      editing_port_ = std::clamp(value, 1, 65535);
+    } else if (widget_name == "tfIntervalSpinBox") {
+      tf_interval_ms_ = std::max(1, value);
     }
     return false;
   }
 
   bool onTextChanged(std::string_view widget_name, std::string_view text) override {
-    if (widget_name == "lineEditFilter") {
-      filter_text_ = std::string(text);
-      return true;  // rebuild table with filtered rows
-    }
     if (widget_name == "topicNameEdit") {
-      editing_topic_name_ = std::string(text);
-      return false;
-    }
-    if (widget_name == "urdfPathEdit") {
-      urdf_file_path_ = std::string(text);
-      return false;
-    }
-    if (widget_name == "xmlPathEdit") {
-      xml_file_path_ = std::string(text);
-      return false;
-    }
-    if (widget_name == "lcmFileEdit") {
-      editing_lcm_file_ = std::string(text);
-      return false;
-    }
-    if (widget_name == "logPathEdit") {
-      log_save_path_ = std::string(text);
-      return false;
-    }
-    if (widget_name == "logMaxSizeEdit") {
-      log_max_size_ = std::max(1, std::stoi(std::string(text)));
-      return false;
-    }
-    if (widget_name == "logMaxFilesEdit") {
-      log_max_files_num_ = std::max(1, std::stoi(std::string(text)));
-      return false;
+      manual_topic_name_ = text;
+    } else if (widget_name == "urdfPathEdit") {
+      urdf_file_path_ = text;
+    } else if (widget_name == "xmlPathEdit") {
+      xml_file_path_ = text;
+    } else if (widget_name == "logPathEdit") {
+      log_save_path_ = text;
+    } else if (widget_name == "logMaxSizeEdit") {
+      if (const auto value = parsePositiveInt(text)) {
+        log_max_size_ = std::min(*value, std::numeric_limits<int>::max() / (1024 * 1024));
+      }
+    } else if (widget_name == "logMaxFilesEdit") {
+      if (const auto value = parsePositiveInt(text)) {
+        log_max_files_num_ = *value;
+      }
     }
     return false;
   }
 
   bool onSelectionChanged(std::string_view widget_name, const std::vector<std::string>& selected) override {
-    if (widget_name == "tableWidget") {
-      // The table only reports the rows currently visible under the filter, so a
-      // plain clear()+re-add would drop any selection the filter is hiding.
-      // Reconcile only the visible topics: forget the visible ones that are no
-      // longer selected, and leave everything the filter hides untouched.
-      std::unordered_set<std::string> visible;
-      for (const auto* ch : filteredChannels()) {
-        visible.insert(ch->topic);
-      }
-      for (auto it = selected_topics_.begin(); it != selected_topics_.end();) {
-        if (visible.count(*it) > 0) {
-          it = selected_topics_.erase(it);
-        } else {
-          ++it;
-        }
-      }
-      for (const auto& topic : selected) {
-        selected_topics_.insert(topic);
-      }
-      reassertAlwaysIncluded();
-      return true;  // update OK button state
+    if (widget_name != "topicTableWidget") {
+      return false;
     }
-
-    if (widget_name == "topicTableWidget") {
-      if (!selected.empty()) {
-        // 查找选中行的 index
-        for (size_t i = 0; i < topic_config_.size(); ++i) {
-          if (topic_config_[i].topic_name == selected.front() ||
-              (topic_config_[i].topic_name.empty() && i == topic_config_.size() - 1)) {
-            selected_row_ = static_cast<int>(i);
-            editing_topic_name_ = topic_config_[i].topic_name;
-            editing_port_ = topic_config_[i].port.empty() ? 7667 : std::stoi(topic_config_[i].port);
-            editing_lcm_file_ = topic_config_[i].lcm_file_path;
-            return true;
-          }
-        }
-        // 如果没精确匹配到，默认选第一行
-        selected_row_ = 0;
-        editing_topic_name_ = topic_config_[0].topic_name;
-        editing_port_ = topic_config_[0].port.empty() ? 7667 : std::stoi(topic_config_[0].port);
-        editing_lcm_file_ = topic_config_[0].lcm_file_path;
-      } else {
-        selected_row_ = -1;
-      }
-      return true;
-    }
-
-    return false;
+    const auto match = selected.empty() ? topic_keys_.end() : topic_keys_.find(selected.front());
+    selected_topic_ = match == topic_keys_.end() ? std::nullopt : std::optional<TopicKey>{match->second};
+    return true;
   }
 
   bool onClicked(std::string_view widget_name) override {
     if (widget_name == "updateHistoryButton") {
       request_update_history_ = true;
-      return true;
-    }
-    if (widget_name == "btnSelectAll") {
-      auto filtered = filteredChannels();
-      for (const auto* ch : filtered) {
-        if (ch->msg_count > 0) {
-          selected_topics_.insert(ch->topic);
+    } else if (widget_name == "btnListenPort") {
+      discovery_ports_.insert(editing_port_);
+      failed_ports_.erase(editing_port_);
+    } else if (widget_name == "btnAdd") {
+      if (manual_topic_name_.empty()) {
+        return false;
+      }
+      discovery_ports_.insert(editing_port_);
+      failed_ports_.erase(editing_port_);
+      selected_topic_ = TopicKey{editing_port_, manual_topic_name_};
+      manual_topics_.insert(*selected_topic_);
+      manual_topic_name_.clear();
+    } else if (widget_name == "btnDel") {
+      if (!selected_topic_) {
+        return false;
+      }
+      clearMapping(*selected_topic_);
+    } else if (widget_name == "btnClear") {
+      for (const auto& mapping : topic_config_) {
+        if (const auto port = lcm_stream::parseLcmPort(mapping.port)) {
+          discovery_ports_.insert(*port);
+          manual_topics_.emplace(*port, mapping.topic_name);
         }
       }
-      return true;
-    }
-    if (widget_name == "btnDeselectAll") {
-      selected_topics_.clear();
-      reassertAlwaysIncluded();
-      return true;
-    }
-
-    if (widget_name == "btnAdd") {
-      addRow(editing_topic_name_, editing_port_, editing_lcm_file_);
-      // 自动选中新行
-      selected_row_ = static_cast<int>(topic_config_.size()) - 1;
-      return true;
-    }
-    if (widget_name == "btnDel") {
-      if (selected_row_ >= 0 && selected_row_ < static_cast<int>(topic_config_.size())) {
-        topic_config_.erase(topic_config_.begin() + selected_row_);
-        if (topic_config_.empty()) {
-          selected_row_ = -1;
-        } else if (selected_row_ >= static_cast<int>(topic_config_.size())) {
-          selected_row_ = static_cast<int>(topic_config_.size()) - 1;
-        }
-      }
-      return true;
-    }
-
-    if (widget_name == "btnClear") {
       topic_config_.clear();
-      selected_row_ = -1;
-      return true;
-    }
-    if (widget_name == "btnConfirm") {
+    } else if (widget_name == "btnClearTopics") {
+      discovery_cutoff_us_ = std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::system_clock::now().time_since_epoch()).count();
+      discovered_topics_.clear();
+      manual_topics_.clear();
+      topic_config_.clear();
+      topic_keys_.clear();
+      selected_topic_.reset();
+      manual_topic_name_.clear();
+    } else if (widget_name == "btnConfirm") {
       request_accept_ = true;
-      return true;
+    } else {
+      return false;
     }
-    return false;
+    return true;
   }
 
   bool onFileSelected(std::string_view widget_name, std::string_view path) override {
-    if (widget_name == "urdfBrowseBtn") {
-      urdf_file_path_ = std::string(path);
-      return true;
-    }
-    if (widget_name == "xmlBrowseBtn") {
-      xml_file_path_ = std::string(path);
-      return true;
-    }
-    if (widget_name == "lcmFileBrowseBtn") {
-      editing_lcm_file_ = std::string(path);
-      return true;
-    }
-    if (widget_name == "logPathBrowseBtn") {
-      log_save_path_ = std::string(path);
-      return true;
-    }
-    if (widget_name == "btnSaveCfg") {
-      std::string json = saveConfig();
-      std::ofstream file{std::string(path)};
-      if (file) {
-        file << json;
-      }
-      return true;
-    }
-    if (widget_name == "btnLoadCfg") {
-      std::ifstream file{std::string(path)};
-      if (file) {
-        std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        loadConfig(json);
-        return true;  // rebuild entire widget data
-      }
+    if (path.empty()) {
       return false;
     }
-    return false;
+    if (widget_name == "urdfBrowseBtn") {
+      urdf_file_path_ = path;
+    } else if (widget_name == "xmlBrowseBtn") {
+      xml_file_path_ = path;
+    } else if (widget_name == "lcmFileBrowseBtn") {
+      if (!selected_topic_) {
+        return false;
+      }
+      const auto& [port, name] = *selected_topic_;
+      clearMapping(*selected_topic_);
+      topic_config_.push_back({name, std::to_string(port), std::string(path)});
+    } else if (widget_name == "logPathBrowseBtn") {
+      log_save_path_ = path;
+    } else if (widget_name == "btnSaveCfg") {
+      std::ofstream file{std::filesystem::path(path)};
+      if (!file) {
+        return false;
+      }
+      file << saveConfig();
+      return file.good();
+    } else if (widget_name == "btnLoadCfg") {
+      std::ifstream file{std::filesystem::path(path)};
+      if (!file) {
+        return false;
+      }
+      const std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+      return loadConfig(json);
+    } else {
+      return false;
+    }
+    return true;
   }
 
-  void onAccepted(std::string_view /*json*/) override {}
-  void onRejected() override {}
+  void onAccepted(std::string_view /*json*/) override {
+    stopDiscovery();
+  }
 
-  const auto& getTopicConfig() const {
-    return topic_config_;
+  void onRejected() override {
+    stopDiscovery();
   }
 
   std::string saveConfig() const override {
-    nlohmann::json cfg;
-    cfg["filepath"] = filepath_;
-    cfg["urdf_file_path"] = urdf_file_path_;
-    cfg["xml_file_path"] = xml_file_path_;
-    cfg["tf_interval_ms"] = tf_interval_ms_;
-    cfg["log_save_path"] = log_save_path_;
-    cfg["log_max_size"] = log_max_size_;
-    cfg["log_max_files_num"] = log_max_files_num_;
-    cfg["max_array_size"] = max_array_size_;
-    cfg["clamp_large_arrays"] = clamp_large_arrays_;
-    cfg["use_log_time"] = use_log_time_;
-    cfg["use_header_timestamp"] = use_header_timestamp_;
-    cfg["selected_topics"] = std::vector<std::string>(selected_topics_.begin(), selected_topics_.end());
-
-    nlohmann::json topic_arr = nlohmann::json::array();
-    for (const auto& tc : topic_config_) {
-      topic_arr.push_back({{"topic_name", tc.topic_name},
-                           {"port", tc.port},
-                           {"lcm_file_path", tc.lcm_file_path}});
+    auto config = saved_config_;
+    config["urdf_file_path"] = urdf_file_path_;
+    config["xml_file_path"] = xml_file_path_;
+    config["tf_interval_ms"] = tf_interval_ms_;
+    config["log_save_path"] = log_save_path_;
+    config["log_max_size"] = log_max_size_;
+    config["log_max_files_num"] = log_max_files_num_;
+    config["discovery_ports"] = discovery_ports_;
+    auto topics = nlohmann::json::array();
+    for (const auto& item : topic_config_) {
+      topics.push_back({{"topic_name", item.topic_name}, {"port", item.port}, {"lcm_file_path", item.lcm_file_path}});
     }
-    cfg["topic_config"] = topic_arr;
-
-    return cfg.dump();
+    config["topic_config"] = std::move(topics);
+    return config.dump();
   }
 
   bool loadConfig(std::string_view config_json) override {
-    auto cfg = nlohmann::json::parse(config_json, nullptr, false);
-    if (cfg.is_discarded()) {
+    auto config = nlohmann::json::parse(config_json, nullptr, false);
+    if (!config.is_object()) {
       return false;
     }
-
-    filepath_ = cfg.value("filepath", std::string{});
-    urdf_file_path_ = cfg.value("urdf_file_path", std::string{});
-    xml_file_path_ = cfg.value("xml_file_path", std::string{});
-    tf_interval_ms_ = kDefaultTfIntervalMs;
-    if (const auto it = cfg.find("tf_interval_ms"); it != cfg.end() && it->is_number_integer()) {
-      const double max_interval = std::numeric_limits<int>::max();
-      tf_interval_ms_ = static_cast<int>(std::clamp(it->get<double>(), 1.0, max_interval));
-    }
-    log_save_path_ = cfg.value("log_save_path", std::string{});
-    log_max_size_ = cfg.value("log_max_size", 100);
-    log_max_files_num_ = cfg.value("log_max_files_num", 10);
-    max_array_size_ = cfg.value("max_array_size", 500u);
-    clamp_large_arrays_ = cfg.value("clamp_large_arrays", true);
-    use_log_time_ = cfg.value("use_log_time", cfg.value("use_mcap_log_time", false));
-    // Backward compatibility: old MCAP configs used "use_timestamp" for the
-    // parser-level embedded timestamp option before the controls were split.
-    use_header_timestamp_ = cfg.value("use_header_timestamp", cfg.value("use_timestamp", false));
-
-    selected_topics_.clear();
-    if (auto it = cfg.find("selected_topics"); it != cfg.end() && it->is_array()) {
-      for (const auto& t : *it) {
-        if (t.is_string()) {
-          selected_topics_.insert(t.get<std::string>());
+    std::set<int> ports;
+    std::vector<TopicConfig> topics;
+    try {
+      if (const auto it = config.find("discovery_ports"); it != config.end() && it->is_array()) {
+        for (const auto& entry : *it) {
+          if (entry.is_number_integer() && entry >= 1 && entry <= 65535) {
+            ports.insert(entry.get<int>());
+          }
         }
       }
-    }
-
-    if (!filepath_.empty()) {
-      analyzeFile();
-    }
-
-    topic_config_.clear();
-    if (auto it = cfg.find("topic_config"); it != cfg.end() && it->is_array()) {
-      for (const auto& item : *it) {
-        TopicConfig tc;
-        tc.topic_name = item.value("topic_name", std::string{});
-        tc.port = item.value("port", std::string{});
-        tc.lcm_file_path = item.value("lcm_file_path", std::string{});
-        topic_config_.push_back(std::move(tc));
+      if (const auto it = config.find("topic_config"); it != config.end() && it->is_array()) {
+        for (const auto& item : *it) {
+          if (!item.is_object()) {
+            return false;
+          }
+          auto name = item.value("topic_name", std::string{});
+          auto file = item.value("lcm_file_path", std::string{});
+          const auto text = item.value("port", std::string{});
+          const auto port = lcm_stream::parseLcmPort(text);
+          if (port && !name.empty()) {
+            ports.insert(*port);
+            if (!file.empty()) {
+              topics.push_back({std::move(name), std::to_string(*port), std::move(file)});
+            }
+          }
+        }
       }
+      auto urdf_path = config.value("urdf_file_path", std::string{});
+      auto xml_path = config.value("xml_file_path", std::string{});
+      auto log_path = config.value("log_save_path", std::string{});
+      const auto log_size = std::clamp(config.value("log_max_size", 100), 1,
+                                       std::numeric_limits<int>::max() / (1024 * 1024));
+      const auto log_files = std::max(1, config.value("log_max_files_num", 10));
+      int tf_interval = kDefaultTfIntervalMs;
+      if (const auto it = config.find("tf_interval_ms"); it != config.end() && it->is_number_integer()) {
+        tf_interval = static_cast<int>(std::clamp(it->get<double>(), 1.0,
+                                                 static_cast<double>(std::numeric_limits<int>::max())));
+      }
+      urdf_file_path_ = std::move(urdf_path);
+      xml_file_path_ = std::move(xml_path);
+      log_save_path_ = std::move(log_path);
+      log_max_size_ = log_size;
+      log_max_files_num_ = log_files;
+      tf_interval_ms_ = tf_interval;
+    } catch (const nlohmann::json::exception&) {
+      return false;
     }
-
+    discovery_ports_ = std::move(ports);
+    topic_config_ = std::move(topics);
+    saved_config_ = std::move(config);
+    failed_ports_.clear();
+    manual_topics_.clear();
+    selected_topic_.reset();
     return true;
   }
 
  private:
-  void analyzeFile() {
-    all_channels_.clear();
-    analyze_error_.clear();
+  struct DiscoveryPort {
+    LcmDialog& dialog;
+    int port;
+    lcm::LCM transport;
 
-    auto describe = [](const mcap::Status& s) {
-      return "Code: " + std::to_string(static_cast<int>(s.code)) + "\nMessage: " + s.message;
-    };
+    DiscoveryPort(LcmDialog& owner, int number)
+      : dialog(owner), port(number), transport(lcm_stream::lcmUrl(number)) {}
 
-    // A restored config still holds the PREVIOUS recording's selection. The
-    // pruning step near the end of this function is what normally reconciles
-    // it, so any early return has to drop it here — otherwise OK stays enabled
-    // over an empty table and starts an import that can bind nothing.
-    const auto fail = [this](std::string message) {
-      analyze_error_ = std::move(message);
-      selected_topics_.clear();
-    };
-
-    const auto recording = PJ::McapHelpers::resolveRecordingFiles(filepath_);
-    if (!recording.error.empty()) {
-      fail(recording.error);
-      return;
-    }
-    const bool multi_file = recording.paths.size() > 1;
-
-    // A split rosbag2 bag repeats its channels in every file: merge them by
-    // topic and sum the per-file message counts.
-    std::unordered_map<std::string, size_t> channel_index_by_topic;
-    size_t channels_with_dangling_schema = 0;
-    for (const std::string& path : recording.paths) {
-      const std::string where = multi_file ? "\n" + path : std::string{};
-      mcap::McapReader reader;
-      auto status = reader.open(path);
-      if (!status.ok()) {
-        fail("Cannot open this MCAP file." + where + "\n" + describe(status));
-        return;
-      }
-
-      // AllowFallbackScan reconstructs channels, schemas and statistics by
-      // scanning when the summary section is unusable, so a failure here means
-      // the data section itself could not be read.
-      status = reader.readSummary(mcap::ReadSummaryMethod::AllowFallbackScan);
-      if (!status.ok()) {
-        fail("Cannot read the contents of this MCAP file." + where + "\n" + describe(status));
-        reader.close();
-        return;
-      }
-
-      // Build message count map from statistics
-      std::unordered_map<mcap::ChannelId, uint64_t> msg_counts;
-      if (auto stats = reader.statistics()) {
-        msg_counts = stats->channelMessageCounts;
-      }
-
-      const auto& schemas = reader.schemas();
-      for (const auto& [id, channel_ptr] : reader.channels()) {
-        // schema_id 0 is the MCAP spec's "no schema" sentinel, not an error:
-        // the channel is self-describing (schemaless JSON is the common case)
-        // and binds on its message encoding alone. Schema ids are 1-based, so a
-        // NON-zero id that resolves to nothing is a dangling reference in a
-        // damaged file — no parser can ever be bound to that, and offering it in
-        // the picker would promise data that never arrives.
-        const bool schemaless = PJ::McapHelpers::isSchemaless(channel_ptr->schemaId);
-        auto schema_it = schemas.find(channel_ptr->schemaId);
-        if (!schemaless && schema_it == schemas.end()) {
-          ++channels_with_dangling_schema;
-          continue;
-        }
-
-        auto count_it = msg_counts.find(id);
-        const uint64_t msg_count = (count_it != msg_counts.end()) ? count_it->second : 0;
-
-        if (auto known = channel_index_by_topic.find(channel_ptr->topic); known != channel_index_by_topic.end()) {
-          all_channels_[known->second].msg_count += msg_count;
-          continue;
-        }
-
-        ChannelInfo info;
-        info.topic = channel_ptr->topic;
-        if (schemaless) {
-          info.encoding = channel_ptr->messageEncoding;
-        } else {
-          info.schema = schema_it->second->name;
-          info.encoding =
-              channel_ptr->messageEncoding.empty() ? schema_it->second->encoding : channel_ptr->messageEncoding;
-        }
-        info.msg_count = msg_count;
-
-        channel_index_by_topic.emplace(info.topic, all_channels_.size());
-        all_channels_.push_back(std::move(info));
-      }
-      reader.close();
-    }
-
-    if (all_channels_.empty()) {
-      analyze_error_ = channels_with_dangling_schema > 0
-                           ? "No readable channels: all " + std::to_string(channels_with_dangling_schema) +
-                                 " channel(s) in this file reference a missing schema."
-                           : "No channels were found in this MCAP file.";
-    }
-
-    // Sort by topic name
-    std::sort(all_channels_.begin(), all_channels_.end(), [](const ChannelInfo& a, const ChannelInfo& b) {
-      return a.topic < b.topic;
-    });
-
-    // Saved selections belong to the previously opened recording. Drop names
-    // that do not exist (or have no messages) in this one; otherwise a stale,
-    // non-empty set leaves the dialog with no selected rows and OK disabled.
-    std::unordered_set<std::string> selectable_topics;
-    for (const auto& ch : all_channels_) {
-      if (ch.msg_count > 0) {
-        selectable_topics.insert(ch.topic);
+    void onMessage(const lcm::ReceiveBuffer* buffer, const std::string& name) {
+      // Only messages received after a reset can repopulate the list.
+      if (buffer->recv_utime >= dialog.discovery_cutoff_us_) {
+        dialog.discovered_topics_.emplace(port, name);
       }
     }
-    std::erase_if(selected_topics_, [&](const std::string& topic) { return !selectable_topics.contains(topic); });
 
-    // If no previous selection survives, select all channels with messages.
-    if (selected_topics_.empty()) {
-      selected_topics_ = std::move(selectable_topics);
+    bool subscribe() {
+      if (!transport.good() || transport.getFileno() < 0) {
+        return false;
+      }
+      auto* subscription = transport.subscribe(".*", &DiscoveryPort::onMessage, this);
+      return subscription && subscription->setQueueCapacity(256) == 0;
     }
+  };
 
-    reassertAlwaysIncluded();
-  }
-
-  /// Channels matching kAlwaysIncludeRules are always loaded: 3D rendering
-  /// depends on them even when the user narrows their selection to a handful
-  /// of unrelated topics. Idempotent -- safe to call after any mutation of
-  /// selected_topics_.
-  void reassertAlwaysIncluded() {
-    for (const auto& ch : all_channels_) {
-      if (ch.msg_count > 0 && isAlwaysIncluded(ch)) {
-        selected_topics_.insert(ch.topic);
-      }
+  static std::optional<int> parsePositiveInt(std::string_view text) {
+    if (text.empty()) {
+      return std::nullopt;
     }
-  }
-
-  std::vector<const ChannelInfo*> filteredChannels() const {
-    std::vector<const ChannelInfo*> result;
-    if (filter_text_.empty()) {
-      for (const auto& ch : all_channels_) {
-        result.push_back(&ch);
-      }
-      return result;
-    }
-
-    auto lower = [](std::string s) {
-      for (auto& c : s) {
-        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-      }
-      return s;
-    };
-
-    // Split filter by spaces — AND logic (all words must match), matched
-    // case-insensitively like the streaming pickers' filters.
-    std::vector<std::string> words;
-    std::string word;
-    for (char c : filter_text_) {
-      if (c == ' ') {
-        if (!word.empty()) {
-          words.push_back(lower(word));
-          word.clear();
-        }
-      } else {
-        word += c;
-      }
-    }
-    if (!word.empty()) {
-      words.push_back(lower(word));
-    }
-
-    for (const auto& ch : all_channels_) {
-      const std::string topic = lower(ch.topic);
-      bool match = true;
-      for (const auto& w : words) {
-        if (topic.find(w) == std::string::npos) {
-          match = false;
-          break;
-        }
-      }
-      if (match) {
-        result.push_back(&ch);
-      }
+    int result = 0;
+    const auto* end = text.data() + text.size();
+    const auto [next, error] = std::from_chars(text.data(), end, result);
+    if (error != std::errc{} || next != end || result < 1) {
+      return std::nullopt;
     }
     return result;
   }
 
-  // Config state
-  std::string analyze_error_;
-  std::string filepath_;
-  unsigned max_array_size_ = 500;
-  bool clamp_large_arrays_ = true;
-  bool use_log_time_ = false;
-  bool use_header_timestamp_ = false;
-  std::unordered_set<std::string> selected_topics_;
-  std::string filter_text_;
+  void updateDiscoveryPorts() {
+    const auto ports = listeningPorts();
+    std::erase_if(listeners_, [&](const auto& entry) { return !ports.contains(entry.first); });
+    std::erase_if(discovered_topics_, [&](const TopicKey& key) { return !ports.contains(key.first); });
+    for (int port : ports) {
+      if (listeners_.contains(port) || failed_ports_.contains(port)) {
+        continue;
+      }
+      auto listener = std::make_unique<DiscoveryPort>(*this, port);
+      if (listener->subscribe()) {
+        listeners_.emplace(port, std::move(listener));
+      } else {
+        failed_ports_.insert(port);
+      }
+    }
+  }
+
+  std::string discoveryStatus() const {
+    std::string status = "监听端口";
+    for (const auto& [port, listener] : listeners_) {
+      (void)listener;
+      status += " " + std::to_string(port);
+    }
+    if (listeners_.empty()) {
+      status += " 暂无";
+    } else {
+      status += " · 已发现 " + std::to_string(discovered_topics_.size()) + " 个话题";
+    }
+    if (!failed_ports_.empty()) {
+      status += " · 无法监听端口";
+      for (const int port : failed_ports_) {
+        status += " " + std::to_string(port);
+      }
+    }
+    return status;
+  }
+
+  void clearMapping(const TopicKey& key) {
+    const auto& [port, name] = key;
+    const std::string port_text = std::to_string(port);
+    manual_topics_.insert(key);
+    discovery_ports_.insert(port);
+    std::erase_if(topic_config_, [&](const TopicConfig& config) {
+      return config.topic_name == name && config.port == port_text;
+    });
+  }
+
+  void stopDiscovery() {
+    discovery_active_ = false;
+    listeners_.clear();
+    discovered_topics_.clear();
+    failed_ports_.clear();
+  }
+
+  nlohmann::json saved_config_ = nlohmann::json::object();
   std::string urdf_file_path_;
   std::string xml_file_path_;
   int tf_interval_ms_ = kDefaultTfIntervalMs;
   std::string log_save_path_;
   int log_max_size_ = 100;
   int log_max_files_num_ = 10;
-
-  struct TopicConfig {
-    std::string topic_name;
-    std::string port;
-    std::string lcm_file_path;
-  };
   std::vector<TopicConfig> topic_config_;
 
-  void addRow(std::string& topic_name, int port, std::string& lcm_file_path) {
-    topic_config_.push_back({topic_name, std::to_string(port), lcm_file_path});
-  }
+  std::set<int> discovery_ports_;
+  std::set<TopicKey> manual_topics_;
+  std::set<TopicKey> discovered_topics_;
+  std::int64_t discovery_cutoff_us_ = 0;
+  std::set<int> failed_ports_;
+  std::map<int, std::unique_ptr<DiscoveryPort>> listeners_;
+  std::map<std::string, TopicKey> topic_keys_;
+  std::optional<TopicKey> selected_topic_;
+  int editing_port_ = lcm_stream::kDefaultLcmPort;
+  std::string manual_topic_name_;
 
-  // Row editor state
-  int selected_row_ = -1;
-  std::string editing_topic_name_;
-  int editing_port_ = 7667;
-  std::string editing_lcm_file_;
-
-  // File analysis results
-  std::vector<ChannelInfo> all_channels_;
-
+  bool discovery_active_ = false;
   bool request_accept_ = false;
   bool request_update_history_ = false;
 };

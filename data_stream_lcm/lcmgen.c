@@ -2,20 +2,17 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
+#include <float.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#ifndef _MSC_VER
-#include <unistd.h>
-#endif
 
 #include "tokenize.h"
-
-#ifdef WIN32
-#define strtoll _strtoui64
-#endif
 
 /** The LCM grammar is implemented here with a recursive-descent parser.
     handle_file is the top-level function, which calls parse_struct/parse_enum,
@@ -24,16 +21,20 @@
     Every LCM type has an associated "signature", which is a hash of
     various components of its delcaration. If the declaration of a
     signature changes, the hash changes with high probability.
-
-    Note that this implementation is sloppy about memory allocation:
-    we don't worry about freeing memory since the program will exit
-    after parsing anyway.
 **/
 
-void parse_error(tokenize_t *t, const char *fmt, ...) {}
+enum { LCM_PARSE_ERROR = -10 };
 
-lcm_struct_t *parse_struct(lcmgen_t *lcm, const char *lcmfile, tokenize_t *t);
-lcm_enum_t *parse_enum(lcmgen_t *lcm, const char *lcmfile, tokenize_t *t);
+static int parse_error(const tokenize_t *t, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    fprintf(stderr, "%s:%d: ", t->path, t->token_line);
+    vfprintf(stderr, fmt, args);
+    fputc('\n', stderr);
+    va_end(args);
+    return LCM_PARSE_ERROR;
+}
 
 // lcm's built-in types. Note that unsigned types are not present
 // because there is no safe java implementation. Really, you don't
@@ -75,7 +76,13 @@ int lcm_is_array_dimension_type(const char *t)
 
 int lcm_is_legal_member_name(const char *t)
 {
-    return isalpha(t[0]) || t[0] == '_';
+    if (!isalpha((unsigned char) t[0]) && t[0] != '_')
+        return 0;
+    for (++t; *t; ++t) {
+        if (!isalnum((unsigned char) *t) && *t != '_')
+            return 0;
+    }
+    return 1;
 }
 
 int lcm_is_legal_const_type(const char *t)
@@ -87,8 +94,8 @@ int lcm_is_legal_const_type(const char *t)
 // order that hash_update is called in IS important.
 static int64_t hash_update(int64_t v, char c)
 {
-    v = ((v << 8) ^ (v >> 55)) + c;
-
+    const uint64_t bits = (((uint64_t) v << 8) ^ (uint64_t) (v >> 55)) + (uint64_t) c;
+    memcpy(&v, &bits, sizeof(v));
     return v;
 }
 
@@ -103,111 +110,134 @@ static int64_t hash_string_update(int64_t v, const char *s)
     return v;
 }
 
-// Create a parsing context
-lcmgen_t *lcmgen_create()
+static void lcm_typename_destroy(lcm_typename_t *type)
 {
-    lcmgen_t *lcmgen = (lcmgen_t *) calloc(1, sizeof(lcmgen_t));
-    lcmgen->structs = g_ptr_array_new();
-    lcmgen->enums = g_ptr_array_new();
-    lcmgen->parse_cache.package = strdup("");
-    lcmgen->parse_cache.comment_doc = NULL;
-    lcmgen->parse_cache.file_comment = NULL;
+    g_free(type->lctypename);
+    g_free(type->package);
+    g_free(type->shortname);
+    g_free(type);
+}
+
+static void lcm_dimension_destroy(gpointer pointer)
+{
+    lcm_dimension_t *dim = pointer;
+    g_free(dim->size);
+    g_free(dim);
+}
+
+static void lcm_constant_destroy(gpointer pointer)
+{
+    lcm_constant_t *constant = pointer;
+    g_free(constant->lctypename);
+    g_free(constant->membername);
+    g_free(constant->val_str);
+    g_free(constant->comment);
+    g_free(constant);
+}
+
+static void lcm_member_destroy(gpointer pointer)
+{
+    lcm_member_t *member = pointer;
+    lcm_typename_destroy(member->type);
+    g_free(member->membername);
+    g_free(member->comment);
+    g_ptr_array_unref(member->dimensions);
+    g_free(member);
+}
+
+static void lcm_enum_value_destroy(gpointer pointer)
+{
+    lcm_enum_value_t *value = pointer;
+    g_free(value->valuename);
+    g_free(value);
+}
+
+static void lcm_enum_destroy(gpointer pointer)
+{
+    lcm_enum_t *enumeration = pointer;
+    lcm_typename_destroy(enumeration->enumname);
+    g_ptr_array_unref(enumeration->values);
+    g_free(enumeration->lcmfile);
+    g_free(enumeration);
+}
+
+static void lcm_struct_destroy(gpointer pointer)
+{
+    lcm_struct_t *structure = pointer;
+    lcm_typename_destroy(structure->structname);
+    g_ptr_array_unref(structure->members);
+    g_ptr_array_unref(structure->constants);
+    g_ptr_array_unref(structure->enums);
+    g_ptr_array_unref(structure->structs);
+    g_free(structure->lcmfile);
+    g_free(structure->comment);
+    g_free(structure->file_comment);
+    g_free(structure);
+}
+
+lcmgen_t *lcmgen_create(void)
+{
+    lcmgen_t *lcmgen = g_new0(lcmgen_t, 1);
+    lcmgen->structs = g_ptr_array_new_with_free_func(lcm_struct_destroy);
+    lcmgen->enums = g_ptr_array_new_with_free_func(lcm_enum_destroy);
+    lcmgen->parse_cache.package = g_strdup("");
 
     return lcmgen;
+}
+
+void lcmgen_destroy(lcmgen_t *lcmgen)
+{
+    if (lcmgen) {
+        g_ptr_array_unref(lcmgen->structs);
+        g_ptr_array_unref(lcmgen->enums);
+        g_free(lcmgen->parse_cache.package);
+        g_free(lcmgen->parse_cache.comment_doc);
+        g_free(lcmgen->parse_cache.file_comment);
+        g_free(lcmgen);
+    }
 }
 
 // Parse a type into package and class name.  If no package is
 // specified, we will try to use the package from the last specified
 // "package" directive, like in Java.
-lcm_typename_t *lcm_typename_create(lcmgen_t *lcmgen, const char *lctypename)
+static lcm_typename_t *lcm_typename_create(lcmgen_t *lcmgen, const char *name)
 {
-    lcm_typename_t *type_name = (lcm_typename_t *) calloc(1, sizeof(lcm_typename_t));
-
-    type_name->lctypename = strdup(lctypename);
-
-    // package name: everything before the last ".", or "" if there is no "."
-    //
-    // shortname: everything after the last ".", or everything if
-    // there is no "."
-    //
-    char *tmp = strdup(lctypename);
-    char *rtmp = strrchr(tmp, '.');
-    if (rtmp == NULL) {
-        type_name->shortname = tmp;
-        if (lcm_is_primitive_type(type_name->shortname)) {
-            type_name->package = strdup("");
-        } else {
-            // we're overriding the package name using the last directive.
-            type_name->package = strdup(lcmgen->parse_cache.package);
-            type_name->lctypename = g_strdup_printf(
-                "%s%s%s", type_name->package, strlen(lcmgen->parse_cache.package) > 0 ? "." : "",
-                type_name->shortname);
-        }
+    lcm_typename_t *type = g_new0(lcm_typename_t, 1);
+    const char *separator = strrchr(name, '.');
+    if (separator) {
+        type->package = g_strndup(name, (gsize) (separator - name));
+        type->shortname = g_strdup(separator + 1);
+        type->lctypename = g_strdup(name);
     } else {
-        type_name->package = tmp;
-        *rtmp = 0;
-        type_name->shortname = &rtmp[1];
+        type->package = g_strdup(lcm_is_primitive_type(name) ? "" : lcmgen->parse_cache.package);
+        type->shortname = g_strdup(name);
+        type->lctypename = *type->package
+            ? g_strconcat(type->package, ".", name, NULL)
+            : g_strdup(name);
     }
-
-    return type_name;
+    return type;
 }
 
-lcm_struct_t *lcm_struct_create(lcmgen_t *lcmgen, const char *lcmfile, const char *structname)
+static lcm_struct_t *lcm_struct_create(lcmgen_t *lcmgen, const char *lcmfile, const char *name)
 {
-    lcm_struct_t *lr = (lcm_struct_t *) calloc(1, sizeof(lcm_struct_t));
-    lr->lcmfile = strdup(lcmfile);
-    lr->structname = lcm_typename_create(lcmgen, structname);
-    lr->members = g_ptr_array_new();
-    lr->constants = g_ptr_array_new();
-    lr->enums = g_ptr_array_new();
-    lr->structs = g_ptr_array_new();
-    return lr;
+    lcm_struct_t *structure = g_new0(lcm_struct_t, 1);
+    structure->lcmfile = g_strdup(lcmfile);
+    structure->structname = lcm_typename_create(lcmgen, name);
+    structure->members = g_ptr_array_new_with_free_func(lcm_member_destroy);
+    structure->constants = g_ptr_array_new_with_free_func(lcm_constant_destroy);
+    structure->enums = g_ptr_array_new_with_free_func(lcm_enum_destroy);
+    structure->structs = g_ptr_array_new_with_free_func(lcm_struct_destroy);
+    return structure;
 }
 
-lcm_constant_t *lcm_constant_create(const char *type, const char *name, const char *val_str)
+static lcm_enum_t *lcm_enum_create(lcmgen_t *lcmgen, const char *lcmfile, const char *name)
 {
-    lcm_constant_t *lc = (lcm_constant_t *) calloc(1, sizeof(lcm_constant_t));
-    lc->lctypename = strdup(type);
-    lc->membername = strdup(name);
-    lc->val_str = strdup(val_str);
-    // don't fill in the value
-    return lc;
+    lcm_enum_t *enumeration = g_new0(lcm_enum_t, 1);
+    enumeration->lcmfile = g_strdup(lcmfile);
+    enumeration->enumname = lcm_typename_create(lcmgen, name);
+    enumeration->values = g_ptr_array_new_with_free_func(lcm_enum_value_destroy);
+    return enumeration;
 }
-
-void lcm_constant_destroy(lcm_constant_t *lc)
-{
-    free(lc->lctypename);
-    free(lc->membername);
-    free(lc);
-}
-
-lcm_enum_t *lcm_enum_create(lcmgen_t *lcmgen, const char *lcmfile, const char *name)
-{
-    lcm_enum_t *le = (lcm_enum_t *) calloc(1, sizeof(lcm_enum_t));
-    le->lcmfile = strdup(lcmfile);
-    le->enumname = lcm_typename_create(lcmgen, name);
-    le->values = g_ptr_array_new();
-
-    return le;
-}
-
-lcm_enum_value_t *lcm_enum_value_create(const char *name)
-{
-    lcm_enum_value_t *lev = (lcm_enum_value_t *) calloc(1, sizeof(lcm_enum_t));
-
-    lev->valuename = strdup(name);
-
-    return lev;
-}
-
-lcm_member_t *lcm_member_create()
-{
-    lcm_member_t *lm = (lcm_member_t *) calloc(1, sizeof(lcm_member_t));
-    lm->dimensions = g_ptr_array_new();
-    return lm;
-}
-
-// lcm_constant_t *lcm_constant_create(lcmgen_t *lcmgen, const char *lcmfile
 
 int64_t lcm_struct_hash(lcm_struct_t *lr)
 {
@@ -255,529 +285,355 @@ int64_t lcm_enum_hash(lcm_enum_t *le)
     return v;
 }
 
-// semantic error: it parsed fine, but it's illegal. (we don't try to
-// identify the offending token). This function does not return.
-void semantic_error(tokenize_t *t, const char *fmt, ...)
+// The next call to tokenize_next() still consumes the non-comment token.
+static void skip_comments(lcmgen_t *lcmgen, tokenize_t *t)
 {
-    va_list ap;
-    va_start(ap, fmt);
+    if (lcmgen)
+        g_clear_pointer(&lcmgen->parse_cache.comment_doc, g_free);
 
-    printf("\n");
-    vprintf(fmt, ap);
-    printf("\n");
-
-    printf("%s : %i\n", t->path, t->token_line);
-    printf("%s", t->buffer);
-
-    va_end(ap);
-    fflush(stdout);
-    _exit(1);
-}
-
-// semantic warning: it parsed fine, but it's dangerous.
-void semantic_warning(tokenize_t *t, const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-
-    printf("\n");
-    vprintf(fmt, ap);
-    printf("\n");
-
-    printf("%s : %i\n", t->path, t->token_line);
-    printf("%s", t->buffer);
-
-    va_end(ap);
-}
-
-// Consume any available comments and store them in lcmgen->comment_doc
-// Comments are allowed in most positions in the lcm grammar.
-// However they are only significant in specific positions.
-// Call with store_comment_doc=0 to discard any parsed comments.
-// Call with store_comment_doc=1 to save the parsed comment to lcmgen->comment_doc.
-//   This frees the previous value of lcmgen->comment_doc.
-void parse_try_consume_comment(lcmgen_t *lcmgen, tokenize_t *t, int store_comment_doc)
-{
-    if (store_comment_doc) {
-        g_free(lcmgen->parse_cache.comment_doc);
-        lcmgen->parse_cache.comment_doc = NULL;
-    }
-
-    while (tokenize_peek(t) != EOF && t->token_type == LCM_TOK_COMMENT) {
+    while (tokenize_peek(t) >= 0 && t->token_type == LCM_TOK_COMMENT) {
         tokenize_next(t);
-
-        if (store_comment_doc) {
-            if (!lcmgen->parse_cache.comment_doc) {
-                lcmgen->parse_cache.comment_doc = g_strdup(t->token);
-            } else {
-                gchar *orig = lcmgen->parse_cache.comment_doc;
-                lcmgen->parse_cache.comment_doc = g_strdup_printf("%s\n%s", orig, t->token);
-                g_free(orig);
-            }
-        }
+        if (!lcmgen)
+            continue;
+        char *previous = lcmgen->parse_cache.comment_doc;
+        lcmgen->parse_cache.comment_doc = previous
+            ? g_strconcat(previous, "\n", t->token, NULL)
+            : g_strdup(t->token);
+        g_free(previous);
     }
 }
 
-// If the next non-comment token is "tok", consume it and return 1. Else,
-// return 0
-int parse_try_consume(tokenize_t *t, const char *tok)
+static int try_consume(tokenize_t *t, const char *token)
 {
-    parse_try_consume_comment(NULL, t, 0);
-    int res = tokenize_peek(t);
-    if (res == EOF)
-        parse_error(t, "End of file while looking for %s.", tok);
-
-    res = (t->token_type != LCM_TOK_COMMENT && !strcmp(t->token, tok));
-
-    // consume if the token matched
-    if (res)
-        tokenize_next(t);
-
-    return res;
+    skip_comments(NULL, t);
+    if (tokenize_peek(t) < 0 || t->token_type != LCM_TOK_OTHER || strcmp(t->token, token))
+        return 0;
+    tokenize_next(t);
+    return 1;
 }
 
-// Consume the next token. If it's not "tok", an error is emitted and
-// the program exits.
-void parse_require(tokenize_t *t, char *tok)
+static int next_token(tokenize_t *t, const char *description)
 {
-    parse_try_consume_comment(NULL, t, 0);
-    int res;
-    do {
-        res = tokenize_next(t);
-    } while (t->token_type == LCM_TOK_COMMENT);
-
-    if (res == EOF || strcmp(t->token, tok))
-        parse_error(t, "expected token %s", tok);
+    skip_comments(NULL, t);
+    if (tokenize_next(t) < 0 || t->token_type != LCM_TOK_OTHER)
+        return parse_error(t, "Expected %s", description);
+    return 0;
 }
 
-// require that the next token exist (not EOF). Description is a
-// human-readable description of what was expected to be read.
-void tokenize_next_or_fail(tokenize_t *t, const char *description)
+static int require_token(tokenize_t *t, const char *token)
 {
-    int res = tokenize_next(t);
-    if (res == EOF)
-        parse_error(t, "End of file reached, expected %s.", description);
+    return try_consume(t, token) ? 0 : parse_error(t, "Expected '%s'", token);
 }
 
-int parse_const(lcmgen_t *lcmgen, lcm_struct_t *lr, tokenize_t *t)
+static int is_qualified_name(const char *name)
 {
-    parse_try_consume_comment(lcmgen, t, 0);
-    tokenize_next_or_fail(t, "type identifier");
+    int first = 1;
+    for (; *name; ++name) {
+        const unsigned char ch = (unsigned char) *name;
+        if (first && !(isalpha(ch) || ch == '_'))
+            return 0;
+        if (!first && !(isalnum(ch) || ch == '_' || ch == '.'))
+            return 0;
+        first = ch == '.';
+    }
+    return !first;
+}
 
-    // get the constant type
-    if (!lcm_is_legal_const_type(t->token))
-        parse_error(t, "invalid type for const");
-    char *lctypename = strdup(t->token);
+static int parse_integer(const char *token, long long min, long long max, long long *value)
+{
+    char *end;
+    errno = 0;
+    *value = strtoll(token, &end, 0);
+    return end != token && *end == '\0' && errno != ERANGE && *value >= min && *value <= max;
+}
 
-another_constant:
-    // get the member name
-    parse_try_consume_comment(lcmgen, t, 0);
-    tokenize_next_or_fail(t, "name identifier");
+static int parse_constant_value(lcm_constant_t *constant, tokenize_t *t)
+{
+    const char *type = constant->lctypename;
+    const char *token = t->token;
+    long long integer;
+
+    if (!strcmp(type, "float") || !strcmp(type, "double")) {
+        char *end;
+        double maximum = !strcmp(type, "float") ? FLT_MAX : DBL_MAX;
+        double value = strtod(token, &end);
+        if (end == token || *end != '\0' || value < -maximum || value > maximum)
+            return parse_error(t, "Invalid %s constant '%s'", type, token);
+        if (!strcmp(type, "float"))
+            constant->val.f = (float) value;
+        else
+            constant->val.d = value;
+    } else if (!strcmp(type, "int8_t") && parse_integer(token, INT8_MIN, INT8_MAX, &integer)) {
+        constant->val.i8 = (int8_t) integer;
+    } else if (!strcmp(type, "int16_t") && parse_integer(token, INT16_MIN, INT16_MAX, &integer)) {
+        constant->val.i16 = (int16_t) integer;
+    } else if (!strcmp(type, "int32_t") && parse_integer(token, INT32_MIN, INT32_MAX, &integer)) {
+        constant->val.i32 = (int32_t) integer;
+    } else if (!strcmp(type, "int64_t") && parse_integer(token, INT64_MIN, INT64_MAX, &integer)) {
+        constant->val.i64 = (int64_t) integer;
+    } else {
+        return parse_error(t, "Invalid %s constant '%s'", type, token);
+    }
+    constant->val_str = g_strdup(token);
+    return 0;
+}
+
+static int parse_declaration_name(lcm_struct_t *structure, tokenize_t *t)
+{
+    if (next_token(t, "a field name") != 0)
+        return LCM_PARSE_ERROR;
     if (!lcm_is_legal_member_name(t->token))
-        parse_error(t, "Invalid member name: must start with [a-zA-Z_].");
-    char *membername = strdup(t->token);
-
-    // make sure this name isn't already taken.
-    if (lcm_find_member(lr, t->token) != NULL)
-        semantic_error(t, "Duplicate member name '%s'.", t->token);
-    if (lcm_find_const(lr, t->token) != NULL)
-        semantic_error(t, "Duplicate member name '%s'.", t->token);
-
-    // get the value
-    parse_require(t, "=");
-    parse_try_consume_comment(lcmgen, t, 0);
-    tokenize_next_or_fail(t, "constant value");
-
-    // create a new const member
-    lcm_constant_t *lc = lcm_constant_create(lctypename, membername, t->token);
-
-    // Attach the last comment if one was defined.
-    if (lcmgen->parse_cache.comment_doc) {
-        lc->comment = lcmgen->parse_cache.comment_doc;
-        lcmgen->parse_cache.comment_doc = NULL;
-    }
-
-    char *endptr = NULL;
-    if (!strcmp(lctypename, "int8_t")) {
-        long long v = strtoll(t->token, &endptr, 0);
-        if (endptr == t->token || *endptr != '\0')
-            parse_error(t, "Expected integer value");
-        if (v < INT8_MIN || v > INT8_MAX)
-            semantic_error(t, "Integer value out of bounds for int8_t");
-        lc->val.i8 = (int8_t) v;
-    } else if (!strcmp(lctypename, "int16_t")) {
-        long long v = strtoll(t->token, &endptr, 0);
-        if (endptr == t->token || *endptr != '\0')
-            parse_error(t, "Expected integer value");
-        if (v < INT16_MIN || v > INT16_MAX)
-            semantic_error(t, "Integer value out of range for int16_t");
-        lc->val.i16 = (int16_t) v;
-    } else if (!strcmp(lctypename, "int32_t")) {
-        long long v = strtoll(t->token, &endptr, 0);
-        if (endptr == t->token || *endptr != '\0')
-            parse_error(t, "Expected integer value");
-        if (v < INT32_MIN || v > INT32_MAX)
-            semantic_error(t, "Integer value out of range for int32_t");
-        lc->val.i32 = (int32_t) v;
-    } else if (!strcmp(lctypename, "int64_t")) {
-        long long v = strtoll(t->token, &endptr, 0);
-        if (endptr == t->token || *endptr != '\0')
-            parse_error(t, "Expected integer value");
-        lc->val.i64 = (int64_t) v;
-    } else if (!strcmp(lctypename, "float")) {
-        double v = strtod(t->token, &endptr);
-        if (endptr == t->token || *endptr != '\0')
-            parse_error(t, "Expected floating point value");
-        if (v > FLT_MAX || v < -FLT_MAX)
-            semantic_error(t, "Floating point value out of range for float");
-        lc->val.f = (float) v;
-    } else if (!strcmp(lctypename, "double")) {
-        double v = strtod(t->token, &endptr);
-        if (endptr == t->token || *endptr != '\0')
-            parse_error(t, "Expected floating point value");
-        lc->val.d = v;
-    } else {
-        fprintf(stderr, "[%s]\n", t->token);
-        assert(0);
-    }
-
-    g_ptr_array_add(lr->constants, lc);
-
-    free(membername);
-
-    if (parse_try_consume(t, ",")) {
-        goto another_constant;
-    }
-
-    free(lctypename);
-
-    parse_require(t, ";");
+        return parse_error(t, "Invalid field name '%s'", t->token);
+    if (lcm_find_member(structure, t->token) || lcm_find_const(structure, t->token))
+        return parse_error(t, "Duplicate field '%s'", t->token);
     return 0;
 }
 
-// parse a member declaration. This looks long and scary, but most of
-// the code is for semantic analysis (error checking)
-int parse_member(lcmgen_t *lcmgen, lcm_struct_t *lr, tokenize_t *t)
+static int parse_const(lcmgen_t *lcmgen, lcm_struct_t *structure, tokenize_t *t)
 {
-    lcm_typename_t *lt = NULL;
+    if (next_token(t, "a constant type") != 0)
+        return LCM_PARSE_ERROR;
+    if (!lcm_is_legal_const_type(t->token))
+        return parse_error(t, "Invalid type '%s' for a constant", t->token);
 
-    // Read a type specification. Then read members (multiple
-    // members can be defined per-line.) Each member can have
-    // different array dimensionalities.
-
-    // inline type declaration?
-    if (parse_try_consume(t, "struct")) {
-        parse_error(t, "recursive structs not implemented.");
-    } else if (parse_try_consume(t, "enum")) {
-        parse_error(t, "recursive enums not implemented.");
-    } else if (parse_try_consume(t, "const")) {
-        return parse_const(lcmgen, lr, t);
-    }
-
-    // standard declaration
-    parse_try_consume_comment(lcmgen, t, 0);
-    tokenize_next_or_fail(t, "type identifier");
-
-    if (!isalpha(t->token[0]) && t->token[0] != '_')
-        parse_error(t, "invalid type name");
-
-    // A common mistake is use 'int' as a type instead of 'intN_t'
-    if (!strcmp(t->token, "int"))
-        semantic_warning(t, "int type should probably be int8_t, int16_t, int32_t, or int64_t");
-
-    lt = lcm_typename_create(lcmgen, t->token);
-
-    while (1) {
-        // get the lcm type name
-        parse_try_consume_comment(lcmgen, t, 0);
-        tokenize_next_or_fail(t, "name identifier");
-
-        if (!lcm_is_legal_member_name(t->token))
-            parse_error(t, "Invalid member name: must start with [a-zA-Z_].");
-
-        // make sure this name isn't already taken.
-        if (lcm_find_member(lr, t->token) != NULL)
-            semantic_error(t, "Duplicate member name '%s'.", t->token);
-        if (lcm_find_const(lr, t->token) != NULL)
-            semantic_error(t, "Duplicate member name '%s'.", t->token);
-
-        // create a new member
-        lcm_member_t *lm = lcm_member_create();
-        lm->type = lt;
-        lm->membername = strdup(t->token);
-        if (lcmgen->parse_cache.comment_doc) {
-            lm->comment = lcmgen->parse_cache.comment_doc;
-            lcmgen->parse_cache.comment_doc = NULL;
-        }
-        g_ptr_array_add(lr->members, lm);
-
-        // (multi-dimensional) array declaration?
-        while (parse_try_consume(t, "[")) {
-            // pull out the size of the dimension, either a number or a variable name.
-            parse_try_consume_comment(lcmgen, t, 0);
-            tokenize_next_or_fail(t, "array size");
-
-            lcm_dimension_t *dim = (lcm_dimension_t *) calloc(1, sizeof(lcm_dimension_t));
-
-            if (isdigit(t->token[0])) {
-                // we have a constant size array declaration.
-                int sz = strtol(t->token, NULL, 0);
-                if (sz <= 0)
-                    semantic_error(t, "Constant array size must be > 0");
-
-                dim->mode = LCM_CONST;
-                dim->size = strdup(t->token);
-
-            } else {
-                // we have a variable sized declaration.
-                if (t->token[0] == ']')
-                    semantic_error(
-                        t, "Array sizes must be declared either as a constant or variable.");
-                if (!lcm_is_legal_member_name(t->token))
-                    semantic_error(t,
-                                   "Invalid array size variable name: must start with [a-zA-Z_].");
-
-                lcm_constant_t *const_dim_var = lcm_find_const(lr, t->token);
-                if (const_dim_var) {
-                    if (!lcm_is_array_dimension_type(const_dim_var->lctypename))
-                        semantic_error(t, "Array dimension '%s' must be an integer type.",
-                                       t->token);
-
-                    dim->mode = LCM_CONST;
-                    dim->size = strdup(const_dim_var->val_str);
-                } else {
-                    // make sure the named variable is
-                    // 1) previously declared and
-                    // 2) an integer type
-                    int okay = 0;
-                    for (unsigned int i = 0; i < g_ptr_array_size(lr->members); i++) {
-                        lcm_member_t *thislm = (lcm_member_t *) g_ptr_array_index(lr->members, i);
-                        if (!strcmp(thislm->membername, t->token)) {
-                            if (g_ptr_array_size(thislm->dimensions) != 0)
-                                semantic_error(t,
-                                               "Array dimension '%s' must be not be an array type.",
-                                               t->token);
-                            if (!lcm_is_array_dimension_type(thislm->type->lctypename))
-                                semantic_error(t, "Array dimension '%s' must be an integer type.",
-                                               t->token);
-                            okay = 1;
-                            break;
-                        }
-                    }
-                    if (!okay)
-                        semantic_error(t,
-                                       "Unknown variable array index '%s'. Index variables must be "
-                                       "declared before the array.",
-                                       t->token);
-
-                    dim->mode = LCM_VAR;
-                    dim->size = strdup(t->token);
-                }
-            }
-            parse_require(t, "]");
-
-            // increase the dimensionality of the array by one dimension.
-            g_ptr_array_add(lm->dimensions, dim);
-        }
-
-        if (!parse_try_consume(t, ","))
+    char *type = g_strdup(t->token);
+    int result = 0;
+    do {
+        result = parse_declaration_name(structure, t);
+        if (result != 0)
             break;
-    }
-
-    parse_require(t, ";");
-
-    return 0;
-}
-
-int parse_enum_value(lcm_enum_t *le, tokenize_t *t)
-{
-    tokenize_next_or_fail(t, "enum name");
-
-    lcm_enum_value_t *lev = lcm_enum_value_create(t->token);
-
-    if (parse_try_consume(t, "=")) {
-        tokenize_next_or_fail(t, "enum value literal");
-
-        lev->value = strtol(t->token, NULL, 0);
-    } else {
-        // the didn't specify the value, compute the next largest value
-        int32_t max = 0;
-
-        for (unsigned int i = 0; i < g_ptr_array_size(le->values); i++) {
-            lcm_enum_value_t *tmp = (lcm_enum_value_t *) g_ptr_array_index(le->values, i);
-            if (tmp->value > max)
-                max = tmp->value;
-        }
-
-        lev->value = max + 1;
-    }
-
-    // make sure there aren't any duplicate values
-    for (unsigned int i = 0; i < g_ptr_array_size(le->values); i++) {
-        lcm_enum_value_t *tmp = (lcm_enum_value_t *) g_ptr_array_index(le->values, i);
-        if (tmp->value == lev->value)
-            semantic_error(t, "Enum values %s and %s have the same value %d!", tmp->valuename,
-                           lev->valuename, lev->value);
-        if (!strcmp(tmp->valuename, lev->valuename))
-            semantic_error(t, "Enum value %s declared twice!", tmp->valuename);
-    }
-
-    g_ptr_array_add(le->values, lev);
-    return 0;
-}
-
-/** assume the "struct" token is already consumed **/
-lcm_struct_t *parse_struct(lcmgen_t *lcmgen, const char *lcmfile, tokenize_t *t)
-{
-    char *name;
-
-    parse_try_consume_comment(lcmgen, t, 0);
-    tokenize_next_or_fail(t, "struct name");
-    name = strdup(t->token);
-
-    lcm_struct_t *structure = lcm_struct_create(lcmgen, lcmfile, name);
-
-    if (lcmgen->parse_cache.file_comment) {
-        structure->file_comment = lcmgen->parse_cache.file_comment;
-        lcmgen->parse_cache.file_comment = NULL;
-    }
-
-    if (lcmgen->parse_cache.comment_doc) {
-        structure->comment = lcmgen->parse_cache.comment_doc;
+        lcm_constant_t *constant = g_new0(lcm_constant_t, 1);
+        constant->lctypename = g_strdup(type);
+        constant->membername = g_strdup(t->token);
+        constant->comment = lcmgen->parse_cache.comment_doc;
         lcmgen->parse_cache.comment_doc = NULL;
-    }
+        g_ptr_array_add(structure->constants, constant);
+        result = require_token(t, "=");
+        if (result == 0)
+            result = next_token(t, "a constant value");
+        if (result == 0)
+            result = parse_constant_value(constant, t);
+    } while (result == 0 && try_consume(t, ","));
+    g_free(type);
+    return result == 0 ? require_token(t, ";") : result;
+}
 
-    parse_require(t, "{");
+static int parse_dimension(lcm_struct_t *structure, lcm_member_t *member, tokenize_t *t)
+{
+    if (next_token(t, "an array dimension") != 0)
+        return LCM_PARSE_ERROR;
 
-    while (1) {
-        // Check for leading comments that will be used to document the next member.
-        parse_try_consume_comment(lcmgen, t, 1);
-
-        if (parse_try_consume(t, "}")) {
-            break;
+    const char *size = t->token;
+    lcm_dimension_mode_t mode = LCM_CONST;
+    if (lcm_is_legal_member_name(size)) {
+        const lcm_constant_t *constant = lcm_find_const(structure, size);
+        if (constant) {
+            if (!lcm_is_array_dimension_type(constant->lctypename))
+                return parse_error(t, "Array dimension '%s' must be an integer", size);
+            size = constant->val_str;
+        } else {
+            const lcm_member_t *dimension_member = lcm_find_member(structure, size);
+            if (!dimension_member || dimension_member == member
+                || dimension_member->dimensions->len != 0
+                || !lcm_is_array_dimension_type(dimension_member->type->lctypename))
+                return parse_error(t, "Array dimension '%s' must be a preceding integer field", size);
+            mode = LCM_VAR;
         }
-        parse_member(lcmgen, structure, t);
+    }
+    long long length;
+    if (mode == LCM_CONST && !parse_integer(size, 1, INT_MAX, &length))
+        return parse_error(t, "Invalid array size '%s'", size);
+
+    lcm_dimension_t *dimension = g_new0(lcm_dimension_t, 1);
+    dimension->mode = mode;
+    dimension->size = g_strdup(size);
+    g_ptr_array_add(member->dimensions, dimension);
+    return require_token(t, "]");
+}
+
+static int parse_member(lcmgen_t *lcmgen, lcm_struct_t *structure, tokenize_t *t)
+{
+    if (try_consume(t, "struct") || try_consume(t, "enum"))
+        return parse_error(t, "Inline type declarations are not supported");
+    if (try_consume(t, "const"))
+        return parse_const(lcmgen, structure, t);
+    if (next_token(t, "a field type") != 0)
+        return LCM_PARSE_ERROR;
+    if (!is_qualified_name(t->token))
+        return parse_error(t, "Invalid field type '%s'", t->token);
+
+    char *type = g_strdup(t->token);
+    int result = 0;
+    do {
+        result = parse_declaration_name(structure, t);
+        if (result != 0)
+            break;
+        lcm_member_t *member = g_new0(lcm_member_t, 1);
+        member->type = lcm_typename_create(lcmgen, type);
+        member->membername = g_strdup(t->token);
+        member->dimensions = g_ptr_array_new_with_free_func(lcm_dimension_destroy);
+        member->comment = lcmgen->parse_cache.comment_doc;
+        lcmgen->parse_cache.comment_doc = NULL;
+        g_ptr_array_add(structure->members, member);
+
+        while (result == 0 && try_consume(t, "["))
+            result = parse_dimension(structure, member, t);
+    } while (result == 0 && try_consume(t, ","));
+    g_free(type);
+    return result == 0 ? require_token(t, ";") : result;
+}
+
+static int parse_enum_value(lcm_enum_t *enumeration, tokenize_t *t)
+{
+    if (next_token(t, "an enum name") != 0)
+        return LCM_PARSE_ERROR;
+    if (!lcm_is_legal_member_name(t->token))
+        return parse_error(t, "Invalid enum name '%s'", t->token);
+
+    lcm_enum_value_t *value = g_new0(lcm_enum_value_t, 1);
+    value->valuename = g_strdup(t->token);
+    int result = 0;
+    long long integer;
+    if (try_consume(t, "=")) {
+        result = next_token(t, "an enum value");
+        if (result == 0 && !parse_integer(t->token, INT32_MIN, INT32_MAX, &integer))
+            result = parse_error(t, "Invalid enum value '%s'", t->token);
+    } else {
+        integer = 1;
+        for (guint i = 0; i < enumeration->values->len; ++i) {
+            const lcm_enum_value_t *prior = g_ptr_array_index(enumeration->values, i);
+            if (prior->value >= integer)
+                integer = (long long) prior->value + 1;
+        }
+        if (integer > INT32_MAX)
+            result = parse_error(t, "Enum value is out of range");
     }
 
+    for (guint i = 0; result == 0 && i < enumeration->values->len; ++i) {
+        const lcm_enum_value_t *prior = g_ptr_array_index(enumeration->values, i);
+        if (prior->value == integer || !strcmp(prior->valuename, value->valuename))
+            result = parse_error(t, "Duplicate enum member '%s' or value %lld", value->valuename, integer);
+    }
+    if (result != 0) {
+        lcm_enum_value_destroy(value);
+        return result;
+    }
+
+    value->value = (int32_t) integer;
+    g_ptr_array_add(enumeration->values, value);
+    return 0;
+}
+
+static int parse_struct(lcmgen_t *lcmgen, const char *lcmfile, tokenize_t *t)
+{
+    if (next_token(t, "a structure name") != 0)
+        return LCM_PARSE_ERROR;
+    if (!is_qualified_name(t->token))
+        return parse_error(t, "Invalid structure name '%s'", t->token);
+
+    lcm_struct_t *structure = lcm_struct_create(lcmgen, lcmfile, t->token);
+    structure->file_comment = lcmgen->parse_cache.file_comment;
+    structure->comment = lcmgen->parse_cache.comment_doc;
+    lcmgen->parse_cache.file_comment = NULL;
+    lcmgen->parse_cache.comment_doc = NULL;
+
+    int result = require_token(t, "{");
+    while (result == 0) {
+        skip_comments(lcmgen, t);
+        if (try_consume(t, "}"))
+            break;
+        result = parse_member(lcmgen, structure, t);
+    }
+    for (guint i = 0; result == 0 && i < lcmgen->structs->len; ++i) {
+        const lcm_struct_t *prior = g_ptr_array_index(lcmgen->structs, i);
+        if (!strcmp(prior->structname->lctypename, structure->structname->lctypename))
+            result = parse_error(t, "Duplicate structure '%s'", structure->structname->lctypename);
+    }
+
+    if (result != 0) {
+        lcm_struct_destroy(structure);
+        return result;
+    }
     structure->hash = lcm_struct_hash(structure);
-
-    free(name);
-    return structure;
+    g_ptr_array_add(lcmgen->structs, structure);
+    return 0;
 }
 
-/** assumes the "enum" token is already consumed **/
-lcm_enum_t *parse_enum(lcmgen_t *lcmgen, const char *lcmfile, tokenize_t *t)
+static int parse_enum(lcmgen_t *lcmgen, const char *lcmfile, tokenize_t *t)
 {
-    char *name;
+    if (next_token(t, "an enum name") != 0)
+        return LCM_PARSE_ERROR;
+    if (!is_qualified_name(t->token))
+        return parse_error(t, "Invalid enum name '%s'", t->token);
 
-    tokenize_next_or_fail(t, "enum name");
-    name = strdup(t->token);
-
-    lcm_enum_t *le = lcm_enum_create(lcmgen, lcmfile, name);
-    parse_require(t, "{");
-
-    while (!parse_try_consume(t, "}")) {
-        parse_enum_value(le, t);
-
-        parse_try_consume(t, ",");
-        parse_try_consume(t, ";");
+    lcm_enum_t *enumeration = lcm_enum_create(lcmgen, lcmfile, t->token);
+    int result = require_token(t, "{");
+    while (result == 0 && !try_consume(t, "}")) {
+        result = parse_enum_value(enumeration, t);
+        if (result == 0) {
+            try_consume(t, ",");
+            try_consume(t, ";");
+        }
     }
-
-    le->hash = lcm_enum_hash(le);
-    free(name);
-    return le;
+    if (result != 0) {
+        lcm_enum_destroy(enumeration);
+        return result;
+    }
+    enumeration->hash = lcm_enum_hash(enumeration);
+    g_ptr_array_add(lcmgen->enums, enumeration);
+    return 0;
 }
 
-const lcm_struct_t *find_struct(lcmgen_t *lcmgen, const char *package, const char *name)
-{
-    for (int i = 0; i < lcmgen->structs->len; i++) {
-        lcm_struct_t *lr = (lcm_struct_t *) g_ptr_array_index(lcmgen->structs, i);
-        if (!strcmp(package, lr->structname->package) && !strcmp(name, lr->structname->shortname))
-            return lr;
-    }
-    return NULL;
-}
-
-/** parse entity (top-level construct), return EOF if eof. **/
+// Parse one top-level declaration, leaving completed declarations in lcmgen.
 int parse_entity(lcmgen_t *lcmgen, const char *lcmfile, tokenize_t *t)
 {
-    int res;
-
-    parse_try_consume_comment(lcmgen, t, 1);
-
-    res = tokenize_next(t);
-    if (res == EOF)
+    skip_comments(lcmgen, t);
+    const int status = tokenize_next(t);
+    if (status == EOF && t->token_type == LCM_TOK_EOF && !ferror(t->f))
         return EOF;
+    if (status < 0 || t->token_type != LCM_TOK_OTHER)
+        return parse_error(t, "Invalid token");
 
     if (!strcmp(t->token, "package")) {
+        if (next_token(t, "a package name") != 0)
+            return LCM_PARSE_ERROR;
+        if (!is_qualified_name(t->token))
+            return parse_error(t, "Invalid package name '%s'", t->token);
+        g_free(lcmgen->parse_cache.package);
+        lcmgen->parse_cache.package = g_strdup(t->token);
+        g_free(lcmgen->parse_cache.file_comment);
         lcmgen->parse_cache.file_comment = lcmgen->parse_cache.comment_doc;
-
         lcmgen->parse_cache.comment_doc = NULL;
-
-        parse_try_consume_comment(lcmgen, t, 0);
-        tokenize_next_or_fail(t, "package name");
-        lcmgen->parse_cache.package = strdup(t->token);
-        parse_require(t, ";");
-        return 0;
+        return require_token(t, ";");
     }
-
-    if (!strcmp(t->token, "struct")) {
-        lcm_struct_t *structure = parse_struct(lcmgen, lcmfile, t);
-
-        // check for duplicate types
-        const lcm_struct_t *prior =
-            find_struct(lcmgen, structure->structname->package, structure->structname->shortname);
-        if (prior) {
-            printf("ERROR:  duplicate type %s declared in %s\n", structure->structname->lctypename,
-                   lcmfile);
-            printf("        %s was previously declared in %s\n", structure->structname->lctypename,
-                   prior->lcmfile);
-            // TODO destroy lr.
-            return 1;
-        } else {
-            g_ptr_array_add(lcmgen->structs, structure);
-        }
-        return 0;
-    }
-
-    if (!strcmp(t->token, "enum")) {
-        lcm_enum_t *le = parse_enum(lcmgen, lcmfile, t);
-        g_ptr_array_add(lcmgen->enums, le);
-        return 0;
-    }
-
-    return -10;
+    if (!strcmp(t->token, "struct"))
+        return parse_struct(lcmgen, lcmfile, t);
+    if (!strcmp(t->token, "enum"))
+        return parse_enum(lcmgen, lcmfile, t);
+    return parse_error(t, "Unexpected declaration '%s'", t->token);
 }
 
 int lcmgen_handle_file(lcmgen_t *lcmgen, const char *path)
 {
+    struct stat info;
+    if (stat(path, &info) != 0 || !S_ISREG(info.st_mode))
+        return LCM_PARSE_ERROR;
     tokenize_t *t = tokenize_create(path);
+    if (!t)
+        return LCM_PARSE_ERROR;
 
-    if (t == NULL) {
-        perror(path);
-        return -1;
-    }
-
-    int res;
+    int result;
     do {
-        res = parse_entity(lcmgen, path, t);
-    } while (res == 0);
+        result = parse_entity(lcmgen, path, t);
+    } while (result == 0);
 
     tokenize_destroy(t);
-    if (res == 0 || res == EOF)
-        return 0;
-    else
-        return res;
+    return result == EOF ? 0 : result;
 }
 
 void lcm_typename_dump(lcm_typename_t *lt)
 {
-    char buf[1024];
-    int pos = 0;
-
-    pos += sprintf(&buf[pos], "%s", lt->lctypename);
-
-    printf("\t%-20s", buf);
+    printf("\t%-20s", lt->lctypename);
 }
 
 void lcm_member_dump(lcm_member_t *lm)

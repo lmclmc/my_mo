@@ -187,13 +187,14 @@ lcm_constant_t *lcm_find_const(lcm_struct_t *lr, const char *name);
 // older than the file "declaringfile"
 int lcm_needs_generation(lcmgen_t *lcmgen, const char *declaringfile, const char *outfile);
 
-// create a new parsing context.
-lcmgen_t *lcmgen_create();
+// Create and destroy a parsing context and its parsed declarations.
+lcmgen_t *lcmgen_create(void);
+void lcmgen_destroy(lcmgen_t *lcm);
 
 // for debugging, emit the contents to stdout
 void lcmgen_dump(lcmgen_t *lcm);
 
-// parse the provided file
+// Parse the provided file. Returns zero on success and nonzero on error.
 int lcmgen_handle_file(lcmgen_t *lcm, const char *path);
 
 int parse_entity(lcmgen_t *lcmgen, const char *lcmfile, tokenize_t *t);

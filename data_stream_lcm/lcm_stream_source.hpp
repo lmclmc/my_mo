@@ -4,11 +4,13 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <set>
 #include <pj_base/sdk/data_source_patterns.hpp>
 #include <pj_plugins/sdk/encoding_utils.hpp>
 #include <pj_plugins/sdk/endpoint.hpp>
@@ -19,6 +21,7 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <string>
 #include <thread>
+#include <utility>
 #include <unordered_map>
 #include <vector>
 #include <lcm/lcm-cpp.hpp>
@@ -122,6 +125,7 @@ class LcmStreamSource : public PJ::StreamSourceBase {
   using WriteCB = std::function<void(const std::string&, const std::string&, PJ::sdk::ValueRef)>;
 public:
   LcmStreamSource();
+  ~LcmStreamSource() override;
   PJ_borrowed_dialog_t getDialog() override {
     return PJ::borrowDialog(dialog_);
   }
@@ -143,8 +147,6 @@ public:
 
   void onStop() override;
 
-  void handleMessage(const lcm::ReceiveBuffer*, const std::string&);
-
   void publishRobotState(const std::string&);
   void publishDepthImage(void*, int, int64_t, int, int, std::vector<uint8_t>&);
   void publishTF(void*, int, int64_t, const std::vector<geometry_msgs::msg::TransformStamped>&);
@@ -156,38 +158,60 @@ public:
   int decode_type_2(void*, int, int64_t, int, const std::string&,
                     const std::string&, const std::string&,
                     std::unordered_map<std::string, int>&,
-                    std::map<std::string, lcm_struct_t*>&,
+                    const std::map<std::string, const lcm_struct_t*>&,
                     const WriteCB&);
   //一级解析函数，解析LCM消息中，任意类型的结构体数据，解开结构体内部任意成员数据后，调用二级解析函数处理
   int decode_type_1(void*, int, int64_t, int, const std::string&, 
-                    const std::string&, std::map<std::string, lcm_struct_t*>&,
+                    const std::string&, const std::map<std::string, const lcm_struct_t*>&,
                     const WriteCB&);
 
-  void savePoint(void*, int, int64_t, const std::string&, const std::string&, PJ::sdk::ValueRef);
-
 private:
+  using TypeTable = std::map<std::string, const lcm_struct_t*>;
+  using TopicKey = std::pair<int, std::string>;
+  using SchemaFile = std::unique_ptr<lcmgen_t, void (*)(lcmgen_t*)>;
+
+  struct TopicSchema {
+    TypeTable types;
+    std::unordered_map<uint64_t, const lcm_struct_t*> types_by_hash;
+    std::string curve_prefix;
+  };
+
+  struct Receiver {
+    Receiver(LcmStreamSource* stream, int listen_port, const std::string& url)
+      : source(stream), port(listen_port), connection(url) {}
+
+    LcmStreamSource* source;
+    int port;
+    lcm::LCM connection;
+
+    void receive(const lcm::ReceiveBuffer* buffer, const std::string& topic) {
+      source->handleMessage(port, buffer, topic);
+    }
+  };
+
+  PJ::Status loadTopicSchemas();
+  void handleMessage(int port, const lcm::ReceiveBuffer* buffer, const std::string& topic);
+  void savePoint(int64_t timestamp, const std::string& curve_path, std::string_view robot_path,
+                 const std::string& field, PJ::sdk::ValueRef value);
+
   LcmDialog dialog_;
 
   std::string parser_config_override_;
 
-  std::map<std::string, lcm_struct_t*> lcm_type_table;
-  std::unordered_map<int, std::shared_ptr<lcm::LCM>> lcm_table;
-  typedef struct TopicLcmItem {
-    int64_t hash = 0;
-    std::vector<lcmgen_t*> lcmgen_table = {};
-    std::string lcmFilePath = "";
-    std::optional<PJ::sdk::TopicHandle> topic_handle;
-  } TopicLcmItem;
-  
-  std::unordered_map<std::string, TopicLcmItem> topic_map;
+  std::map<std::string, SchemaFile> schema_files_;
+  std::map<TopicKey, TopicSchema> topic_map_;
+  std::vector<std::unique_ptr<Receiver>> receivers_;
+  std::set<TopicKey> reported_mismatches_;
   std::shared_ptr<rotating_file_sink> lcm_log;
-  SafeQueue<LcmMessage> message_queue;
+  struct Message {
+    TopicKey topic;
+    int64_t timestamp;
+    std::vector<uint8_t> data;
+  };
+  SafeQueue<Message> message_queue;
 
-  bool _running;
-  bool _first_warning;
-
+  std::atomic<bool> running_{false};
   std::thread lcm_runner_;
-  std::thread render_runner_;
 
   std::string log_save_path;
   int log_max_size;

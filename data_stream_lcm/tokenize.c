@@ -6,12 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char single_char_toks[] = "();\",:\'[]";  // no '.' so that name spaces are one token
+static const char single_char_toks[] = "(){};\",:\'[]";  // no '.' so that name spaces are one token
 static const char op_chars[] = "!~<>=&|^%*+=";
 
 #define MAX_LINE_LEN 1024
 
 #define TOK_ERR_MEMORY_INSUFFICIENT -2
+#define TOK_ERR_SYNTAX -3
 
 static char unescape(char c)
 {
@@ -85,6 +86,10 @@ int tokenize_next_char(tokenize_t *t)
         if (fgets(t->buffer, MAX_LINE_LEN, t->f) == NULL)
             return EOF;
         t->buffer_len = (int) strlen(t->buffer);
+        if (!t->buffer_len) {
+            t->buffer_column = 0;
+            return 0;
+        }
         t->buffer_line++;
         t->buffer_column = 0;
     }
@@ -115,14 +120,18 @@ void tokenize_flush_line(tokenize_t *t)
     } while (c != EOF && c != '\n');
 }
 
-static int ensure_token_capacity(tokenize_t *t, int pos)
+static int ensure_token_capacity(tokenize_t *t, size_t pos)
 {
     if (pos >= t->token_capacity) {
-        t->token_capacity *= 2;
-        t->token = (char *) realloc(t->token, t->token_capacity);
-        if (!t->token) {
+        if (t->token_capacity > INT32_MAX / 2) {
             return 0;
         }
+        const size_t capacity = t->token_capacity * 2;
+        char *token = realloc(t->token, capacity);
+        if (!token)
+            return 0;
+        t->token = token;
+        t->token_capacity = capacity;
     }
     return 1;
 }
@@ -203,8 +212,7 @@ int tokenize_extended_comment(tokenize_t *t)
 
         if (!comment_finished) {
             if (c == EOF) {
-                printf("%s : EOF reached while parsing comment\n", t->path);
-                return EOF;
+                return TOK_ERR_SYNTAX;
             }
 
             assert(c == '\n');
@@ -217,6 +225,8 @@ int tokenize_extended_comment(tokenize_t *t)
         }
     }
 
+    if (!ensure_token_capacity(t, pos))
+        return TOK_ERR_MEMORY_INSUFFICIENT;
     t->token[pos] = 0;
     t->token_type = LCM_TOK_COMMENT;
 
@@ -278,7 +288,7 @@ int tokenize_next_internal(tokenize_t *t)
 
             c = tokenize_next_char(t);
             if (c == EOF)
-                goto end_tok;
+                return TOK_ERR_SYNTAX;
 
             if (escape) {
                 escape = 0;
@@ -289,6 +299,7 @@ int tokenize_next_internal(tokenize_t *t)
 
             if (c == '\"') {
                 t->token[pos++] = c;
+                t->token_type = LCM_TOK_OTHER;
                 goto end_tok;
             }
             if (c == '\\') {
@@ -298,13 +309,11 @@ int tokenize_next_internal(tokenize_t *t)
 
             t->token[pos++] = c;
         }
-        t->token_type = LCM_TOK_OTHER;
-        goto end_tok;
     }
 
     // is an operator?
-    if (strchr(op_chars, c) != NULL) {
-        while (strchr(op_chars, c) != NULL) {
+    if (c != 0 && strchr(op_chars, c) != NULL) {
+        while (c != 0 && c != EOF && strchr(op_chars, c) != NULL) {
             if (!ensure_token_capacity(t, pos)) {
                 return TOK_ERR_MEMORY_INSUFFICIENT;
             }
@@ -372,6 +381,8 @@ int tokenize_next_internal(tokenize_t *t)
 
     // otherwise, all tokens are alpha-numeric blobs
     do {
+        if (c == 0)
+            return TOK_ERR_SYNTAX;
         if (!ensure_token_capacity(t, pos)) {
             return TOK_ERR_MEMORY_INSUFFICIENT;
         }
@@ -384,7 +395,7 @@ int tokenize_next_internal(tokenize_t *t)
             goto end_tok;
 
         c = tokenize_next_char(t);
-        if (strchr(single_char_toks, c) != NULL || strchr(op_chars, c) != NULL) {
+        if (c == '/' || strchr(single_char_toks, c) != NULL || strchr(op_chars, c) != NULL) {
             tokenize_ungetc(t, c);
             goto end_tok;
         }
@@ -392,6 +403,8 @@ int tokenize_next_internal(tokenize_t *t)
     } while (!isspace(c) && c != EOF);
 
 end_tok:
+    if (!ensure_token_capacity(t, pos))
+        return TOK_ERR_MEMORY_INSUFFICIENT;
     t->token[pos] = 0;
 
     return pos;
